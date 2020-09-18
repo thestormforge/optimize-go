@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/redskyops/redskyops-controller/internal/oauth2/registration"
+	"github.com/redskyops/redskyops-go/pkg/oauth2/registration"
 	"golang.org/x/oauth2"
 )
 

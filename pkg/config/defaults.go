@@ -22,7 +22,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/redskyops/redskyops-controller/internal/oauth2/discovery"
+	"github.com/redskyops/redskyops-go/pkg/oauth2/discovery"
 )
 
 // The default loader must NEVER make changes via RedSkyConfig.Update or RedSkyConfig.unpersisted
