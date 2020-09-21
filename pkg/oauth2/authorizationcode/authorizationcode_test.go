@@ -17,58 +17,76 @@ limitations under the License.
 package authorizationcode
 
 import (
-	"fmt"
+	"context"
+	"encoding/base64"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestAuthorization(t *testing.T) {
-	testCases := []struct {
-		desc                string
-		vb                  []byte
-		verifierb64         string
-		verifierText        string
-		codeChallengeMethod string
-		codeChallenge       string
+func TestConfig_AuthCodeURLWithPKCE(t *testing.T) {
+	cases := []struct {
+		desc                        string
+		verifier                    []byte
+		expectedVerifier            string
+		expectedCodeChallengeMethod string
+		expectedCodeChallenge       string
 	}{
 		{
 			desc: "Example for the S256 code_challenge_method",
-			vb: []byte{116, 24, 223, 180, 151, 153, 224, 37, 79, 250, 96, 125, 216, 173,
-				187, 186, 22, 212, 37, 77, 105, 214, 191, 240, 91, 88, 5, 88, 83,
-				132, 141, 121},
-			verifierb64:         "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
-			codeChallengeMethod: "S256",
-			codeChallenge:       "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+			verifier: []byte{116, 24, 223, 180, 151, 153, 224, 37, 79, 250, 96, 125, 216, 173,
+				187, 186, 22, 212, 37, 77, 105, 214, 191, 240, 91, 88, 5, 88, 83, 132, 141, 121},
+			expectedVerifier:            "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+			expectedCodeChallengeMethod: "S256",
+			expectedCodeChallenge:       "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("%q", tc.desc), func(t *testing.T) {
-			var err error
-			assert.NoError(t, err)
+	for _, c := range cases {
+		t.Run(c.desc, func(t *testing.T) {
+			acf, err := NewAuthorizationCodeFlowWithPKCE()
+			require.NoError(t, err)
 
-			c, err := NewAuthorizationCodeFlowWithPKCE()
-			assert.NoError(t, err)
+			// Override verifier and check the internal encoding
+			acf.setVerifier(c.verifier)
+			assert.Equal(t, c.expectedVerifier, acf.verifier)
 
-			// Override verifier
-			c.setVerifier(tc.vb)
+			u, err := url.Parse(acf.AuthCodeURLWithPKCE())
+			require.NoError(t, err)
 
-			assert.Equal(t, tc.verifierb64, c.verifier)
-
-			u, err := url.Parse(c.AuthCodeURLWithPKCE())
-			assert.NoError(t, err)
-
-			v := u.Query()
-			assert.Equal(t, tc.codeChallengeMethod, v.Get("code_challenge_method"))
-			assert.Equal(t, tc.codeChallenge, v.Get("code_challenge"))
-
-			// Cant do exchange without a test server
-			// May want to look at implementing something like
-			// https://github.com/golang/oauth2/blob/master/oauth2_test.go#L140
-			// _, err = c.ExchangeWithPKCE(context.Background(), "1234")
-			// assert.NoError(t, err)
+			// Check the URL query parameters
+			q := u.Query()
+			assert.Equal(t, c.expectedCodeChallengeMethod, q.Get("code_challenge_method"))
+			assert.Equal(t, c.expectedCodeChallenge, q.Get("code_challenge"))
 		})
+	}
+}
+
+func TestConfig_ExchangeWithPKCE(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		err := r.ParseForm()
+		require.NoError(t, err)
+
+		assert.Equal(t, "exchange-code", r.PostForm.Get("code"))
+		assert.Equal(t, "authorization_code", r.PostForm.Get("grant_type"))
+		assert.Equal(t, base64.RawURLEncoding.EncodeToString([]byte("verifier")), r.PostForm.Get("code_verifier"))
+
+		// Send back an access token to sanity check the response
+		w.Header().Set("Content-Type", "application/x-www-form-urlencoded")
+		_, _ = w.Write([]byte("access_token=access-token"))
+	}))
+	defer ts.Close()
+
+	acf := &Config{}
+	acf.Endpoint.TokenURL = ts.URL + "/token"
+	acf.setVerifier([]byte("verifier"))
+
+	tok, err := acf.ExchangeWithPKCE(context.Background(), "exchange-code")
+	if assert.NoError(t, err) {
+		assert.Equal(t, tok.AccessToken, "access-token")
 	}
 }

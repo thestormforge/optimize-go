@@ -17,75 +17,69 @@ limitations under the License.
 package discovery
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestWellKnownURI(t *testing.T) {
-	baseURL := "http://example.com"
-	name := "foo"
-
-	testCases := []struct {
+	cases := []struct {
 		desc     string
 		id       string
 		name     string
 		expected string
 	}{
 		{
-			desc:     "default",
-			id:       baseURL,
-			name:     "",
-			expected: "http://example.com/.well-known/",
-		},
-		{
-			desc:     "default",
-			id:       baseURL,
-			name:     name,
-			expected: "http://example.com/.well-known/foo",
-		},
-		{
-			desc:     "default",
-			id:       baseURL + "/",
-			name:     name,
-			expected: "http://example.com/.well-known/foo",
-		},
-		{
-			desc:     "default",
-			id:       baseURL + "/x",
-			name:     name,
-			expected: "http://example.com/.well-known/foo/x",
-		},
-		{
-			desc:     "default",
-			id:       "",
-			name:     "",
+			desc:     "empty",
 			expected: "/.well-known/",
 		},
 		{
 			desc:     "default",
-			id:       "",
-			name:     name,
+			id:       "http://example.com",
+			expected: "http://example.com/.well-known/",
+		},
+		{
+			desc:     "named",
+			id:       "http://example.com",
+			name:     "foo",
+			expected: "http://example.com/.well-known/foo",
+		},
+		{
+			desc:     "trailing slash",
+			id:       "http://example.com/",
+			name:     "foo",
+			expected: "http://example.com/.well-known/foo",
+		},
+		{
+			desc:     "relative named",
+			name:     "foo",
 			expected: "/.well-known/foo",
 		},
 		{
-			desc:     "default",
+			desc:     "relative trailing slash",
 			id:       "/",
-			name:     name,
+			name:     "foo",
 			expected: "/.well-known/foo",
 		},
+
+		// NOTE: Where is this behavior defined? It doesn't appear to be documented in RFC 8615.
 		{
-			desc:     "default",
+			desc:     "base path",
+			id:       "http://example.com/x",
+			name:     "foo",
+			expected: "http://example.com/.well-known/foo/x",
+		},
+		{
+			desc:     "relative base path",
 			id:       "/x",
-			name:     name,
+			name:     "foo",
 			expected: "/.well-known/foo/x",
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("%q", tc.desc), func(t *testing.T) {
-			assert.Equal(t, tc.expected, WellKnownURI(tc.id, tc.name))
+	for _, c := range cases {
+		t.Run(c.desc, func(t *testing.T) {
+			assert.Equal(t, c.expected, WellKnownURI(c.id, c.name))
 		})
 	}
 }

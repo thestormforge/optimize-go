@@ -19,51 +19,66 @@ package config
 import (
 	"testing"
 
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-const (
-	// Dummy endpoint names for testing
-	exp             = "/experiments/"
-	expFooBar       = "/experiments/foo_bar"
-	expFooBarTrials = "/experiments/foo_bar/trials/"
-)
-
-func TestRedSkyConfig_Endpoints(t *testing.T) {
-	g := NewWithT(t)
-
+func TestEndpoints_Resolve(t *testing.T) {
 	cfg := &RedSkyConfig{}
-	g.Expect(defaultLoader(cfg)).Should(Succeed())
+	require.NoError(t, defaultLoader(cfg))
+	experimentsEndpoint := &cfg.data.Servers[0].Server.RedSky.ExperimentsEndpoint
 
-	// This is the main use case using the default data
-	rss := &cfg.data.Servers[0].Server.RedSky
-	ep, err := cfg.Endpoints()
-	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(ep.Resolve(exp).String()).To(Equal("https://api.carbonrelay.io/v1/experiments/"))
-	g.Expect(ep.Resolve(expFooBar).String()).To(Equal("https://api.carbonrelay.io/v1/experiments/foo_bar"))
-	g.Expect(ep.Resolve(expFooBarTrials).String()).To(Equal("https://api.carbonrelay.io/v1/experiments/foo_bar/trials/"))
+	cases := []struct {
+		desc                string
+		experimentsEndpoint string
+		endpoint            string
+		expected            string
+	}{
+		{
+			desc:                "default experiments",
+			experimentsEndpoint: *experimentsEndpoint, // Default value hack
+			endpoint:            "/experiments/",
+			expected:            "https://api.carbonrelay.io/v1/experiments/",
+		},
+		{
+			desc:                "default experiment",
+			experimentsEndpoint: *experimentsEndpoint, // Default value hack
+			endpoint:            "/experiments/foo_bar",
+			expected:            "https://api.carbonrelay.io/v1/experiments/foo_bar",
+		},
+		{
+			desc:                "default trials",
+			experimentsEndpoint: *experimentsEndpoint, // Default value hack
+			endpoint:            "/experiments/foo_bar/trials/",
+			expected:            "https://api.carbonrelay.io/v1/experiments/foo_bar/trials/",
+		},
+		{
+			desc:                "explicit endpoint",
+			experimentsEndpoint: "http://example.com/api/experiments/",
+			endpoint:            "/experiments/",
+			expected:            "http://example.com/api/experiments/",
+		},
+		{
+			desc:                "missing trailing slash",
+			experimentsEndpoint: "http://example.com/api/experiments",
+			endpoint:            "/experiments/",
+			expected:            "http://example.com/api/experiments/",
+		},
+		{
+			desc:                "query string",
+			experimentsEndpoint: "http://example.com/api/experiments?foo=bar",
+			endpoint:            "/experiments/",
+			expected:            "http://example.com/api/experiments/?foo=bar",
+		},
+	}
 
-	// Change inside the path
-	rss.ExperimentsEndpoint = "http://example.com/api/experiments/"
-	ep, err = cfg.Endpoints()
-	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(ep.Resolve(exp).String()).To(Equal("http://example.com/api/experiments/"))
-	g.Expect(ep.Resolve(expFooBar).String()).To(Equal("http://example.com/api/experiments/foo_bar"))
-	g.Expect(ep.Resolve(expFooBarTrials).String()).To(Equal("http://example.com/api/experiments/foo_bar/trials/"))
-
-	// Missing trailing slash in the configuration data
-	rss.ExperimentsEndpoint = "http://example.com/api/experiments"
-	ep, err = cfg.Endpoints()
-	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(ep.Resolve(exp).String()).To(Equal("http://example.com/api/experiments/"))
-	g.Expect(ep.Resolve(expFooBar).String()).To(Equal("http://example.com/api/experiments/foo_bar"))
-	g.Expect(ep.Resolve(expFooBarTrials).String()).To(Equal("http://example.com/api/experiments/foo_bar/trials/"))
-
-	// Query string in the configuration data
-	rss.ExperimentsEndpoint = "http://example.com/api/experiments?foo=bar"
-	ep, err = cfg.Endpoints()
-	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(ep.Resolve(exp).String()).To(Equal("http://example.com/api/experiments/?foo=bar"))
-	g.Expect(ep.Resolve(expFooBar).String()).To(Equal("http://example.com/api/experiments/foo_bar?foo=bar"))
-	g.Expect(ep.Resolve(expFooBarTrials).String()).To(Equal("http://example.com/api/experiments/foo_bar/trials/?foo=bar"))
+	for _, c := range cases {
+		t.Run(c.desc, func(t *testing.T) {
+			*experimentsEndpoint = c.experimentsEndpoint
+			ep, err := cfg.Endpoints()
+			if assert.NoError(t, err) {
+				assert.Equal(t, c.expected, ep.Resolve(c.endpoint).String())
+			}
+		})
+	}
 }
