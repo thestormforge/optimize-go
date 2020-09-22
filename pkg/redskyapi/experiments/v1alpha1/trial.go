@@ -17,11 +17,12 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/redskyops/redskyops-go/pkg/redskyapi/experiments/v1alpha1/numstr"
 )
 
 type TrialMeta struct {
@@ -47,7 +48,7 @@ type Assignment struct {
 	// The name of the parameter in the experiment the assignment corresponds to.
 	ParameterName string `json:"parameterName"`
 	// The assigned value of the parameter.
-	Value json.Number `json:"value"`
+	Value numstr.NumberOrString `json:"value"`
 }
 
 type TrialAssignments struct {

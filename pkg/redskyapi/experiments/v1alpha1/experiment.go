@@ -96,8 +96,9 @@ type Constraint struct {
 type ParameterType string
 
 const (
-	ParameterTypeInteger ParameterType = "int"
-	ParameterTypeDouble  ParameterType = "double"
+	ParameterTypeInteger     ParameterType = "int"
+	ParameterTypeDouble      ParameterType = "double"
+	ParameterTypeCategorical ParameterType = "categorical"
 )
 
 type Bounds struct {
@@ -114,7 +115,9 @@ type Parameter struct {
 	// The type of the parameter.
 	Type ParameterType `json:"type"`
 	// The domain of the parameter.
-	Bounds Bounds `json:"bounds"`
+	Bounds *Bounds `json:"bounds,omitempty"`
+	// The discrete values for a categorical parameter.
+	Values []string `json:"values,omitempty"`
 }
 
 type ExperimentMeta struct {
