@@ -74,6 +74,10 @@ type TrialValues struct {
 	Values []Value `json:"values,omitempty"`
 	// Indicator that the trial failed, Values is ignored when true.
 	Failed bool `json:"failed,omitempty"`
+	// Reason is a the machine-readable reason code for the failure, if Failed is true.
+	Reason string `json:"failureReason,omitempty"`
+	// Message is a human-readable explanation of the failure, if Failed is true.
+	Message string `json:"failureMessage,omitempty"`
 }
 
 type TrialStatus string
