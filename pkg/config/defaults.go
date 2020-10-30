@@ -173,6 +173,7 @@ func (d *defaults) applyControllerDefaults() error {
 	for i := range d.cfg.Controllers {
 		ctrl := &d.cfg.Controllers[i].Controller
 
+		defaultString(&ctrl.DeploymentName, "redsky-controller-manager")
 		defaultString(&ctrl.Namespace, "redsky-system")
 	}
 	return nil
