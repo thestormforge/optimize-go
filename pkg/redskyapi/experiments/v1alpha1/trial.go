@@ -65,7 +65,7 @@ type Value struct {
 	MetricName string `json:"metricName"`
 	// The observed value of the metric.
 	Value float64 `json:"value"`
-	//The observed error of the metric.
+	// The observed error of the metric.
 	Error float64 `json:"error,omitempty"`
 }
 
@@ -74,10 +74,10 @@ type TrialValues struct {
 	Values []Value `json:"values,omitempty"`
 	// Indicator that the trial failed, Values is ignored when true.
 	Failed bool `json:"failed,omitempty"`
-	// Reason is a the machine-readable reason code for the failure, if Failed is true.
-	Reason string `json:"failureReason,omitempty"`
-	// Message is a human-readable explanation of the failure, if Failed is true.
-	Message string `json:"failureMessage,omitempty"`
+	// FailureReason is a the machine-readable reason code for the failure, if Failed is true.
+	FailureReason string `json:"failureReason,omitempty"`
+	// FailureMessage is a human-readable explanation of the failure, if Failed is true.
+	FailureMessage string `json:"failureMessage,omitempty"`
 }
 
 type TrialStatus string
