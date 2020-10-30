@@ -134,7 +134,7 @@ type Cluster struct {
 // Controller contains additional controller configuration when working with Red Sky on a specific cluster
 type Controller struct {
 	// DeploymentName is the name of the controller deployment object
-	DeploymentName string `json:"deploymentName,omitempty"` // TODO Use as an instance label?
+	DeploymentName string `json:"deploymentName,omitempty"`
 	// Namespace overrides the default namespace to use during configuration
 	Namespace string `json:"namespace,omitempty"`
 	// RegistrationClientURI is the fully qualified URL of the client configuration endpoint for the controller's client
