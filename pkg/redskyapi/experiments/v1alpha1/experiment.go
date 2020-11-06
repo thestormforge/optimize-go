@@ -52,6 +52,8 @@ type Metric struct {
 	Name string `json:"name"`
 	// The flag indicating this metric should be minimized.
 	Minimize bool `json:"minimize,omitempty"`
+	// The flag indicating this metric is optimized (nil defaults to true).
+	Optimize *bool `json:"optimize,omitempty"`
 }
 
 type ConstraintType string
