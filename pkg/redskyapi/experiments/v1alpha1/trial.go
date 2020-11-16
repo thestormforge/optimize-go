@@ -78,6 +78,10 @@ type TrialValues struct {
 	FailureReason string `json:"failureReason,omitempty"`
 	// FailureMessage is a human-readable explanation of the failure, if Failed is true.
 	FailureMessage string `json:"failureMessage,omitempty"`
+	// StartTime is the time at which the trial was started.
+	StartTime *time.Time `json:"startTime,omitempty"`
+	// CompletionTime is the time at which the trial was completed.
+	CompletionTime *time.Time `json:"completionTime,omitempty"`
 }
 
 type TrialStatus string
