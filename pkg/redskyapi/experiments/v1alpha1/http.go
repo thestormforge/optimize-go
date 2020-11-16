@@ -282,6 +282,14 @@ func (h *httpAPI) ReportTrial(ctx context.Context, u string, vls TrialValues) er
 		vls.Values = nil
 	}
 
+	if vls.StartTime != nil && vls.CompletionTime != nil {
+		*vls.StartTime = vls.StartTime.Round(time.Millisecond).UTC()
+		*vls.CompletionTime = vls.CompletionTime.Round(time.Millisecond).UTC()
+	} else {
+		vls.StartTime = nil
+		vls.CompletionTime = nil
+	}
+
 	req, err := httpNewJSONRequest(http.MethodPost, u, vls)
 	if err != nil {
 		return err
