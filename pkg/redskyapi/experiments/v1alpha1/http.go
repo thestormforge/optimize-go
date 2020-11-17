@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/redskyops/redskyops-go/pkg/redskyapi"
+	"github.com/thestormforge/optimize-go/pkg/redskyapi"
 )
 
 // NewAPI returns a new API implementation for the specified client

@@ -1,4 +1,4 @@
-module github.com/redskyops/redskyops-go
+module github.com/thestormforge/optimize-go
 
 go 1.14
 

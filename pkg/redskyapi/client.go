@@ -23,7 +23,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/redskyops/redskyops-go/pkg/config"
+	"github.com/thestormforge/optimize-go/pkg/config"
 )
 
 // Config exposes the information for configuring a Red Sky Client
