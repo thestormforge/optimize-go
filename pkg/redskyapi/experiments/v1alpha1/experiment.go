@@ -160,6 +160,8 @@ type Experiment struct {
 	DisplayName string `json:"displayName,omitempty"`
 	// The number of observations made for this experiment.
 	Observations int64 `json:"observations,omitempty"`
+	// The target number of observations for this experiment.
+	Budget int64 `json:"budget,omitempty"`
 	// Controls how the optimizer will generate trials.
 	Optimization []Optimization `json:"optimization,omitempty"`
 	// The metrics been optimized in the experiment.
