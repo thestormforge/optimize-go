@@ -67,10 +67,10 @@ func defaultServerRoots(env string, srv *Server) error {
 	// The environment corresponds to deployment details of the proprietary backend
 	switch env {
 	case "production":
-		defaultString(&srv.Identifier, "https://api.carbonrelay.io/v1/")
+		defaultString(&srv.Identifier, "https://api.stormforge.io/v1/")
 		defaultString(&srv.Authorization.Issuer, "https://auth.carbonrelay.io/")
 	case "development":
-		defaultString(&srv.Identifier, "https://api.carbonrelay.dev/v1/")
+		defaultString(&srv.Identifier, "https://api.stormforge.dev/v1/")
 		defaultString(&srv.Authorization.Issuer, "https://auth.carbonrelay.dev/")
 	default:
 		return fmt.Errorf("unknown environment: '%s'", env)
