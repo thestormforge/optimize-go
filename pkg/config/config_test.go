@@ -38,19 +38,19 @@ func TestEndpoints_Resolve(t *testing.T) {
 			desc:                "default experiments",
 			experimentsEndpoint: *experimentsEndpoint, // Default value hack
 			endpoint:            "/experiments/",
-			expected:            "https://api.carbonrelay.io/v1/experiments/",
+			expected:            "https://api.stormforge.io/v1/experiments/",
 		},
 		{
 			desc:                "default experiment",
 			experimentsEndpoint: *experimentsEndpoint, // Default value hack
 			endpoint:            "/experiments/foo_bar",
-			expected:            "https://api.carbonrelay.io/v1/experiments/foo_bar",
+			expected:            "https://api.stormforge.io/v1/experiments/foo_bar",
 		},
 		{
 			desc:                "default trials",
 			experimentsEndpoint: *experimentsEndpoint, // Default value hack
 			endpoint:            "/experiments/foo_bar/trials/",
-			expected:            "https://api.carbonrelay.io/v1/experiments/foo_bar/trials/",
+			expected:            "https://api.stormforge.io/v1/experiments/foo_bar/trials/",
 		},
 		{
 			desc:                "explicit endpoint",
