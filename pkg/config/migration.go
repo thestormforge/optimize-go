@@ -48,21 +48,16 @@ func migrationLoader(cfg *RedSkyConfig) error {
 
 	// This is _really_ legacy at this point, we may want to consider dropping support
 	filename := filepath.Join(os.Getenv("HOME"), ".redsky")
-	name := "default"
-
-	// Use the current cluster name as the default name for controller
-	cmd := exec.Command("kubectl", "config", "view", "--minify", "--output", "jsonpath={.clusters[0].name}")
-	if stdout, err := cmd.Output(); err == nil {
-		name = strings.TrimSpace(string(stdout))
-	}
-
 	lc, err := loadLegacyConfigFile(filename)
-	if err != nil {
+	if err != nil || lc == nil || len(lc.Manager.Environment) == 0 {
 		return err
 	}
 
-	if lc == nil || len(lc.Manager.Environment) == 0 {
-		return nil
+	// Use the current cluster name as the default name for controller
+	name := "default"
+	cmd := exec.Command("kubectl", "config", "view", "--minify", "--output", "jsonpath={.clusters[0].name}")
+	if stdout, err := cmd.Output(); err == nil {
+		name = strings.TrimSpace(string(stdout))
 	}
 
 	apply := func(cfg *Config) {
