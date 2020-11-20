@@ -98,8 +98,8 @@ func (rsc *RedSkyConfig) Write() error {
 		return nil
 	}
 
-	f := file{}
-	if err := f.read(rsc.Filename); err != nil {
+	f := file{filename: rsc.Filename}
+	if err := f.read(); err != nil {
 		return err
 	}
 
@@ -109,7 +109,7 @@ func (rsc *RedSkyConfig) Write() error {
 		}
 	}
 
-	if err := f.write(rsc.Filename); err != nil {
+	if err := f.write(); err != nil {
 		return err
 	}
 

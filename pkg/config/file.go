@@ -34,20 +34,18 @@ const (
 	xdgConfigHomeDefault = ".config"
 	xdgConfigDirsEnv     = "XDG_CONFIG_DIRS"
 	xdgConfigDirsDefault = "/etc/xdg"
-	configFilename       = "redsky/config"
 )
 
 // fileLoader loads a configuration from the currently configured filename
 func fileLoader(cfg *RedSkyConfig) error {
-	f := &file{}
+	f := &file{filename: cfg.Filename}
 
 	// If we are using a configuration file, the filename _must_ be set
-	filename := cfg.Filename
-	if filename == "" {
-		filename, cfg.Filename = f.filename()
+	if f.filename == "" {
+		f.filename, cfg.Filename = configFilename("stormforge/config")
 	}
 
-	if err := f.read(filename); err != nil {
+	if err := f.read(); err != nil {
 		return err
 	}
 
@@ -58,12 +56,13 @@ func fileLoader(cfg *RedSkyConfig) error {
 
 // file represents the data of a configuration file
 type file struct {
-	data Config
+	filename string
+	data     Config
 }
 
 // read will decode YAML or JSON data from the specified file into this configuration file
-func (l *file) read(filename string) error {
-	f, err := os.Open(filename)
+func (l *file) read() error {
+	f, err := os.Open(l.filename)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -81,7 +80,7 @@ func (l *file) read(filename string) error {
 }
 
 // write will encode YAML data from this configuration into the specified file name
-func (l *file) write(filename string) error {
+func (l *file) write() error {
 	output, err := yaml.Marshal(l.data)
 	if err != nil {
 		return err
@@ -89,17 +88,17 @@ func (l *file) write(filename string) error {
 
 	// Create the file (and directories, if necessary). The XDG Base Dir Spec says directories should
 	// be created with 0700 and the file may contain sensitive information so we use 0600 for the file.
-	if err := os.MkdirAll(filepath.Dir(filename), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(l.filename), 0700); err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(filename, output, 0600); err != nil {
+	if err := ioutil.WriteFile(l.filename, output, 0600); err != nil {
 		return err
 	}
 	return nil
 }
 
 // filename finds the configuration file and returns both the current file and where changes should be written
-func (l *file) filename() (string, string) {
+func configFilename(configFilename string) (string, string) {
 	xdgConfigHome := os.Getenv(xdgConfigHomeEnv)
 	if xdgConfigHome == "" {
 		home := os.Getenv(homeEnv)

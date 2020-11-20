@@ -39,6 +39,14 @@ type legacyManager struct {
 
 // migrationLoader will take the meaningful bits from a legacy config file and delete that file once the changes are persisted
 func migrationLoader(cfg *RedSkyConfig) error {
+	// Try to rename the old file to the new location
+	old, _ := configFilename("redsky/config")
+	if err := safeRenameConfig(old, cfg.Filename); err == nil {
+		// It is safe to merge in the contents if the environment loader ONLY does defaults
+		return fileLoader(cfg)
+	}
+
+	// This is _really_ legacy at this point, we may want to consider dropping support
 	filename := filepath.Join(os.Getenv("HOME"), ".redsky")
 	name := "default"
 
@@ -68,6 +76,30 @@ func migrationLoader(cfg *RedSkyConfig) error {
 		return os.Remove(filename)
 	})
 
+	return nil
+}
+
+// safeRenameConfig delegates to `os.Rename`, but only if the destination file does not exist.
+func safeRenameConfig(oldname, newname string) error {
+	// TODO Should we check if parent directories are the same and just rename the directories?
+
+	// Fail if the destination already exists
+	if _, err := os.Lstat(newname); err == nil {
+		return &os.LinkError{Op: "rename", Old: oldname, New: newname, Err: os.ErrExist}
+	}
+
+	// Only create the directory for the new path if the old path exists (otherwise, let os.Rename fail)
+	if _, err := os.Lstat(oldname); err == nil {
+		if err := os.MkdirAll(filepath.Dir(newname), 0700); err != nil {
+			return err
+		}
+	}
+
+	if err := os.Rename(oldname, newname); err != nil {
+		return err
+	}
+
+	_ = os.Remove(filepath.Dir(oldname))
 	return nil
 }
 
