@@ -245,17 +245,12 @@ func (ri *RevocationInformation) String() string {
 	return ri.authorizationName
 }
 
-// RemoveAuthorization returns a configuration change to remove the authorization associated with the revocation information
+// RemoveAuthorization returns a configuration change to clear the credentials for an authorization.
 func (ri *RevocationInformation) RemoveAuthorization() Change {
 	return func(cfg *Config) error {
-		for i := range cfg.Contexts {
-			if cfg.Contexts[i].Context.Authorization == ri.authorizationName {
-				cfg.Contexts[i].Context.Authorization = ""
-			}
-		}
 		for i := range cfg.Authorizations {
 			if cfg.Authorizations[i].Name == ri.authorizationName {
-				cfg.Authorizations = append(cfg.Authorizations[:i], cfg.Authorizations[i+1:]...)
+				cfg.Authorizations[i].Authorization.Credential = Credential{}
 				return nil
 			}
 		}
