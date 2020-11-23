@@ -66,25 +66,20 @@ func bootstrapClusterName() string {
 	return "default"
 }
 
-// applicationRoots returns the base URLs of the UI and the documentation.
-func applicationRoots(baseURL string) (base string, docs string, err error) {
+// applicationRoot returns the base URL of the UI.
+func applicationRoot(baseURL string) (base string, err error) {
 	b, err := url.Parse(baseURL)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	if b.RawQuery != "" {
-		return "", "", fmt.Errorf("query component is not allowed: %s", baseURL)
+		return "", fmt.Errorf("query component is not allowed: %s", baseURL)
 	}
 	if b.Fragment != "" {
-		return "", "", fmt.Errorf("fragment component is not allowed: %s", baseURL)
+		return "", fmt.Errorf("fragment component is not allowed: %s", baseURL)
 	}
 	b.Path = strings.TrimRight(b.Path, "/")
-
-	d := *b
-	d.Path = ""
-	d.Host = "docs." + strings.TrimPrefix(d.Host, "app.")
-
-	return b.String(), d.String(), nil
+	return b.String(), nil
 }
 
 // defaultString overwrites an empty s1 with the value of s2
@@ -121,7 +116,7 @@ func defaultServerEndpoints(srv *Server) error {
 	if err != nil {
 		return err
 	}
-	base, docs, err := applicationRoots(srv.Application.BaseURL)
+	base, err := applicationRoot(srv.Application.BaseURL)
 	if err != nil {
 		return err
 	}
@@ -140,7 +135,7 @@ func defaultServerEndpoints(srv *Server) error {
 	defaultString(&srv.Authorization.JSONWebKeySetURI, discovery.WellKnownURI(issuer, "jwks.json"))
 
 	// Apply the application defaults
-	defaultString(&srv.Application.AuthSuccessEndpoint, docs+"/api/auth_success/")
+	defaultString(&srv.Application.AuthSuccessEndpoint, "https://docs.stormforge.io/api/auth_success/")
 	defaultString(&srv.Application.ExperimentsEndpoint, base+"/experiments")
 
 	// Special case for the registration service which is actually part of the accounts API
