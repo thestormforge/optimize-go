@@ -59,6 +59,8 @@ type Server struct {
 	API APIServer `json:"api"`
 	// Authorization contains the authorization server metadata necessary to access this server
 	Authorization AuthorizationServer `json:"authorization"`
+	// Application contains information about the public facing user interface.
+	Application ApplicationServer `json:"application"`
 }
 
 // APIServer is the API server metadata
@@ -67,6 +69,16 @@ type APIServer struct {
 	ExperimentsEndpoint string `json:"experiments_endpoint,omitempty"`
 	// AccountsEndpoint is the URL of the accounts endpoint
 	AccountsEndpoint string `json:"accounts_endpoint,omitempty"`
+}
+
+// ApplicationServer is the user facing application.
+type ApplicationServer struct {
+	// BaseURL is the main entrypoint to the application.
+	BaseURL string `json:"base_url,omitempty"`
+	// AuthSuccessEndpoint is URL to direct the user to after a successful login.
+	AuthSuccessEndpoint string `json:"auth_success_endpoint,omitempty"`
+	// ExperimentsEndpoint is the URL of the experiments UI.
+	ExperimentsEndpoint string `json:"experiments_endpoint,omitempty"`
 }
 
 // NOTE: AuthorizationServer is defined by https://tools.ietf.org/html/rfc8414 do not add non-standard fields!
@@ -278,9 +290,14 @@ func (srv *Server) MarshalJSON() ([]byte, error) {
 	if (APIServer{}) == srv.API {
 		api = nil
 	}
+	app := &srv.Application
+	if (ApplicationServer{}) == srv.Application {
+		app = nil
+	}
 	return json.Marshal(&struct {
 		*S
 		Authorization *AuthorizationServer `json:"authorization,omitempty"`
 		API           *APIServer           `json:"api,omitempty"`
-	}{S: (*S)(srv), Authorization: az, API: api})
+		Application   *ApplicationServer   `json:"application,omitempty"`
+	}{S: (*S)(srv), Authorization: az, API: api, Application: app})
 }

@@ -48,6 +48,9 @@ func mergeServer(s1, s2 *Server) {
 	mergeString(&s1.Authorization.RegistrationEndpoint, s2.Authorization.RegistrationEndpoint)
 	mergeString(&s1.Authorization.DeviceAuthorizationEndpoint, s2.Authorization.DeviceAuthorizationEndpoint)
 	mergeString(&s1.Authorization.JSONWebKeySetURI, s2.Authorization.JSONWebKeySetURI)
+	mergeString(&s1.Application.BaseURL, s2.Application.BaseURL)
+	mergeString(&s1.Application.AuthSuccessEndpoint, s2.Application.AuthSuccessEndpoint)
+	mergeString(&s1.Application.ExperimentsEndpoint, s2.Application.ExperimentsEndpoint)
 }
 
 func mergeAuthorization(a1, a2 *Authorization) {
