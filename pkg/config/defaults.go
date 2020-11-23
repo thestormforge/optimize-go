@@ -31,12 +31,10 @@ func defaultLoader(cfg *RedSkyConfig) error {
 	// NOTE: Any errors reported here are effectively fatal errors for a program that needs configuration since they will
 	// not be able to load the configuration. Errors should be limited to unusable configurations.
 
-	d := &defaults{cfg: &cfg.data, env: cfg.Environment(), clusterName: "default"}
-
-	// This constitutes a "bootstrap" invocation of "kubectl", we can't use the configuration because we are actually creating it
-	cmd := exec.Command("kubectl", "config", "view", "--minify", "--output", "jsonpath={.clusters[0].name}")
-	if stdout, err := cmd.Output(); err == nil {
-		d.clusterName = strings.TrimSpace(string(stdout))
+	d := &defaults{
+		cfg:         &cfg.data,
+		env:         cfg.Environment(),
+		clusterName: bootstrapClusterName(),
 	}
 
 	d.addDefaultObjects()
@@ -54,6 +52,18 @@ func defaultLoader(cfg *RedSkyConfig) error {
 		return err
 	}
 	return nil
+}
+
+// bootstrapClusterName attempts to return the currently configured Kubernetes cluster name. This never returns an empty string.
+func bootstrapClusterName() string {
+	// This constitutes a "bootstrap" invocation of "kubectl", we can't use the configuration because we are actually creating it
+	cmd := exec.Command("kubectl", "config", "view", "--minify", "--output", "jsonpath={.clusters[0].name}")
+	if stdout, err := cmd.Output(); err == nil {
+		if clusterName := strings.TrimSpace(string(stdout)); clusterName != "" {
+			return clusterName
+		}
+	}
+	return "default"
 }
 
 // defaultString overwrites an empty s1 with the value of s2
@@ -89,9 +99,9 @@ func defaultServerEndpoints(srv *Server) error {
 		return err
 	}
 
-	// Apply the Red Sky defaults
-	defaultString(&srv.RedSky.ExperimentsEndpoint, api+"/experiments/")
-	defaultString(&srv.RedSky.AccountsEndpoint, api+"/accounts/")
+	// Apply the API defaults
+	defaultString(&srv.API.ExperimentsEndpoint, api+"/experiments/")
+	defaultString(&srv.API.AccountsEndpoint, api+"/accounts/")
 
 	// Apply the authorization defaults
 	// TODO We should try discovery, e.g. fetch `discovery.WellKnownURI(issuer, "oauth-authorization-server")` and _merge_ (not _default_ since the server reported values win)
@@ -103,7 +113,7 @@ func defaultServerEndpoints(srv *Server) error {
 	defaultString(&srv.Authorization.JSONWebKeySetURI, discovery.WellKnownURI(issuer, "jwks.json"))
 
 	// Special case for the registration service which is actually part of the accounts API
-	if u, err := url.Parse(srv.RedSky.AccountsEndpoint); err != nil {
+	if u, err := url.Parse(srv.API.AccountsEndpoint); err != nil {
 		defaultString(&srv.Authorization.RegistrationEndpoint, api+"/accounts/clients")
 	} else {
 		u.Path = strings.TrimRight(u.Path, "/") + "/clients"

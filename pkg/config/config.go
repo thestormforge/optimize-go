@@ -98,8 +98,8 @@ func (rsc *RedSkyConfig) Write() error {
 		return nil
 	}
 
-	f := file{}
-	if err := f.read(rsc.Filename); err != nil {
+	f := file{filename: rsc.Filename}
+	if err := f.read(); err != nil {
 		return err
 	}
 
@@ -109,7 +109,7 @@ func (rsc *RedSkyConfig) Write() error {
 		}
 	}
 
-	if err := f.write(rsc.Filename); err != nil {
+	if err := f.write(); err != nil {
 		return err
 	}
 
@@ -120,12 +120,7 @@ func (rsc *RedSkyConfig) Write() error {
 // Merge combines the supplied data with what is already present in this client configuration; unlike Update, changes
 // will not be persisted on the next write
 func (rsc *RedSkyConfig) Merge(data *Config) {
-	mergeServers(&rsc.data, data.Servers)
-	mergeAuthorizations(&rsc.data, data.Authorizations)
-	mergeClusters(&rsc.data, data.Clusters)
-	mergeControllers(&rsc.data, data.Controllers)
-	mergeContexts(&rsc.data, data.Contexts)
-	mergeString(&rsc.data.CurrentContext, data.CurrentContext)
+	mergeConfig(&rsc.data, data)
 }
 
 // Reader returns a configuration reader for accessing information from the configuration
@@ -171,10 +166,10 @@ func (rsc *RedSkyConfig) Endpoints() (Endpoints, error) {
 	}
 
 	ep := Endpoints(make(map[string]*url.URL, 2))
-	if err := add(ep, "/experiments/", srv.RedSky.ExperimentsEndpoint); err != nil {
+	if err := add(ep, "/experiments/", srv.API.ExperimentsEndpoint); err != nil {
 		return nil, err
 	}
-	if err := add(ep, "/accounts/", srv.RedSky.AccountsEndpoint); err != nil {
+	if err := add(ep, "/accounts/", srv.API.AccountsEndpoint); err != nil {
 		return nil, err
 	}
 	return ep, nil

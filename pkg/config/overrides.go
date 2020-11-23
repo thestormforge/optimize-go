@@ -55,7 +55,7 @@ func (o *overrideReader) Server(name string) (Server, error) {
 
 	if o.overrides.ServerIdentifier != "" {
 		mergeString(&srv.Identifier, o.overrides.ServerIdentifier)
-		srv.RedSky = RedSkyServer{}
+		srv.API = APIServer{}
 		srv.Authorization.RegistrationEndpoint = ""
 	}
 
