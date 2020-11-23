@@ -240,17 +240,12 @@ func (ri *RevocationInformation) String() string {
 	return ri.authorizationName
 }
 
-// RemoveAuthorization returns a configuration change to remove the authorization associated with the revocation information
+// RemoveAuthorization returns a configuration change to clear the credentials for an authorization.
 func (ri *RevocationInformation) RemoveAuthorization() Change {
 	return func(cfg *Config) error {
-		for i := range cfg.Contexts {
-			if cfg.Contexts[i].Context.Authorization == ri.authorizationName {
-				cfg.Contexts[i].Context.Authorization = ""
-			}
-		}
 		for i := range cfg.Authorizations {
 			if cfg.Authorizations[i].Name == ri.authorizationName {
-				cfg.Authorizations = append(cfg.Authorizations[:i], cfg.Authorizations[i+1:]...)
+				cfg.Authorizations[i].Authorization.Credential = Credential{}
 				return nil
 			}
 		}
@@ -259,31 +254,27 @@ func (ri *RevocationInformation) RemoveAuthorization() Change {
 }
 
 // RevocationInfo returns the information necessary to revoke an authorization entry from the configuration
-func (rsc *RedSkyConfig) RevocationInfo(name string) (*RevocationInformation, error) {
-	var authorizationName, serverName string
-	for i := range rsc.data.Contexts {
-		// Allow a blank name for the authorization to revoke the current context authorization
-		if (name != "" && name == rsc.data.Contexts[i].Context.Authorization) ||
-			(name == "" && rsc.data.Contexts[i].Name == rsc.data.CurrentContext) {
-			authorizationName = rsc.data.Contexts[i].Context.Authorization
-			serverName = rsc.data.Contexts[i].Context.Server
-		}
+func (rsc *RedSkyConfig) RevocationInfo() (*RevocationInformation, error) {
+	r := rsc.Reader()
+
+	authorizationName, err := r.AuthorizationName(r.ContextName())
+	if err != nil {
+		return nil, err
+	}
+	az, err := r.Authorization(authorizationName)
+	if err != nil {
+		return nil, err
 	}
 
-	az := findAuthorization(rsc.data.Authorizations, authorizationName)
-	if authorizationName == "" || az == nil {
-		return nil, fmt.Errorf("unknown authorization: %s", name)
-	}
-
-	srv := findServer(rsc.data.Servers, serverName)
-	if serverName == "" || srv == nil {
-		return nil, fmt.Errorf("unable to find server for authorization: %s", authorizationName)
+	srv, err := CurrentServer(r)
+	if err != nil {
+		return nil, err
 	}
 
 	return &RevocationInformation{
 		RevocationURL:     srv.Authorization.RevocationEndpoint,
-		ClientID:          rsc.clientID(srv),
-		Authorization:     *az,
+		ClientID:          rsc.clientID(&srv),
+		Authorization:     az,
 		authorizationName: authorizationName,
 	}, nil
 }
