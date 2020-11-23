@@ -27,10 +27,20 @@ func mergeString(s1 *string, s2 string) {
 
 // Merge elements
 
+func mergeConfig(c1, c2 *Config) {
+	mergeServers(c1, c2.Servers)
+	mergeAuthorizations(c1, c2.Authorizations)
+	mergeClusters(c1, c2.Clusters)
+	mergeControllers(c1, c2.Controllers)
+	mergeContexts(c1, c2.Contexts)
+	mergeString(&c1.CurrentContext, c2.CurrentContext)
+	mergeString(&c1.Environment, c2.Environment)
+}
+
 func mergeServer(s1, s2 *Server) {
 	mergeString(&s1.Identifier, s2.Identifier)
-	mergeString(&s1.RedSky.AccountsEndpoint, s2.RedSky.AccountsEndpoint)
-	mergeString(&s1.RedSky.ExperimentsEndpoint, s2.RedSky.ExperimentsEndpoint)
+	mergeString(&s1.API.AccountsEndpoint, s2.API.AccountsEndpoint)
+	mergeString(&s1.API.ExperimentsEndpoint, s2.API.ExperimentsEndpoint)
 	mergeString(&s1.Authorization.Issuer, s2.Authorization.Issuer)
 	mergeString(&s1.Authorization.AuthorizationEndpoint, s2.Authorization.AuthorizationEndpoint)
 	mergeString(&s1.Authorization.TokenEndpoint, s2.Authorization.TokenEndpoint)

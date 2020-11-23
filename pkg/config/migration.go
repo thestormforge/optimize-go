@@ -18,101 +18,122 @@ package config
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 
-	yaml2 "k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
-
-// legacyConfig contains only the parts of the legacy configuration object that we can migrate; the address and
-// credentials were all invalidated when the remote server switched to a single endpoint
-type legacyConfig struct {
-	Manager legacyManager `json:"manager"`
-}
-
-// legacyManager shares the current representation to make migration easier
-type legacyManager struct {
-	Environment []ControllerEnvVar `json:"env"`
-}
 
 // migrationLoader will take the meaningful bits from a legacy config file and delete that file once the changes are persisted
 func migrationLoader(cfg *RedSkyConfig) error {
-	// Try to rename the old file to the new location
-	old, _ := configFilename("redsky/config")
-	if err := safeRenameConfig(old, cfg.Filename); err == nil {
-		// It is safe to merge in the contents if the environment loader ONLY does defaults
-		return fileLoader(cfg)
-	}
-
-	// This is _really_ legacy at this point, we may want to consider dropping support
-	filename := filepath.Join(os.Getenv("HOME"), ".redsky")
-	lc, err := loadLegacyConfigFile(filename)
-	if err != nil || lc == nil || len(lc.Manager.Environment) == 0 {
+	// Migrate the really old `~/.redsky` file
+	if err := migrateDotRedSky(cfg); err != nil {
 		return err
 	}
 
-	// Use the current cluster name as the default name for controller
-	name := "default"
-	cmd := exec.Command("kubectl", "config", "view", "--minify", "--output", "jsonpath={.clusters[0].name}")
-	if stdout, err := cmd.Output(); err == nil {
-		name = strings.TrimSpace(string(stdout))
+	// Migrate the old `~/.config/redsky/config` file
+	if err := migrateXDGRedSky(cfg); err != nil {
+		return err
 	}
 
-	apply := func(cfg *Config) {
-		mergeControllers(cfg, []NamedController{{Name: name, Controller: Controller{Env: lc.Manager.Environment}}})
+	return nil
+}
+
+// migrateDotRedSky migrates the really old '~/.redsky' file into the supplied configuration.
+func migrateDotRedSky(cfg *RedSkyConfig) error {
+	filename := filepath.Join(os.Getenv("HOME"), ".redsky")
+
+	f, err := os.Open(filename)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	defer func() { _ = f.Close() }()
+
+	// legacyConfig contains only the parts of the legacy configuration object that we can migrate; the address and
+	// credentials were all invalidated when the remote server switched to a single endpoint
+	legacyConfig := &struct {
+		Manager struct {
+			Env []ControllerEnvVar `json:"env"`
+		} `json:"manager"`
+	}{}
+
+	if err := yaml.NewYAMLOrJSONDecoder(bufio.NewReader(f), 4096).Decode(legacyConfig); err != nil {
+		return err
+	}
+	if len(legacyConfig.Manager.Env) == 0 {
+		return nil
+	}
+
+	legacyControllers := []NamedController{
+		{Name: bootstrapClusterName(), Controller: Controller{Env: legacyConfig.Manager.Env}},
 	}
 
 	// We can't use cfg.Update here because we only want to remove the file as part of cfg.Write
-	apply(&cfg.data)
+	mergeControllers(&cfg.data, legacyControllers)
 	cfg.unpersisted = append(cfg.unpersisted, func(cfg *Config) error {
-		apply(cfg)
+		mergeControllers(cfg, legacyControllers)
 		return os.Remove(filename)
 	})
 
 	return nil
 }
 
-// safeRenameConfig delegates to `os.Rename`, but only if the destination file does not exist.
-func safeRenameConfig(oldname, newname string) error {
-	// TODO Should we check if parent directories are the same and just rename the directories?
+// migrateXDGRedSky migrates the old '~/.config/redsky/config' file into the supplied configuration.
+func migrateXDGRedSky(cfg *RedSkyConfig) error {
+	filename, _ := configFilename("redsky/config")
 
-	// Fail if the destination already exists
-	if _, err := os.Lstat(newname); err == nil {
-		return &os.LinkError{Op: "rename", Old: oldname, New: newname, Err: os.ErrExist}
-	}
-
-	// Only create the directory for the new path if the old path exists (otherwise, let os.Rename fail)
-	if _, err := os.Lstat(oldname); err == nil {
-		if err := os.MkdirAll(filepath.Dir(newname), 0700); err != nil {
-			return err
-		}
-	}
-
-	if err := os.Rename(oldname, newname); err != nil {
-		return err
-	}
-
-	_ = os.Remove(filepath.Dir(oldname))
-	return nil
-}
-
-// loadLegacyConfigFile will read the specified file into the legacy configuration
-func loadLegacyConfigFile(filename string) (*legacyConfig, error) {
 	f, err := os.Open(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil
+			return nil
 		}
-		return nil, err
+		return err
 	}
-	lc := &legacyConfig{}
-	if err = yaml2.NewYAMLOrJSONDecoder(bufio.NewReader(f), 4096).Decode(lc); err != nil {
-		return nil, err
+	defer func() { _ = f.Close() }()
+
+	// The old file was basically the same as the new file with one exception: the name of the API server section. We
+	// need to decode into an unstructured type so we can perform the necessary rename.
+	legacyConfig := map[string]interface{}{}
+
+	if err := yaml.NewYAMLOrJSONDecoder(bufio.NewReader(f), 4096).Decode(&legacyConfig); err != nil {
+		return err
 	}
-	if err = f.Close(); err != nil {
-		return nil, err
+
+	if servers, ok := legacyConfig["servers"].([]interface{}); ok {
+		for i := range servers {
+			if namedServer, ok := servers[i].(map[string]interface{}); ok {
+				if server, ok := namedServer["server"].(map[string]interface{}); ok {
+					if rs, ok := server["redsky"]; ok {
+						server["api"] = rs
+					}
+				}
+			}
+		}
 	}
-	return lc, nil
+
+	// Now that the unstructured data is in the right format we can round trip it into the correct structure
+	data := &Config{}
+	if b, err := json.Marshal(legacyConfig); err != nil {
+		return err
+	} else if err := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(b), 4096).Decode(data); err != nil {
+		return err
+	}
+
+	// We can't use cfg.Update here because we only want to remove the file as part of cfg.Write
+	mergeConfig(&cfg.data, data)
+	cfg.unpersisted = append(cfg.unpersisted, func(cfg *Config) error {
+		mergeConfig(cfg, data)
+		if err := os.Remove(filename); err != nil {
+			return err
+		}
+		_ = os.Remove(filepath.Dir(filename))
+		return nil
+	})
+
+	return nil
 }

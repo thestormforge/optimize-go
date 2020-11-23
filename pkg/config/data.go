@@ -55,14 +55,14 @@ type Server struct {
 	// may be used to resolve ".well-known" locations, used as an authorization audience, or used as a common base URL
 	// when determining default endpoint addresses. The URL must not have any query or fragment components.
 	Identifier string `json:"identifier"`
-	// RedSky contains the Red Sky server metadata necessary to access this server
-	RedSky RedSkyServer `json:"redsky"`
+	// API contains the API server metadata necessary to access the programmatic interface.
+	API APIServer `json:"api"`
 	// Authorization contains the authorization server metadata necessary to access this server
 	Authorization AuthorizationServer `json:"authorization"`
 }
 
-// RedSkyServer is the API server metadata
-type RedSkyServer struct {
+// APIServer is the API server metadata
+type APIServer struct {
 	// ExperimentsEndpoint is the URL of the experiments endpoint
 	ExperimentsEndpoint string `json:"experiments_endpoint,omitempty"`
 	// AccountsEndpoint is the URL of the accounts endpoint
@@ -270,17 +270,17 @@ func (c *Credential) MarshalJSON() ([]byte, error) {
 // MarshalJSON omits empty structs
 func (srv *Server) MarshalJSON() ([]byte, error) {
 	type S Server
-	as := &srv.Authorization
+	az := &srv.Authorization
 	if (AuthorizationServer{}) == srv.Authorization {
-		as = nil
+		az = nil
 	}
-	rss := &srv.RedSky
-	if (RedSkyServer{}) == srv.RedSky {
-		rss = nil
+	api := &srv.API
+	if (APIServer{}) == srv.API {
+		api = nil
 	}
 	return json.Marshal(&struct {
 		*S
 		Authorization *AuthorizationServer `json:"authorization,omitempty"`
-		RedSky        *RedSkyServer        `json:"redsky,omitempty"`
-	}{S: (*S)(srv), Authorization: as, RedSky: rss})
+		API           *APIServer           `json:"api,omitempty"`
+	}{S: (*S)(srv), Authorization: az, API: api})
 }
