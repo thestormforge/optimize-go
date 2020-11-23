@@ -66,6 +66,27 @@ func bootstrapClusterName() string {
 	return "default"
 }
 
+// applicationRoots returns the base URLs of the UI and the documentation.
+func applicationRoots(baseURL string) (base string, docs string, err error) {
+	b, err := url.Parse(baseURL)
+	if err != nil {
+		return "", "", err
+	}
+	if b.RawQuery != "" {
+		return "", "", fmt.Errorf("query component is not allowed: %s", baseURL)
+	}
+	if b.Fragment != "" {
+		return "", "", fmt.Errorf("fragment component is not allowed: %s", baseURL)
+	}
+	b.Path = strings.TrimRight(b.Path, "/")
+
+	d := *b
+	d.Path = ""
+	d.Host = "docs." + strings.TrimPrefix(d.Host, "app.")
+
+	return b.String(), d.String(), nil
+}
+
 // defaultString overwrites an empty s1 with the value of s2
 func defaultString(s1 *string, s2 string) {
 	if *s1 == "" {
@@ -79,9 +100,11 @@ func defaultServerRoots(env string, srv *Server) error {
 	case "production":
 		defaultString(&srv.Identifier, "https://api.stormforge.io/v1/")
 		defaultString(&srv.Authorization.Issuer, "https://auth.carbonrelay.io/")
+		defaultString(&srv.Application.BaseURL, "https://app.stormforge.io/")
 	case "development":
 		defaultString(&srv.Identifier, "https://api.stormforge.dev/v1/")
 		defaultString(&srv.Authorization.Issuer, "https://auth.carbonrelay.dev/")
+		defaultString(&srv.Application.BaseURL, "https://app.stormforge.dev/")
 	default:
 		return fmt.Errorf("unknown environment: '%s'", env)
 	}
@@ -98,6 +121,10 @@ func defaultServerEndpoints(srv *Server) error {
 	if err != nil {
 		return err
 	}
+	base, docs, err := applicationRoots(srv.Application.BaseURL)
+	if err != nil {
+		return err
+	}
 
 	// Apply the API defaults
 	defaultString(&srv.API.ExperimentsEndpoint, api+"/experiments/")
@@ -111,6 +138,10 @@ func defaultServerEndpoints(srv *Server) error {
 	// defaultString(&srv.Authorization.RegistrationEndpoint, issuer+"/oauth/register")
 	defaultString(&srv.Authorization.DeviceAuthorizationEndpoint, issuer+"/oauth/device/code")
 	defaultString(&srv.Authorization.JSONWebKeySetURI, discovery.WellKnownURI(issuer, "jwks.json"))
+
+	// Apply the application defaults
+	defaultString(&srv.Application.AuthSuccessEndpoint, docs+"/api/auth_success/")
+	defaultString(&srv.Application.ExperimentsEndpoint, base+"/experiments")
 
 	// Special case for the registration service which is actually part of the accounts API
 	if u, err := url.Parse(srv.API.AccountsEndpoint); err != nil {
