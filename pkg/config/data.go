@@ -299,5 +299,5 @@ func (srv *Server) MarshalJSON() ([]byte, error) {
 		Authorization *AuthorizationServer `json:"authorization,omitempty"`
 		API           *APIServer           `json:"api,omitempty"`
 		Application   *ApplicationServer   `json:"application,omitempty"`
-	}{S: (*S)(srv), Authorization: as, API: api, Application: app})
+	}{S: (*S)(srv), Authorization: az, API: api, Application: app})
 }
