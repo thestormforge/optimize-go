@@ -32,13 +32,13 @@ type ExperimentName interface {
 
 // NewExperimentName returns an experiment name for a given string
 func NewExperimentName(n string) ExperimentName {
-	return experimentName{name: n}
+	return experimentName(n)
 }
 
-type experimentName struct{ name string }
+type experimentName string
 
-func (n experimentName) Name() string   { return n.name }
-func (n experimentName) String() string { return n.name }
+func (n experimentName) Name() string   { return string(n) }
+func (n experimentName) String() string { return string(n) }
 
 type Optimization struct {
 	// The name of the optimization parameter.
