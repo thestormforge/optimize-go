@@ -72,10 +72,12 @@ type httpClient struct {
 	endpoints func(string) *url.URL
 }
 
+// URL resolves an endpoint to a fully qualified URL.
 func (c *httpClient) URL(ep string) *url.URL {
 	return c.endpoints(ep)
 }
 
+// Do executes an HTTP request using this client and the supplied context.
 func (c *httpClient) Do(ctx context.Context, req *http.Request) (*http.Response, []byte, error) {
 	if ctx != nil {
 		req = req.WithContext(ctx)

@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -150,6 +151,14 @@ func (m *ExperimentMeta) SetLink(rel, link string) {
 	if m.NextTrialURL == "" && strings.ToLower(rel) == "https://carbonrelay.com/rel/nexttrial" {
 		m.NextTrialURL = link
 	}
+}
+func (m *ExperimentMeta) Headers() http.Header {
+	h := metaMarshal("", m.LastModified)
+	metaMarshalLink(h, relationSelf, m.SelfURL)
+	metaMarshalLink(h, relationTrials, m.TrialsURL)
+	metaMarshalLink(h, relationNextTrial, m.NextTrialURL)
+	metaMarshalLink(h, relationLabels, m.LabelsURL)
+	return h
 }
 
 // Experiment combines the search space, outcomes and optimization configuration

@@ -493,3 +493,23 @@ func metaUnmarshal(header http.Header, meta Meta) {
 		}
 	}
 }
+
+// metaMarshal is for reconstructing HTTP headers from the unmarshalled metadata.
+func metaMarshal(location string, lastModified time.Time) http.Header {
+	h := make(http.Header)
+	if location != "" {
+		h.Set("Location", location)
+	}
+	if !lastModified.IsZero() {
+		h.Set("Last-Modified", lastModified.UTC().Format(http.TimeFormat))
+	}
+	return h
+}
+
+// metaMarshalLink adds a non-empty link the HTTP headers.
+func metaMarshalLink(h http.Header, rel, link string) {
+	if link == "" {
+		return
+	}
+	h.Add("Link", fmt.Sprintf(`<%s>;rel=%q`, link, rel))
+}
