@@ -22,15 +22,12 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-
-	"github.com/thestormforge/optimize-go/pkg/config"
 )
 
 // Config exposes the information for configuring a Red Sky Client
 type Config interface {
-	// URL returns the location of the specified endpoint
-	Endpoints() (config.Endpoints, error)
-
+	// Endpoints returns a resolver for the location of the specified endpoint.
+	Endpoints() (func(string) *url.URL, error)
 	// Authorize returns a transport that applies the authorization defined by this configuration. The
 	// supplied context is used for any additional requests necessary to perform authentication. If this
 	// configuration does not define any authorization details, the supplied transport may be returned
@@ -72,13 +69,15 @@ func NewClient(ctx context.Context, cfg Config, transport http.RoundTripper) (Cl
 
 type httpClient struct {
 	client    http.Client
-	endpoints config.Endpoints
+	endpoints func(string) *url.URL
 }
 
+// URL resolves an endpoint to a fully qualified URL.
 func (c *httpClient) URL(ep string) *url.URL {
-	return c.endpoints.Resolve(ep)
+	return c.endpoints(ep)
 }
 
+// Do executes an HTTP request using this client and the supplied context.
 func (c *httpClient) Do(ctx context.Context, req *http.Request) (*http.Response, []byte, error) {
 	if ctx != nil {
 		req = req.WithContext(ctx)
