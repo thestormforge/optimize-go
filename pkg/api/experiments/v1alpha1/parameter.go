@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/thestormforge/optimize-go/pkg/redskyapi/experiments/v1alpha1/numstr"
+	"github.com/thestormforge/optimize-go/pkg/api/experiments/v1alpha1/numstr"
 )
 
 // LowerBound attempts to return the lower bound for this parameter.
