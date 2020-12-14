@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/thestormforge/optimize-go/pkg/redskyapi/experiments/v1alpha1/numstr"
+	"github.com/thestormforge/optimize-go/pkg/api/experiments/v1alpha1/numstr"
 )
 
 type TrialMeta struct {

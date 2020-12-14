@@ -27,16 +27,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/thestormforge/optimize-go/pkg/redskyapi"
+	"github.com/thestormforge/optimize-go/pkg/api"
 )
 
 // NewAPI returns a new API implementation for the specified client
-func NewAPI(c redskyapi.Client) API {
+func NewAPI(c api.Client) API {
 	return &httpAPI{client: c}
 }
 
 type httpAPI struct {
-	client redskyapi.Client
+	client api.Client
 }
 
 func (h *httpAPI) Options(ctx context.Context) (ServerMeta, error) {

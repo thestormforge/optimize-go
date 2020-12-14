@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package redskyapi
+package api
 
 import (
 	"context"
@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-// Config exposes the information for configuring a Red Sky Client
+// Config exposes the information for configuring an API Client.
 type Config interface {
 	// Endpoints returns a resolver for the location of the specified endpoint.
 	Endpoints() (func(string) *url.URL, error)
@@ -35,7 +35,7 @@ type Config interface {
 	Authorize(ctx context.Context, transport http.RoundTripper) (http.RoundTripper, error)
 }
 
-// Client is used to handle interactions with the Red Sky API Server
+// Client is used to handle interactions with the API Server.
 type Client interface {
 	// URL returns the location of the specified endpoint
 	URL(endpoint string) *url.URL
@@ -43,7 +43,7 @@ type Client interface {
 	Do(context.Context, *http.Request) (*http.Response, []byte, error)
 }
 
-// NewClient returns a new client for accessing Red Sky APIs; the supplied context is used for authentication/authorization
+// NewClient returns a new client for accessing API server; the supplied context is used for authentication/authorization
 // requests and the supplied transport (which may be nil in the case of the default transport) is used for all requests made
 // to the API server.
 func NewClient(ctx context.Context, cfg Config, transport http.RoundTripper) (Client, error) {
