@@ -1,10 +1,9 @@
 module github.com/thestormforge/optimize-go
 
-go 1.14
+go 1.15
 
 require (
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/lestrrat-go/jwx v0.9.1
+	github.com/lestrrat-go/jwx v1.0.6
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/stretchr/testify v1.6.1
 	golang.org/x/net v0.0.0-20200904194848-62affa334b73

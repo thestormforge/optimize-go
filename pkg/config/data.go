@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/lestrrat-go/jwx/jwt"
 )
 
 // NOTE: Configuration JSON names in and below Server and Authorization use snake_case for compatibility with OAuth 2.0 specifications
@@ -254,9 +254,8 @@ func (c *Credential) MarshalJSON() ([]byte, error) {
 		// Override the access token with the decoded JWT claims
 		accessToken := interface{}(c.TokenCredential.AccessToken)
 		if DecodeJWT {
-			mc := jwt.MapClaims{}
-			if _, _, err := new(jwt.Parser).ParseUnverified(c.TokenCredential.AccessToken, mc); err == nil {
-				accessToken = mc
+			if tok, err := jwt.ParseString(c.TokenCredential.AccessToken); err == nil {
+				accessToken = tok
 			}
 		}
 
