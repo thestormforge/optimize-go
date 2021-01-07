@@ -24,7 +24,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/thestormforge/optimize-go/pkg/oauth2/authorizationcode"
 	"github.com/thestormforge/optimize-go/pkg/oauth2/devicecode"
 	"github.com/thestormforge/optimize-go/pkg/oauth2/registration"
@@ -398,17 +397,6 @@ func (rsc *RedSkyConfig) tokenSource(ctx context.Context) (oauth2.TokenSource, e
 	}
 
 	return nil, nil
-}
-
-// PublicKey attempts to fetch the JWKS of the current server
-func (rsc *RedSkyConfig) PublicKeys(ctx context.Context) (interface{}, error) {
-	// Get the server configuration for the JWKS URL
-	srv, err := CurrentServer(rsc.Reader())
-	if err != nil {
-		return nil, err
-	}
-
-	return jwk.Fetch(srv.Authorization.JSONWebKeySetURI)
 }
 
 func (rsc *RedSkyConfig) clientID(srv *Server) string {
