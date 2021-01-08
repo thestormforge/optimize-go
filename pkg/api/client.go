@@ -21,19 +21,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
-
-// Config exposes the information for configuring an API Client.
-type Config interface {
-	// Endpoints returns a resolver for the location of the specified endpoint.
-	Endpoints() (func(string) *url.URL, error)
-	// Authorize returns a transport that applies the authorization defined by this configuration. The
-	// supplied context is used for any additional requests necessary to perform authentication. If this
-	// configuration does not define any authorization details, the supplied transport may be returned
-	// directly.
-	Authorize(ctx context.Context, transport http.RoundTripper) (http.RoundTripper, error)
-}
 
 // Client is used to handle interactions with the API Server.
 type Client interface {
@@ -43,38 +33,37 @@ type Client interface {
 	Do(context.Context, *http.Request) (*http.Response, []byte, error)
 }
 
-// NewClient returns a new client for accessing API server; the supplied context is used for authentication/authorization
-// requests and the supplied transport (which may be nil in the case of the default transport) is used for all requests made
-// to the API server.
-func NewClient(ctx context.Context, cfg Config, transport http.RoundTripper) (Client, error) {
-	var err error
-
-	hc := &httpClient{}
-	hc.client.Timeout = 10 * time.Second
-
-	// Configure the OAuth2 transport
-	hc.client.Transport, err = cfg.Authorize(ctx, transport)
+// NewClient returns a new client for accessing API server.
+func NewClient(address string, transport http.RoundTripper) (Client, error) {
+	u, err := url.Parse(address)
 	if err != nil {
 		return nil, err
 	}
+	u.Path = strings.TrimRight(u.Path, "/")
 
-	// Configure the API endpoints
-	hc.endpoints, err = cfg.Endpoints()
-	if err != nil {
-		return nil, err
-	}
-
-	return hc, nil
+	return &httpClient{
+		endpoint: u,
+		client: http.Client{
+			Transport: transport,
+			Timeout:   10 * time.Second,
+		},
+	}, nil
 }
 
 type httpClient struct {
-	client    http.Client
-	endpoints func(string) *url.URL
+	endpoint *url.URL
+	client   http.Client
 }
 
 // URL resolves an endpoint to a fully qualified URL.
 func (c *httpClient) URL(ep string) *url.URL {
-	return c.endpoints(ep)
+	// IMPLICIT: c.endpoint.Path cannot end with "/" because it was stripped off in NewClient
+	// IMPORTANT: Do not use Path.Join as it will not properly preserve trailing slashes
+
+	p := c.endpoint.Path + "/" + strings.TrimLeft(ep, "/")
+	u := *c.endpoint
+	u.Path = p
+	return &u
 }
 
 // Do executes an HTTP request using this client and the supplied context.
