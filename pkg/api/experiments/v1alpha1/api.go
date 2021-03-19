@@ -136,7 +136,8 @@ type API interface {
 	GetAllExperimentsByPage(context.Context, string) (ExperimentList, error)
 	GetExperimentByName(context.Context, ExperimentName) (Experiment, error)
 	GetExperiment(context.Context, string) (Experiment, error)
-	CreateExperiment(context.Context, ExperimentName, Experiment) (Experiment, error)
+	CreateExperimentByName(context.Context, ExperimentName, Experiment) (Experiment, error)
+	CreateExperiment(context.Context, string, Experiment) (Experiment, error)
 	DeleteExperiment(context.Context, string) error
 	GetAllTrials(context.Context, string, *TrialListQuery) (TrialList, error)
 	CreateTrial(context.Context, string, TrialAssignments) (TrialAssignments, error)

@@ -138,8 +138,12 @@ func (h *httpAPI) GetExperiment(ctx context.Context, u string) (Experiment, erro
 	}
 }
 
-func (h *httpAPI) CreateExperiment(ctx context.Context, n ExperimentName, exp Experiment) (Experiment, error) {
+func (h *httpAPI) CreateExperimentByName(ctx context.Context, n ExperimentName, exp Experiment) (Experiment, error) {
 	u := h.client.URL(endpointExperiment + n.Name()).String()
+	return h.CreateExperiment(ctx, u, exp)
+}
+
+func (h *httpAPI) CreateExperiment(ctx context.Context, u string, exp Experiment) (Experiment, error) {
 	e := Experiment{}
 
 	req, err := httpNewJSONRequest(http.MethodPut, u, exp)
