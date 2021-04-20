@@ -38,6 +38,11 @@ func migrationLoader(cfg *RedSkyConfig) error {
 		return err
 	}
 
+	// Migrate the old environment variables
+	if err := migrateRedSkyEnv(cfg); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -135,5 +140,17 @@ func migrateXDGRedSky(cfg *RedSkyConfig) error {
 		return nil
 	})
 
+	return nil
+}
+
+// migrateRedSkyEnv migrates the old environment variables.
+func migrateRedSkyEnv(cfg *RedSkyConfig) error {
+	// This should be consistent with the expected behavior because migrations
+	// run after environment loading and we are only applying defaults to overrides
+	defaultString(&cfg.Overrides.Environment, os.Getenv("REDSKY_ENV"))
+	defaultString(&cfg.Overrides.ServerIdentifier, os.Getenv("REDSKY_SERVER_IDENTIFIER"))
+	defaultString(&cfg.Overrides.ServerIssuer, os.Getenv("REDSKY_SERVER_ISSUER"))
+	defaultString(&cfg.Overrides.Credential.ClientID, os.Getenv("REDSKY_AUTHORIZATION_CLIENT_ID"))
+	defaultString(&cfg.Overrides.Credential.ClientSecret, os.Getenv("REDSKY_AUTHORIZATION_CLIENT_SECRET"))
 	return nil
 }

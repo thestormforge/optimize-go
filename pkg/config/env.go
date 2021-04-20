@@ -23,11 +23,11 @@ import (
 
 // envLoader adds environment variable overrides to the configuration
 func envLoader(cfg *RedSkyConfig) error {
-	defaultString(&cfg.Overrides.Environment, os.Getenv("REDSKY_ENV"))
-	defaultString(&cfg.Overrides.ServerIdentifier, os.Getenv("REDSKY_SERVER_IDENTIFIER"))
-	defaultString(&cfg.Overrides.ServerIssuer, os.Getenv("REDSKY_SERVER_ISSUER"))
-	defaultString(&cfg.Overrides.Credential.ClientID, os.Getenv("REDSKY_AUTHORIZATION_CLIENT_ID"))
-	defaultString(&cfg.Overrides.Credential.ClientSecret, os.Getenv("REDSKY_AUTHORIZATION_CLIENT_SECRET"))
+	defaultString(&cfg.Overrides.Environment, os.Getenv("STORMFORGE_ENV"))
+	defaultString(&cfg.Overrides.ServerIdentifier, os.Getenv("STORMFORGE_SERVER_IDENTIFIER"))
+	defaultString(&cfg.Overrides.ServerIssuer, os.Getenv("STORMFORGE_SERVER_ISSUER"))
+	defaultString(&cfg.Overrides.Credential.ClientID, os.Getenv("STORMFORGE_AUTHORIZATION_CLIENT_ID"))
+	defaultString(&cfg.Overrides.Credential.ClientSecret, os.Getenv("STORMFORGE_AUTHORIZATION_CLIENT_SECRET"))
 	return nil
 }
 
@@ -40,8 +40,8 @@ func EnvironmentMapping(r Reader, includeController bool) (map[string][]byte, er
 	if err != nil {
 		return nil, err
 	}
-	env["REDSKY_SERVER_IDENTIFIER"] = []byte(srv.Identifier)
-	env["REDSKY_SERVER_ISSUER"] = []byte(srv.Authorization.Issuer)
+	env["STORMFORGE_SERVER_IDENTIFIER"] = []byte(srv.Identifier)
+	env["STORMFORGE_SERVER_ISSUER"] = []byte(srv.Authorization.Issuer)
 
 	// Record the authorization information
 	az, err := CurrentAuthorization(r)
@@ -49,8 +49,8 @@ func EnvironmentMapping(r Reader, includeController bool) (map[string][]byte, er
 		return nil, err
 	}
 	if az.Credential.ClientCredential != nil {
-		env["REDSKY_AUTHORIZATION_CLIENT_ID"] = []byte(az.Credential.ClientID)
-		env["REDSKY_AUTHORIZATION_CLIENT_SECRET"] = []byte(az.Credential.ClientSecret)
+		env["STORMFORGE_AUTHORIZATION_CLIENT_ID"] = []byte(az.Credential.ClientID)
+		env["STORMFORGE_AUTHORIZATION_CLIENT_SECRET"] = []byte(az.Credential.ClientSecret)
 	}
 
 	// Optionally record environment variables from the controller configuration
@@ -67,7 +67,7 @@ func EnvironmentMapping(r Reader, includeController bool) (map[string][]byte, er
 		// The controller needs it's issuer to match the registration host
 		if u, err := url.Parse(srv.Authorization.RegistrationEndpoint); err == nil {
 			u.Path = "/"
-			env["REDSKY_SERVER_ISSUER"] = []byte(u.String())
+			env["STORMFORGE_SERVER_ISSUER"] = []byte(u.String())
 		}
 	}
 
