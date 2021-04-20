@@ -16,7 +16,10 @@ limitations under the License.
 
 package config
 
-import "os"
+import (
+	"net/url"
+	"os"
+)
 
 // envLoader adds environment variable overrides to the configuration
 func envLoader(cfg *RedSkyConfig) error {
@@ -59,6 +62,12 @@ func EnvironmentMapping(r Reader, includeController bool) (map[string][]byte, er
 
 		for i := range ctrl.Env {
 			env[ctrl.Env[i].Name] = []byte(ctrl.Env[i].Value)
+		}
+
+		// The controller needs it's issuer to match the registration host
+		if u, err := url.Parse(srv.Authorization.RegistrationEndpoint); err == nil {
+			u.Path = "/"
+			env["REDSKY_SERVER_ISSUER"] = []byte(u.String())
 		}
 	}
 

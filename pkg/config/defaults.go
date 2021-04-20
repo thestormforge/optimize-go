@@ -94,11 +94,11 @@ func defaultServerRoots(env string, srv *Server) error {
 	switch env {
 	case "production":
 		defaultString(&srv.Identifier, "https://api.stormforge.io/v1/")
-		defaultString(&srv.Authorization.Issuer, "https://auth.carbonrelay.io/")
+		defaultString(&srv.Authorization.Issuer, "https://auth.stormforge.io/")
 		defaultString(&srv.Application.BaseURL, "https://app.stormforge.io/")
 	case "development":
 		defaultString(&srv.Identifier, "https://api.stormforge.dev/v1/")
-		defaultString(&srv.Authorization.Issuer, "https://auth.carbonrelay.dev/")
+		defaultString(&srv.Authorization.Issuer, "https://auth.stormforge.dev/")
 		defaultString(&srv.Application.BaseURL, "https://app.stormforge.dev/")
 	default:
 		return fmt.Errorf("unknown environment: '%s'", env)
@@ -107,6 +107,12 @@ func defaultServerRoots(env string, srv *Server) error {
 }
 
 func defaultServerEndpoints(srv *Server) error {
+	// NOTE: The `EnvironmentMapping` function used to create the env for the
+	// controller will set the issuer to scheme and host of the registration
+	// endpoint. This is done so the controller can obtain tokens from an
+	// alternate token endpoint, however it will render most of the remaining
+	// default URLs meaningless as the other endpoints are not supported.
+
 	// Determine the default base URLs
 	api, err := discovery.IssuerURL(srv.Identifier)
 	if err != nil {
