@@ -136,20 +136,15 @@ func (m *ExperimentMeta) SetLastModified(lastModified time.Time) {
 	m.LastModified = lastModified
 }
 func (m *ExperimentMeta) SetLink(rel, link string) {
-	switch strings.ToLower(rel) {
-	case relationSelf:
+	switch {
+	case matchRel(rel, relationSelf):
 		m.SelfURL = link
-	case relationTrials:
+	case matchRel(rel, relationTrials):
 		m.TrialsURL = link
-	case relationNextTrial:
+	case matchRel(rel, relationNextTrial):
 		m.NextTrialURL = link
-	case relationLabels:
+	case matchRel(rel, relationLabels):
 		m.LabelsURL = link
-	}
-
-	// Backwards compatibility with the old next trial relation
-	if m.NextTrialURL == "" && strings.ToLower(rel) == "https://carbonrelay.com/rel/nexttrial" {
-		m.NextTrialURL = link
 	}
 }
 func (m *ExperimentMeta) Headers() http.Header {
