@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -34,10 +35,38 @@ const (
 	relationNext      = "next"
 	relationPrev      = "prev"
 	relationPrevious  = "previous"
-	relationLabels    = "https://carbonrelay.com/rel/labels"
-	relationTrials    = "https://carbonrelay.com/rel/trials"
-	relationNextTrial = "https://carbonrelay.com/rel/next-trial"
+	relationLabels    = "https://stormforge.io/rel/labels"
+	relationTrials    = "https://stormforge.io/rel/trials"
+	relationNextTrial = "https://stormforge.io/rel/next-trial"
 )
+
+// matchRel checks to see if a relation value matches an expected value. For
+// standard relations, this is simply a case-insensitive equality test; for
+// private relations this function will also test for previously known
+// equivalent relations.
+func matchRel(rel, expected string) bool {
+	rel = strings.ToLower(rel)
+	expected = strings.ToLower(expected)
+	switch expected {
+
+	case relationLabels:
+		return rel == relationLabels ||
+			rel == "https://carbonrelay.com/rel/labels" ||
+			rel == "https://carbonrelay.com/rel/triallabels"
+
+	case relationTrials:
+		return rel == relationTrials ||
+			rel == "https://carbonrelay.com/rel/trials"
+
+	case relationNextTrial:
+		return rel == relationNextTrial ||
+			rel == "https://carbonrelay.com/rel/next-trial" ||
+			rel == "https://carbonrelay.com/rel/nexttrial"
+
+	default:
+		return rel == expected
+	}
+}
 
 // Meta is used to collect resource metadata from the response
 type Meta interface {
