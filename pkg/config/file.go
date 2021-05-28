@@ -37,7 +37,7 @@ const (
 )
 
 // fileLoader loads a configuration from the currently configured filename
-func fileLoader(cfg *RedSkyConfig) error {
+func fileLoader(cfg *OptimizeConfig) error {
 	f := &file{filename: cfg.Filename}
 
 	// If we are using a configuration file, the filename _must_ be set

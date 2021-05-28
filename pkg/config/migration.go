@@ -27,7 +27,7 @@ import (
 )
 
 // migrationLoader will take the meaningful bits from a legacy config file and delete that file once the changes are persisted
-func migrationLoader(cfg *RedSkyConfig) error {
+func migrationLoader(cfg *OptimizeConfig) error {
 	// Migrate the really old `~/.redsky` file
 	if err := migrateDotRedSky(cfg); err != nil {
 		return err
@@ -47,7 +47,7 @@ func migrationLoader(cfg *RedSkyConfig) error {
 }
 
 // migrateDotRedSky migrates the really old '~/.redsky' file into the supplied configuration.
-func migrateDotRedSky(cfg *RedSkyConfig) error {
+func migrateDotRedSky(cfg *OptimizeConfig) error {
 	filename := filepath.Join(os.Getenv("HOME"), ".redsky")
 
 	f, err := os.Open(filename)
@@ -89,7 +89,7 @@ func migrateDotRedSky(cfg *RedSkyConfig) error {
 }
 
 // migrateXDGRedSky migrates the old '~/.config/redsky/config' file into the supplied configuration.
-func migrateXDGRedSky(cfg *RedSkyConfig) error {
+func migrateXDGRedSky(cfg *OptimizeConfig) error {
 	filename, _ := configFilename("redsky/config")
 
 	f, err := os.Open(filename)
@@ -144,7 +144,7 @@ func migrateXDGRedSky(cfg *RedSkyConfig) error {
 }
 
 // migrateRedSkyEnv migrates the old environment variables.
-func migrateRedSkyEnv(cfg *RedSkyConfig) error {
+func migrateRedSkyEnv(cfg *OptimizeConfig) error {
 	// This should be consistent with the expected behavior because migrations
 	// run after environment loading and we are only applying defaults to overrides
 	defaultString(&cfg.Overrides.Environment, os.Getenv("REDSKY_ENV"))

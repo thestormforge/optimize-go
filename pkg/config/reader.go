@@ -132,7 +132,7 @@ func Minify(r Reader) (*Config, error) {
 	return cfg, nil
 }
 
-// TODO Instead of defaultReader, just have RedSkyConfig implement Reader?
+// TODO Instead of defaultReader, just have OptimizeConfig implement Reader?
 
 var _ Reader = &defaultReader{}
 
