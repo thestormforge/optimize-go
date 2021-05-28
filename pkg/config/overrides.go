@@ -20,11 +20,11 @@ package config
 type Overrides struct {
 	// Environment overrides the execution environment name
 	Environment string
-	// Context overrides the current Red Sky context name (_not_ the KubeConfig context)
+	// Context overrides the current Optimize context name (_not_ the KubeConfig context)
 	Context string
 	// SystemNamespace overrides the current controller namespace (_not_ the Kube namespace)
 	SystemNamespace string
-	// ServerIdentifier overrides the current server's identifier and Red Sky endpoints. Using this override, it is not possible to specify individual endpoint locations.
+	// ServerIdentifier overrides the current server's identifier and StormForge endpoints. Using this override, it is not possible to specify individual endpoint locations.
 	ServerIdentifier string
 	// ServerIssuer overrides the current server's authorization server issuer. Using this override, it is not possible to specify individual endpoint locations.
 	ServerIssuer string

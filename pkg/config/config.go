@@ -31,10 +31,10 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 )
 
-// audience is the logical identifier of the Red Sky API
+// audience is the logical identifier of the Optimize API
 const audience = "https://api.carbonrelay.io/v1/"
 
-// Loader is used to initially populate a Red Sky configuration
+// Loader is used to initially populate an Optimize configuration
 type Loader func(cfg *OptimizeConfig) error
 
 // Change is used to apply a configuration change that should be persisted
@@ -43,7 +43,7 @@ type Change func(cfg *Config) error
 // ClientIdentity is a mapping function that returns an OAuth 2.0 `client_id` given an authorization server issuer identifier
 type ClientIdentity func(string) string
 
-// Endpoints exposes the Red Sky API server endpoint locations as a mapping of prefixes to base URLs
+// Endpoints exposes the Optimize API server endpoint locations as a mapping of prefixes to base URLs
 type Endpoints map[string]*url.URL
 
 // OptimizeConfig is the structure used to manage configuration data
@@ -134,7 +134,7 @@ func (rsc *OptimizeConfig) Environment() string {
 	return "production"
 }
 
-// SystemNamespace returns the namespace where the Red Sky controller is/should be installed
+// SystemNamespace returns the namespace where the Optimize Controller is/should be installed
 func (rsc *OptimizeConfig) SystemNamespace() (string, error) {
 	ctrl, err := CurrentController(rsc.Reader())
 	if err != nil {
