@@ -215,8 +215,8 @@ func (d *defaults) applyControllerDefaults() error {
 	for i := range d.cfg.Controllers {
 		ctrl := &d.cfg.Controllers[i].Controller
 
-		defaultString(&ctrl.DeploymentName, "redsky-controller-manager")
-		defaultString(&ctrl.Namespace, "redsky-system")
+		defaultString(&ctrl.DeploymentName, "optimize-controller-manager")
+		defaultString(&ctrl.Namespace, "stormforge-system")
 	}
 	return nil
 }
