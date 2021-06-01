@@ -31,11 +31,11 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 )
 
-// audience is the logical identifier of the Red Sky API
+// audience is the logical identifier of the Optimize API
 const audience = "https://api.carbonrelay.io/v1/"
 
-// Loader is used to initially populate a Red Sky configuration
-type Loader func(cfg *RedSkyConfig) error
+// Loader is used to initially populate an Optimize configuration
+type Loader func(cfg *OptimizeConfig) error
 
 // Change is used to apply a configuration change that should be persisted
 type Change func(cfg *Config) error
@@ -43,11 +43,11 @@ type Change func(cfg *Config) error
 // ClientIdentity is a mapping function that returns an OAuth 2.0 `client_id` given an authorization server issuer identifier
 type ClientIdentity func(string) string
 
-// Endpoints exposes the Red Sky API server endpoint locations as a mapping of prefixes to base URLs
+// Endpoints exposes the Optimize API server endpoint locations as a mapping of prefixes to base URLs
 type Endpoints map[string]*url.URL
 
-// RedSkyConfig is the structure used to manage configuration data
-type RedSkyConfig struct {
+// OptimizeConfig is the structure used to manage configuration data
+type OptimizeConfig struct {
 	// Filename is the path to the configuration file; if left blank, it will be populated using XDG base directory conventions on the next Load
 	Filename string
 	// Overrides to the standard configuration
@@ -60,12 +60,12 @@ type RedSkyConfig struct {
 }
 
 // MarshalJSON ensures only the configuration data is marshalled
-func (rsc *RedSkyConfig) MarshalJSON() ([]byte, error) {
+func (rsc *OptimizeConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(rsc.data)
 }
 
 // Load will populate the client configuration
-func (rsc *RedSkyConfig) Load(extra ...Loader) error {
+func (rsc *OptimizeConfig) Load(extra ...Loader) error {
 	var loaders []Loader
 	loaders = append(loaders, fileLoader, envLoader, migrationLoader)
 	loaders = append(loaders, extra...)
@@ -79,7 +79,7 @@ func (rsc *RedSkyConfig) Load(extra ...Loader) error {
 }
 
 // Update will make a change to the configuration data that should be persisted on the next call to Write
-func (rsc *RedSkyConfig) Update(change Change) error {
+func (rsc *OptimizeConfig) Update(change Change) error {
 	if err := change(&rsc.data); err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (rsc *RedSkyConfig) Update(change Change) error {
 }
 
 // Write all unpersisted changes to disk
-func (rsc *RedSkyConfig) Write() error {
+func (rsc *OptimizeConfig) Write() error {
 	if rsc.Filename == "" || len(rsc.unpersisted) == 0 {
 		return nil
 	}
@@ -114,17 +114,17 @@ func (rsc *RedSkyConfig) Write() error {
 
 // Merge combines the supplied data with what is already present in this client configuration; unlike Update, changes
 // will not be persisted on the next write
-func (rsc *RedSkyConfig) Merge(data *Config) {
+func (rsc *OptimizeConfig) Merge(data *Config) {
 	mergeConfig(&rsc.data, data)
 }
 
 // Reader returns a configuration reader for accessing information from the configuration
-func (rsc *RedSkyConfig) Reader() Reader {
+func (rsc *OptimizeConfig) Reader() Reader {
 	return &overrideReader{overrides: &rsc.Overrides, delegate: &defaultReader{cfg: &rsc.data}}
 }
 
 // Environment returns the name of the execution environment
-func (rsc *RedSkyConfig) Environment() string {
+func (rsc *OptimizeConfig) Environment() string {
 	if env := rsc.Overrides.Environment; env != "" {
 		return env
 	}
@@ -134,8 +134,8 @@ func (rsc *RedSkyConfig) Environment() string {
 	return "production"
 }
 
-// SystemNamespace returns the namespace where the Red Sky controller is/should be installed
-func (rsc *RedSkyConfig) SystemNamespace() (string, error) {
+// SystemNamespace returns the namespace where the Optimize Controller is/should be installed
+func (rsc *OptimizeConfig) SystemNamespace() (string, error) {
 	ctrl, err := CurrentController(rsc.Reader())
 	if err != nil {
 		return "", nil
@@ -144,7 +144,7 @@ func (rsc *RedSkyConfig) SystemNamespace() (string, error) {
 }
 
 // Endpoints returns a resolver that can generate fully qualified endpoint URLs
-func (rsc *RedSkyConfig) Endpoints() (Endpoints, error) {
+func (rsc *OptimizeConfig) Endpoints() (Endpoints, error) {
 	srv, err := CurrentServer(rsc.Reader())
 	if err != nil {
 		return nil, err
@@ -183,7 +183,7 @@ func (ep Endpoints) Resolve(endpoint string) *url.URL {
 }
 
 // Kubectl returns an executable command for running kubectl
-func (rsc *RedSkyConfig) Kubectl(ctx context.Context, arg ...string) (*exec.Cmd, error) {
+func (rsc *OptimizeConfig) Kubectl(ctx context.Context, arg ...string) (*exec.Cmd, error) {
 	cstr, err := CurrentCluster(rsc.Reader())
 	if err != nil {
 		return nil, err
@@ -249,7 +249,7 @@ func (ri *RevocationInformation) RemoveAuthorization() Change {
 }
 
 // RevocationInfo returns the information necessary to revoke an authorization entry from the configuration
-func (rsc *RedSkyConfig) RevocationInfo() (*RevocationInformation, error) {
+func (rsc *OptimizeConfig) RevocationInfo() (*RevocationInformation, error) {
 	r := rsc.Reader()
 
 	authorizationName, err := r.AuthorizationName(r.ContextName())
@@ -275,7 +275,7 @@ func (rsc *RedSkyConfig) RevocationInfo() (*RevocationInformation, error) {
 }
 
 // RegisterClient performs dynamic client registration
-func (rsc *RedSkyConfig) RegisterClient(ctx context.Context, client *registration.ClientMetadata) (*registration.ClientInformationResponse, error) {
+func (rsc *OptimizeConfig) RegisterClient(ctx context.Context, client *registration.ClientMetadata) (*registration.ClientInformationResponse, error) {
 	// We can't use the initial token because we don't know if we have a valid token, instead we need to authorize the context client
 	src, err := rsc.tokenSource(ctx)
 	if err != nil {
@@ -297,7 +297,7 @@ func (rsc *RedSkyConfig) RegisterClient(ctx context.Context, client *registratio
 }
 
 // NewAuthorization creates a new authorization code flow with PKCE using the current context
-func (rsc *RedSkyConfig) NewAuthorization() (*authorizationcode.Config, error) {
+func (rsc *OptimizeConfig) NewAuthorization() (*authorizationcode.Config, error) {
 	srv, err := CurrentServer(rsc.Reader())
 	if err != nil {
 		return nil, err
@@ -317,7 +317,7 @@ func (rsc *RedSkyConfig) NewAuthorization() (*authorizationcode.Config, error) {
 }
 
 // NewDeviceAuthorization creates a new device authorization flow using the current context
-func (rsc *RedSkyConfig) NewDeviceAuthorization() (*devicecode.Config, error) {
+func (rsc *OptimizeConfig) NewDeviceAuthorization() (*devicecode.Config, error) {
 	srv, err := CurrentServer(rsc.Reader())
 	if err != nil {
 		return nil, err
@@ -335,7 +335,7 @@ func (rsc *RedSkyConfig) NewDeviceAuthorization() (*devicecode.Config, error) {
 }
 
 // Authorize configures the supplied transport
-func (rsc *RedSkyConfig) Authorize(ctx context.Context, transport http.RoundTripper) (http.RoundTripper, error) {
+func (rsc *OptimizeConfig) Authorize(ctx context.Context, transport http.RoundTripper) (http.RoundTripper, error) {
 	// Get the token source and use it to wrap the transport
 	src, err := rsc.tokenSource(ctx)
 	if err != nil {
@@ -347,8 +347,8 @@ func (rsc *RedSkyConfig) Authorize(ctx context.Context, transport http.RoundTrip
 	return transport, nil
 }
 
-func (rsc *RedSkyConfig) tokenSource(ctx context.Context) (oauth2.TokenSource, error) {
-	// TODO We could make RedSkyConfig implement the TokenSource interface, but we need a way to handle the context
+func (rsc *OptimizeConfig) tokenSource(ctx context.Context) (oauth2.TokenSource, error) {
+	// TODO We could make OptimizeConfig implement the TokenSource interface, but we need a way to handle the context
 	r := rsc.Reader()
 	srv, err := CurrentServer(r)
 	if err != nil {
@@ -399,7 +399,7 @@ func (rsc *RedSkyConfig) tokenSource(ctx context.Context) (oauth2.TokenSource, e
 	return nil, nil
 }
 
-func (rsc *RedSkyConfig) clientID(srv *Server) string {
+func (rsc *OptimizeConfig) clientID(srv *Server) string {
 	if rsc.ClientIdentity != nil {
 		return rsc.ClientIdentity(srv.Authorization.Issuer)
 	}
@@ -408,7 +408,7 @@ func (rsc *RedSkyConfig) clientID(srv *Server) string {
 
 type updateTokenSource struct {
 	src oauth2.TokenSource
-	cfg *RedSkyConfig
+	cfg *OptimizeConfig
 	az  string
 }
 

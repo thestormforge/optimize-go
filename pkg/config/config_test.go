@@ -24,7 +24,7 @@ import (
 )
 
 func TestEndpoints_Resolve(t *testing.T) {
-	cfg := &RedSkyConfig{}
+	cfg := &OptimizeConfig{}
 	require.NoError(t, defaultLoader(cfg))
 	experimentsEndpoint := &cfg.data.Servers[0].Server.API.ExperimentsEndpoint
 

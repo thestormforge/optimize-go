@@ -25,9 +25,9 @@ import (
 	"github.com/thestormforge/optimize-go/pkg/oauth2/discovery"
 )
 
-// The default loader must NEVER make changes via RedSkyConfig.Update or RedSkyConfig.unpersisted
+// The default loader must NEVER make changes via OptimizeConfig.Update or OptimizeConfig.unpersisted
 
-func defaultLoader(cfg *RedSkyConfig) error {
+func defaultLoader(cfg *OptimizeConfig) error {
 	// NOTE: Any errors reported here are effectively fatal errors for a program that needs configuration since they will
 	// not be able to load the configuration. Errors should be limited to unusable configurations.
 
@@ -215,8 +215,8 @@ func (d *defaults) applyControllerDefaults() error {
 	for i := range d.cfg.Controllers {
 		ctrl := &d.cfg.Controllers[i].Controller
 
-		defaultString(&ctrl.DeploymentName, "redsky-controller-manager")
-		defaultString(&ctrl.Namespace, "redsky-system")
+		defaultString(&ctrl.DeploymentName, "optimize-controller-manager")
+		defaultString(&ctrl.Namespace, "stormforge-system")
 	}
 	return nil
 }

@@ -31,7 +31,7 @@ var (
 	DecodeJWT bool
 )
 
-// Config is the top level configuration structure for Red Sky
+// Config is the top level configuration structure for Optimize
 type Config struct {
 	// Servers is a named list of server configurations
 	Servers []NamedServer `json:"servers,omitempty"`
@@ -49,9 +49,9 @@ type Config struct {
 	Environment string `json:"env,omitempty"`
 }
 
-// Server contains information about how to communicate with a Red Sky API Server
+// Server contains information about how to communicate with a StormForge API Server
 type Server struct {
-	// Identifier is a URI used to identify a common set of endpoints making up a Red Sky API Server. The identifier
+	// Identifier is a URI used to identify a common set of endpoints making up a StormForge API Server. The identifier
 	// may be used to resolve ".well-known" locations, used as an authorization audience, or used as a common base URL
 	// when determining default endpoint addresses. The URL must not have any query or fragment components.
 	Identifier string `json:"identifier"`
@@ -143,7 +143,7 @@ type Cluster struct {
 	Controller string `json:"controller,omitempty"`
 }
 
-// Controller contains additional controller configuration when working with Red Sky on a specific cluster
+// Controller contains additional controller configuration when working with Optimize on a specific cluster
 type Controller struct {
 	// DeploymentName is the name of the controller deployment object
 	DeploymentName string `json:"deploymentName,omitempty"`

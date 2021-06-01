@@ -22,7 +22,7 @@ import (
 )
 
 // envLoader adds environment variable overrides to the configuration
-func envLoader(cfg *RedSkyConfig) error {
+func envLoader(cfg *OptimizeConfig) error {
 	defaultString(&cfg.Overrides.Environment, os.Getenv("STORMFORGE_ENV"))
 	defaultString(&cfg.Overrides.ServerIdentifier, os.Getenv("STORMFORGE_SERVER_IDENTIFIER"))
 	defaultString(&cfg.Overrides.ServerIssuer, os.Getenv("STORMFORGE_SERVER_ISSUER"))

@@ -119,7 +119,7 @@ func SetProperty(name, value string) Change {
 	if name == "env" {
 		return SetExecutionEnvironment(value)
 	}
-	// TODO This is a giant hack. Consider not even supporting `redskyctl config set` generically
+	// TODO This is a giant hack. Consider not even supporting `config set` generically
 	return func(cfg *Config) error {
 		path := strings.Split(name, ".")
 		switch path[0] {
