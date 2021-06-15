@@ -91,9 +91,9 @@ type Constraint struct {
 	// Optional name for constraint.
 	Name string `json:"name,omitempty"`
 
-	ConstraintType  ConstraintType `json:"constraintType"`
-	SumConstraint   `json:",inline"`
-	OrderConstraint `json:",inline"`
+	ConstraintType   ConstraintType `json:"constraintType"`
+	*SumConstraint   `json:",omitempty"`
+	*OrderConstraint `json:",omitempty"`
 }
 
 type ParameterType string
