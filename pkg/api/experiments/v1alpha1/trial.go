@@ -23,22 +23,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/thestormforge/optimize-go/pkg/api"
 	"github.com/thestormforge/optimize-go/pkg/api/experiments/v1alpha1/numstr"
 )
-
-type TrialMeta struct {
-	SelfURL   string `json:"-"`
-	LabelsURL string `json:"-"`
-}
-
-func (m *TrialMeta) SetLocation(location string) { m.SelfURL = location }
-func (m *TrialMeta) SetLastModified(time.Time)   {}
-func (m *TrialMeta) SetLink(rel, link string) {
-	switch {
-	case matchRel(rel, relationLabels):
-		m.LabelsURL = link
-	}
-}
 
 type Assignment struct {
 	// The name of the parameter in the experiment the assignment corresponds to.
@@ -48,8 +35,8 @@ type Assignment struct {
 }
 
 type TrialAssignments struct {
-	TrialMeta
-
+	// The trial metadata.
+	api.Metadata `json:"-"`
 	// The list of parameter names and their assigned values.
 	Assignments []Assignment `json:"assignments"`
 	// Labels for this trial.
@@ -90,6 +77,26 @@ const (
 	TrialAbandoned TrialStatus = "abandoned"
 )
 
+type TrialListQuery struct{ api.IndexQuery }
+
+func (q *TrialListQuery) SetStatus(status ...TrialStatus) {
+	str := make([]string, len(status))
+	for _, s := range status {
+		str = append(str, string(s))
+	}
+	if len(str) > 0 {
+		url.Values(q.IndexQuery).Set("status", strings.Join(str, ","))
+	}
+}
+
+func (q *TrialListQuery) AddStatus(status TrialStatus) {
+	value := string(status)
+	if v := url.Values(q.IndexQuery).Get("status"); v != "" {
+		value = v + "," + value
+	}
+	url.Values(q.IndexQuery).Set("status", value)
+}
+
 type TrialItem struct {
 	TrialAssignments
 	TrialValues
@@ -98,16 +105,13 @@ type TrialItem struct {
 	Status TrialStatus `json:"status"`
 	// Ordinal number indicating when during an experiment the trail was generated.
 	Number int64 `json:"number"`
-	// Labels for this trial.
-	Labels map[string]string `json:"labels,omitempty"`
-
-	// The metadata for an individual trial.
-	Metadata Metadata `json:"_metadata,omitempty"`
 
 	// Experiment is a reference back to the experiment this trial item is associated with. This field is never
 	// populated by the API, but may be useful for consumers to maintain a connection between resources.
 	Experiment *Experiment `json:"-"`
 }
+
+func (t *TrialItem) UnmarshalJSON(b []byte) error { return api.UnmarshalJSON(b, t) }
 
 // Name returns an effective name for uniquely identifying the trial.
 func (t *TrialItem) Name() string {
@@ -118,36 +122,9 @@ func (t *TrialItem) Name() string {
 	return strconv.FormatInt(t.Number, 10)
 }
 
-type TrialListQuery struct {
-	// Comma separated list of statuses to fetch.
-	Status []TrialStatus
-	// Comma separated list of label value pairs to match on.
-	LabelSelector map[string]string
-}
-
-func (p *TrialListQuery) Encode() string {
-	if p == nil {
-		return ""
-	}
-	q := url.Values{}
-	if len(p.Status) > 0 {
-		strs := make([]string, len(p.Status))
-		for i := range p.Status {
-			strs[i] = string(p.Status[i])
-		}
-		q.Add("status", strings.Join(strs, ","))
-	}
-	if len(p.LabelSelector) > 0 {
-		ls := make([]string, 0, len(p.LabelSelector))
-		for k, v := range p.LabelSelector {
-			ls = append(ls, fmt.Sprintf("%s=%s", k, v))
-		}
-		q.Add("labelSelector", strings.Join(ls, ","))
-	}
-	return q.Encode()
-}
-
 type TrialList struct {
+	// The trial list metadata.
+	api.Metadata `json:"-"`
 	// The list of trials.
 	Trials []TrialItem `json:"trials"`
 

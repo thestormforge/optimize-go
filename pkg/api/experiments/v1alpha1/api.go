@@ -18,161 +18,43 @@ package v1alpha1
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"net/url"
-	"strings"
-	"time"
 
-	"golang.org/x/oauth2"
+	"github.com/thestormforge/optimize-go/pkg/api"
 )
 
 const (
-	endpointExperiment = "/experiments/"
-
-	relationSelf      = "self"
-	relationNext      = "next"
-	relationPrev      = "prev"
-	relationPrevious  = "previous"
-	relationLabels    = "https://stormforge.io/rel/labels"
-	relationTrials    = "https://stormforge.io/rel/trials"
-	relationNextTrial = "https://stormforge.io/rel/next-trial"
+	ErrExperimentNameInvalid  api.ErrorType = "experiment-name-invalid"
+	ErrExperimentNameConflict api.ErrorType = "experiment-name-conflict"
+	ErrExperimentInvalid      api.ErrorType = "experiment-invalid"
+	ErrExperimentNotFound     api.ErrorType = "experiment-not-found"
+	ErrExperimentStopped      api.ErrorType = "experiment-stopped"
+	ErrTrialInvalid           api.ErrorType = "trial-invalid"
+	ErrTrialUnavailable       api.ErrorType = "trial-unavailable"
+	ErrTrialNotFound          api.ErrorType = "trial-not-found"
+	ErrTrialAlreadyReported   api.ErrorType = "trial-already-reported"
 )
 
-// matchRel checks to see if a relation value matches an expected value. For
-// standard relations, this is simply a case-insensitive equality test; for
-// private relations this function will also test for previously known
-// equivalent relations.
-func matchRel(rel, expected string) bool {
-	rel = strings.ToLower(rel)
-	expected = strings.ToLower(expected)
-	switch expected {
-
-	case relationLabels:
-		return rel == relationLabels ||
-			rel == "https://carbonrelay.com/rel/labels" ||
-			rel == "https://carbonrelay.com/rel/triallabels"
-
-	case relationTrials:
-		return rel == relationTrials ||
-			rel == "https://carbonrelay.com/rel/trials"
-
-	case relationNextTrial:
-		return rel == relationNextTrial ||
-			rel == "https://carbonrelay.com/rel/next-trial" ||
-			rel == "https://carbonrelay.com/rel/nexttrial"
-
-	default:
-		return rel == expected
-	}
-}
-
-// Meta is used to collect resource metadata from the response
-type Meta interface {
-	SetLocation(string)
-	SetLastModified(time.Time)
-	SetLink(rel, link string)
-}
-
-// Metadata is used to hold single or multi-value metadata from list responses
-type Metadata map[string][]string
-
-func (m *Metadata) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if *m == nil {
-		*m = make(map[string][]string, len(raw))
-	}
-	for k, v := range raw {
-		switch t := v.(type) {
-		case string:
-			(*m)[k] = append((*m)[k], t)
-		case []interface{}:
-			for i := range t {
-				(*m)[k] = append((*m)[k], fmt.Sprintf("%s", t[i]))
-			}
-		}
-	}
-	return nil
-}
-
-type ErrorType string
-
-const (
-	ErrExperimentNameInvalid  ErrorType = "experiment-name-invalid"
-	ErrExperimentNameConflict ErrorType = "experiment-name-conflict"
-	ErrExperimentInvalid      ErrorType = "experiment-invalid"
-	ErrExperimentNotFound     ErrorType = "experiment-not-found"
-	ErrExperimentStopped      ErrorType = "experiment-stopped"
-	ErrTrialInvalid           ErrorType = "trial-invalid"
-	ErrTrialUnavailable       ErrorType = "trial-unavailable"
-	ErrTrialNotFound          ErrorType = "trial-not-found"
-	ErrTrialAlreadyReported   ErrorType = "trial-already-reported"
-	ErrUnauthorized           ErrorType = "unauthorized"
-	ErrUnexpected             ErrorType = "unexpected"
-)
-
-// Error represents the API specific error messages and may be used in response to HTTP status codes
-type Error struct {
-	Type       ErrorType     `json:"-"`
-	Message    string        `json:"error"`
-	RetryAfter time.Duration `json:"-"`
-	Location   string        `json:"-"`
-}
-
-func (e *Error) Error() string {
-	return e.Message
-}
-
-// IsUnauthorized check to see if the error is an "unauthorized" error
-func IsUnauthorized(err error) bool {
-	// OAuth errors (e.g. fetching tokens) will come out of `Do` and will be wrapped in url.Error
-	if uerr, ok := err.(*url.Error); ok {
-		err = uerr.Unwrap()
-	}
-	if rerr, ok := err.(*oauth2.RetrieveError); ok {
-		if rerr.Response.StatusCode == http.StatusUnauthorized {
-			return true
-		}
-	}
-	if rserr, ok := err.(*Error); ok {
-		if rserr.Type == ErrUnauthorized {
-			return true
-		}
-	}
-	// TODO This is a hack to work around the way we generate errors during JWT validation
-	if err != nil && err.Error() == "no Bearer token" {
-		return true
-	}
-	return false
-}
-
-type ServerMeta struct {
-	Server string `json:"-"`
-}
-
-func (m *ServerMeta) Unmarshal(header http.Header) {
-	m.Server = header.Get("Server")
+type Server struct {
+	api.Metadata `json:"-"`
 }
 
 // API provides bindings for the supported endpoints
 type API interface {
-	Options(context.Context) (ServerMeta, error)
-	GetAllExperiments(context.Context, *ExperimentListQuery) (ExperimentList, error)
+	Options(context.Context) (Server, error)
+
+	GetAllExperiments(context.Context, ExperimentListQuery) (ExperimentList, error)
 	GetAllExperimentsByPage(context.Context, string) (ExperimentList, error)
 	GetExperimentByName(context.Context, ExperimentName) (Experiment, error)
 	GetExperiment(context.Context, string) (Experiment, error)
 	CreateExperimentByName(context.Context, ExperimentName, Experiment) (Experiment, error)
 	CreateExperiment(context.Context, string, Experiment) (Experiment, error)
 	DeleteExperiment(context.Context, string) error
-	GetAllTrials(context.Context, string, *TrialListQuery) (TrialList, error)
+	LabelExperiment(context.Context, string, ExperimentLabels) error
+
+	GetAllTrials(context.Context, string, TrialListQuery) (TrialList, error)
 	CreateTrial(context.Context, string, TrialAssignments) (TrialAssignments, error)
 	NextTrial(context.Context, string) (TrialAssignments, error)
 	ReportTrial(context.Context, string, TrialValues) error
 	AbandonRunningTrial(context.Context, string) error
-	LabelExperiment(context.Context, string, ExperimentLabels) error
 	LabelTrial(context.Context, string, TrialLabels) error
 }
