@@ -1,6 +1,6 @@
 module github.com/thestormforge/optimize-go
 
-go 1.15
+go 1.16
 
 require (
 	github.com/lestrrat-go/jwx v1.0.6
