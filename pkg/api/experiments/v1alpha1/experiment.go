@@ -66,7 +66,7 @@ const (
 
 type SumConstraintParameter struct {
 	// Name of parameter to be used in constraint.
-	Name string `json:"name"`
+	Name string `json:"parameterName"`
 	// Weight for parameter in constraint.
 	Weight float64 `json:"weight"`
 }
