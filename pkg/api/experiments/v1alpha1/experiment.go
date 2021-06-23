@@ -18,12 +18,10 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"fmt"
-	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
-	"time"
+
+	"github.com/thestormforge/optimize-go/pkg/api"
 )
 
 // ExperimentName exists to clearly separate cases where an actual name can be used
@@ -123,43 +121,10 @@ type Parameter struct {
 	Values []string `json:"values,omitempty"`
 }
 
-type ExperimentMeta struct {
-	LastModified time.Time `json:"-"`
-	SelfURL      string    `json:"-"`
-	TrialsURL    string    `json:"-"`
-	NextTrialURL string    `json:"-"`
-	LabelsURL    string    `json:"-"`
-}
-
-func (m *ExperimentMeta) SetLocation(string) {}
-func (m *ExperimentMeta) SetLastModified(lastModified time.Time) {
-	m.LastModified = lastModified
-}
-func (m *ExperimentMeta) SetLink(rel, link string) {
-	switch {
-	case matchRel(rel, relationSelf):
-		m.SelfURL = link
-	case matchRel(rel, relationTrials):
-		m.TrialsURL = link
-	case matchRel(rel, relationNextTrial):
-		m.NextTrialURL = link
-	case matchRel(rel, relationLabels):
-		m.LabelsURL = link
-	}
-}
-func (m *ExperimentMeta) Headers() http.Header {
-	h := metaMarshal("", m.LastModified)
-	metaMarshalLink(h, relationSelf, m.SelfURL)
-	metaMarshalLink(h, relationTrials, m.TrialsURL)
-	metaMarshalLink(h, relationNextTrial, m.NextTrialURL)
-	metaMarshalLink(h, relationLabels, m.LabelsURL)
-	return h
-}
-
 // Experiment combines the search space, outcomes and optimization configuration
 type Experiment struct {
-	ExperimentMeta
-
+	// The experiment metadata.
+	api.Metadata `json:"-"`
 	// The display name of the experiment. Do not use for generating URLs!
 	DisplayName string `json:"displayName,omitempty"`
 	// The number of observations made for this experiment.
@@ -180,71 +145,26 @@ type Experiment struct {
 
 // Name allows an experiment to be used as an ExperimentName
 func (e *Experiment) Name() string {
-	u, err := url.Parse(e.SelfURL)
+	u, err := url.Parse(e.Link(api.RelationSelf))
 	if err != nil {
 		return ""
 	}
-	i := strings.Index(u.Path, endpointExperiment)
+	i := strings.Index(u.Path, endpointExperiments)
 	if i < 0 {
 		return ""
 	}
-	return u.Path[len(endpointExperiment)+i:]
+	return u.Path[len(endpointExperiments)+i:]
 }
 
-type ExperimentItem struct {
-	Experiment
+type ExperimentListQuery struct{ api.IndexQuery }
 
-	// The metadata for an individual experiment.
-	Metadata Metadata `json:"_metadata,omitempty"`
-}
+type ExperimentItem struct{ Experiment }
 
-type ExperimentListMeta struct {
-	Next string `json:"-"`
-	Prev string `json:"-"`
-}
-
-func (m *ExperimentListMeta) SetLocation(string)        {}
-func (m *ExperimentListMeta) SetLastModified(time.Time) {}
-func (m *ExperimentListMeta) SetLink(rel, link string) {
-	switch strings.ToLower(rel) {
-	case relationNext:
-		m.Next = link
-	case relationPrev, relationPrevious:
-		m.Prev = link
-	}
-}
-
-type ExperimentListQuery struct {
-	Offset        int
-	Limit         int
-	LabelSelector map[string]string
-}
-
-func (p *ExperimentListQuery) Encode() string {
-	if p == nil {
-		return ""
-	}
-
-	q := url.Values{}
-	if p.Offset != 0 {
-		q.Set("offset", strconv.Itoa(p.Offset))
-	}
-	if p.Limit != 0 {
-		q.Set("limit", strconv.Itoa(p.Limit))
-	}
-	if len(p.LabelSelector) > 0 {
-		ls := make([]string, 0, len(p.LabelSelector))
-		for k, v := range p.LabelSelector {
-			ls = append(ls, fmt.Sprintf("%s=%s", k, v))
-		}
-		q.Add("labelSelector", strings.Join(ls, ","))
-	}
-	return q.Encode()
-}
+func (l *ExperimentItem) UnmarshalJSON(b []byte) error { return api.UnmarshalJSON(b, l) }
 
 type ExperimentList struct {
-	ExperimentListMeta
-
+	// The experiment list metadata.
+	api.Metadata `json:"-"`
 	// The list of experiments.
 	Experiments []ExperimentItem `json:"experiments,omitempty"`
 }
