@@ -47,3 +47,13 @@ func TestIndexQuery_SetLabelSelector(t *testing.T) {
 	})
 	assert.Equal(t, []string{"application=my-app,scenario=cyber-monday", "best=true"}, q[ParamLabelSelector])
 }
+
+func TestIndexQuery_nil(t *testing.T) {
+	// Ensure the setter on a nil value allocates a map, otherwise embedding the
+	// IndexQuery will have unexpected results
+	q := IndexQuery(nil)
+	assert.Nil(t, q)
+	q.SetLimit(97)
+	assert.NotNil(t, q)
+	assert.Equal(t, []string{"97"}, q[ParamLimit])
+}

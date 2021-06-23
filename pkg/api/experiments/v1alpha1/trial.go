@@ -85,6 +85,9 @@ func (q *TrialListQuery) SetStatus(status ...TrialStatus) {
 		str = append(str, string(s))
 	}
 	if len(str) > 0 {
+		if q.IndexQuery == nil {
+			q.IndexQuery = api.IndexQuery{}
+		}
 		url.Values(q.IndexQuery).Set("status", strings.Join(str, ","))
 	}
 }
@@ -93,6 +96,9 @@ func (q *TrialListQuery) AddStatus(status TrialStatus) {
 	value := string(status)
 	if v := url.Values(q.IndexQuery).Get("status"); v != "" {
 		value = v + "," + value
+	}
+	if q.IndexQuery == nil {
+		q.IndexQuery = api.IndexQuery{}
 	}
 	url.Values(q.IndexQuery).Set("status", value)
 }

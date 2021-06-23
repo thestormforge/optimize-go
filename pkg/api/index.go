@@ -34,31 +34,40 @@ const (
 type IndexQuery map[string][]string
 
 // SetOffset sets the number of items to skip from the beginning of the index.
-func (q IndexQuery) SetOffset(offset int) {
+func (q *IndexQuery) SetOffset(offset int) {
+	if *q == nil {
+		*q = IndexQuery{}
+	}
 	if offset != 0 {
-		url.Values(q).Set(ParamOffset, strconv.Itoa(offset))
+		url.Values(*q).Set(ParamOffset, strconv.Itoa(offset))
 	} else {
-		url.Values(q).Del(ParamOffset)
+		url.Values(*q).Del(ParamOffset)
 	}
 }
 
 // SetLimit sets the maximum number of items to include with the index.
-func (q IndexQuery) SetLimit(limit int) {
+func (q *IndexQuery) SetLimit(limit int) {
+	if *q == nil {
+		*q = IndexQuery{}
+	}
 	if limit != 0 {
-		url.Values(q).Set(ParamLimit, strconv.Itoa(limit))
+		url.Values(*q).Set(ParamLimit, strconv.Itoa(limit))
 	} else {
-		url.Values(q).Del(ParamLimit)
+		url.Values(*q).Del(ParamLimit)
 	}
 }
 
 // SetLabelSelector is a helper to set label selectors used to filter the index.
-func (q IndexQuery) SetLabelSelector(kv map[string]string) {
+func (q *IndexQuery) SetLabelSelector(kv map[string]string) {
 	ls := make([]string, 0, len(kv))
 	for k, v := range kv {
 		ls = append(ls, fmt.Sprintf("%s=%s", k, v))
 	}
 	if len(ls) > 0 {
 		sort.Strings(ls)
-		url.Values(q).Add(ParamLabelSelector, strings.Join(ls, ","))
+		if *q == nil {
+			*q = IndexQuery{}
+		}
+		url.Values(*q).Add(ParamLabelSelector, strings.Join(ls, ","))
 	}
 }
