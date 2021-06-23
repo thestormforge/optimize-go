@@ -31,9 +31,6 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 )
 
-// audience is the logical identifier of the Optimize API
-const audience = "https://api.carbonrelay.io/v1/"
-
 // Loader is used to initially populate an Optimize configuration
 type Loader func(cfg *OptimizeConfig) error
 
@@ -54,6 +51,8 @@ type OptimizeConfig struct {
 	Overrides Overrides
 	// ClientIdentity is used to determine the OAuth 2.0 client identifier
 	ClientIdentity ClientIdentity
+	// AuthorizationParameters is used to provide additional parameters to the OAuth 2.0 endpoints
+	AuthorizationParameters map[string][]string
 
 	data        Config
 	unpersisted []Change
@@ -312,7 +311,7 @@ func (rsc *OptimizeConfig) NewAuthorization() (*authorizationcode.Config, error)
 	c.Endpoint.AuthURL = srv.Authorization.AuthorizationEndpoint
 	c.Endpoint.TokenURL = srv.Authorization.TokenEndpoint
 	c.Endpoint.AuthStyle = oauth2.AuthStyleInParams
-	c.EndpointParams = map[string][]string{"audience": {audience}}
+	c.EndpointParams = rsc.AuthorizationParameters
 	return c, nil
 }
 
@@ -330,7 +329,7 @@ func (rsc *OptimizeConfig) NewDeviceAuthorization() (*devicecode.Config, error) 
 			AuthStyle: oauth2.AuthStyleInParams,
 		},
 		DeviceAuthorizationURL: srv.Authorization.DeviceAuthorizationEndpoint,
-		EndpointParams:         map[string][]string{"audience": {audience}},
+		EndpointParams:         rsc.AuthorizationParameters,
 	}, nil
 }
 
@@ -368,7 +367,7 @@ func (rsc *OptimizeConfig) tokenSource(ctx context.Context) (oauth2.TokenSource,
 			ClientID:       az.Credential.ClientID,
 			ClientSecret:   az.Credential.ClientSecret,
 			TokenURL:       srv.Authorization.TokenEndpoint,
-			EndpointParams: url.Values{"audience": []string{audience}},
+			EndpointParams: url.Values(rsc.AuthorizationParameters),
 			AuthStyle:      oauth2.AuthStyleInParams,
 		}
 		return cc.TokenSource(ctx), nil
