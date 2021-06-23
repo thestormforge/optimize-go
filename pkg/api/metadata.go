@@ -41,29 +41,14 @@ type Metadata map[string][]string
 func (m Metadata) Title() string {
 	return http.Header(m).Get("Title")
 }
-func (m Metadata) SetTitle(value string) {
-	if value != "" {
-		http.Header(m).Set("Title", value)
-	}
-}
 
 func (m Metadata) Location() string {
 	return http.Header(m).Get("Location")
-}
-func (m Metadata) SetLocation(value string) {
-	if value != "" {
-		http.Header(m).Set("Location", value)
-	}
 }
 
 func (m Metadata) LastModified() time.Time {
 	value, _ := http.ParseTime(http.Header(m).Get("Last-Modified"))
 	return value
-}
-func (m Metadata) SetLastModified(t time.Time) {
-	if !t.IsZero() {
-		http.Header(m).Set("Last-Modified", t.UTC().Format(http.TimeFormat))
-	}
 }
 
 func (m Metadata) Link(rel string) string {
@@ -76,29 +61,6 @@ func (m Metadata) Link(rel string) string {
 		}
 	}
 	return ""
-}
-func (m Metadata) SetLink(rel, link string) {
-	if link == "" {
-		return
-	}
-
-	values := http.Header(m).Values("Link")
-	http.Header(m).Del("Link")
-	var added bool
-	for _, rh := range values {
-		for _, h := range strings.Split(rh, ",") {
-			r, l := splitLink(h)
-			if strings.EqualFold(rel, r) {
-				l = link
-				added = true
-			}
-			http.Header(m).Add("Link", fmt.Sprintf(`<%s>;rel=%q`, l, r))
-		}
-	}
-
-	if !added {
-		http.Header(m).Add("Link", fmt.Sprintf(`<%s>;rel=%q`, link, rel))
-	}
 }
 
 func splitLink(value string) (rel, link string) {
@@ -120,23 +82,33 @@ func splitLink(value string) (rel, link string) {
 		}
 	}
 
+	rel = CanonicalLinkRelation(rel)
+
+	return
+}
+
+// CanonicalLinkRelation returns the supplied link relation name normalized for
+// previously accepted values. The returned value can be compared case-insensitively
+// to the supplied `Relation*` constants.
+func CanonicalLinkRelation(rel string) string {
 	switch strings.ToLower(rel) {
 	case "previous":
-		rel = RelationPrev
+		return RelationPrev
 
 	case "https://carbonrelay.com/rel/labels",
 		"https://carbonrelay.com/rel/triallabels":
-		rel = RelationLabels
+		return RelationLabels
 
 	case "https://carbonrelay.com/rel/trials":
-		rel = RelationTrials
+		return RelationTrials
 
 	case "https://carbonrelay.com/rel/next-trial",
 		"https://carbonrelay.com/rel/nexttrial":
-		rel = RelationNextTrial
-	}
+		return RelationNextTrial
 
-	return
+	default:
+		return rel
+	}
 }
 
 // UnmarshalJSON extracts the supplied JSON, preserving the "_metadata" field if

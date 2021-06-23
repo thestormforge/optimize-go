@@ -17,52 +17,40 @@ limitations under the License.
 package api
 
 import (
-	"net/http"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMetadata_Headers(t *testing.T) {
-	md := Metadata{}
+func TestMetadata(t *testing.T) {
+	md := Metadata{
+		"Title":         []string{`Testing`},
+		"Last-Modified": []string{`fail`},
+		"location":      []string{`https://invalid.example.com/testing`},
+		"Link": []string{
+			`</foo>;rel="abc"`,
+			`</bar>; rel=xyz`,
+			`</list?offset=0>;rel="previous",</list?offset=10>;rel="next"`,
+		},
+	}
 
-	// Overwrite and ignore blanks
-	md.SetTitle("Overwritten")
-	md.SetTitle("Testing")
-	assert.Equal(t, "Testing", md.Title())
-	md.SetTitle("")
+	// Simple case
 	assert.Equal(t, "Testing", md.Title())
 
-	// Last-Modified ignores parse failures
-	md["Last-Modified"] = []string{"fail"}
+	// Invalid time returns zero value
 	assert.Equal(t, time.Time{}, md.LastModified())
 
-	// We expect normalized header names
-	http.Header(md).Set("location", "https://invalid.example.com/testing")
-	assert.NotContains(t, md, "location")
-	assert.Equal(t, "https://invalid.example.com/testing", md.Location())
-}
+	// Metadata keys must be in canonical form (use `http.CanonicalMIMEHeaderKey`)
+	assert.Equal(t, "", md.Location())
 
-func TestMetadata_Links(t *testing.T) {
-	md := Metadata{}
+	// Simple case
+	assert.Equal(t, "/foo", md.Link("abc"))
 
-	// Simple set/get
-	md.SetLink(RelationNext, "https://invalid.example.com/list?offset=10")
-	assert.Equal(t, "https://invalid.example.com/list?offset=10", md.Link(RelationNext))
-	assert.Equal(t, []string{`<https://invalid.example.com/list?offset=10>;rel="next"`}, md["Link"])
+	// Quoting, white-space
+	assert.Equal(t, "/bar", md.Link("xyz"))
 
-	// Expand existing comma-delimited values on write
-	md["Link"] = []string{`</foo>;rel=abc,</bar>;rel=xyz`}
-	md.SetLink("abc", "/test")
-	assert.Equal(t, []string{`</test>;rel="abc"`, `</bar>;rel="xyz"`}, md["Link"])
-
-	// We do not normalize on set...
-	delete(md, "Link")
-	md.SetLink("previous", "/list?offset=0")
-	assert.Equal(t, []string{`</list?offset=0>;rel="previous"`}, md["Link"])
-
-	// ...but we do on get
-	assert.Equal(t, "", md.Link("previous"))
-	assert.Equal(t, "/list?offset=0", md.Link("prev"))
+	// Combined links, canonical relations
+	assert.Equal(t, "/list?offset=0", md.Link(RelationPrev))
+	assert.Equal(t, "/list?offset=10", md.Link(RelationNext))
 }
