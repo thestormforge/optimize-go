@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"net/url"
 	"os/exec"
-	"strings"
 
 	"github.com/thestormforge/optimize-go/pkg/oauth2/authorizationcode"
 	"github.com/thestormforge/optimize-go/pkg/oauth2/devicecode"
@@ -39,9 +38,6 @@ type Change func(cfg *Config) error
 
 // ClientIdentity is a mapping function that returns an OAuth 2.0 `client_id` given an authorization server issuer identifier
 type ClientIdentity func(string) string
-
-// Endpoints exposes the Optimize API server endpoint locations as a mapping of prefixes to base URLs
-type Endpoints map[string]*url.URL
 
 // OptimizeConfig is the structure used to manage configuration data
 type OptimizeConfig struct {
@@ -140,45 +136,6 @@ func (rsc *OptimizeConfig) SystemNamespace() (string, error) {
 		return "", nil
 	}
 	return ctrl.Namespace, nil
-}
-
-// Endpoints returns a resolver that can generate fully qualified endpoint URLs
-func (rsc *OptimizeConfig) Endpoints() (Endpoints, error) {
-	srv, err := CurrentServer(rsc.Reader())
-	if err != nil {
-		return nil, err
-	}
-
-	add := func(ep Endpoints, prefix, endpoint string) error {
-		u, err := url.Parse(endpoint)
-		if err != nil {
-			return err
-		}
-		u.Path = strings.TrimSuffix(u.Path, "/") + "/"
-		ep[prefix] = u
-		return nil
-	}
-
-	ep := Endpoints(make(map[string]*url.URL, 2))
-	if err := add(ep, "/experiments/", srv.API.ExperimentsEndpoint); err != nil {
-		return nil, err
-	}
-	if err := add(ep, "/accounts/", srv.API.AccountsEndpoint); err != nil {
-		return nil, err
-	}
-	return ep, nil
-}
-
-// Resolve returns the fully qualified URL of the specified endpoint
-func (ep Endpoints) Resolve(endpoint string) *url.URL {
-	for k, v := range ep {
-		if strings.HasPrefix(endpoint, k) {
-			u := *v
-			u.Path = u.Path + strings.TrimPrefix(endpoint, k)
-			return &u
-		}
-	}
-	return nil
 }
 
 // Kubectl returns an executable command for running kubectl
