@@ -93,11 +93,11 @@ func defaultServerRoots(env string, srv *Server) error {
 	// The environment corresponds to deployment details of the proprietary backend
 	switch env {
 	case "production":
-		defaultString(&srv.Identifier, "https://api.stormforge.io/v1/")
+		defaultString(&srv.Identifier, "https://api.stormforge.io/")
 		defaultString(&srv.Authorization.Issuer, "https://auth.stormforge.io/")
 		defaultString(&srv.Application.BaseURL, "https://app.stormforge.io/")
 	case "development":
-		defaultString(&srv.Identifier, "https://api.stormforge.dev/v1/")
+		defaultString(&srv.Identifier, "https://api.stormforge.dev/")
 		defaultString(&srv.Authorization.Issuer, "https://auth.stormforge.dev/")
 		defaultString(&srv.Application.BaseURL, "https://app.stormforge.dev/")
 	default:
@@ -128,8 +128,8 @@ func defaultServerEndpoints(srv *Server) error {
 	}
 
 	// Apply the API defaults
-	defaultString(&srv.API.ExperimentsEndpoint, api+"/experiments/")
-	defaultString(&srv.API.AccountsEndpoint, api+"/accounts/")
+	defaultString(&srv.API.ExperimentsEndpoint, api+"/v1/experiments/")
+	defaultString(&srv.API.AccountsEndpoint, api+"/v1/accounts/")
 
 	// Apply the authorization defaults
 	// TODO We should try discovery, e.g. fetch `discovery.WellKnownURI(issuer, "oauth-authorization-server")` and _merge_ (not _default_ since the server reported values win)
@@ -146,7 +146,7 @@ func defaultServerEndpoints(srv *Server) error {
 
 	// Special case for the registration service which is actually part of the accounts API
 	if u, err := url.Parse(srv.API.AccountsEndpoint); err != nil {
-		defaultString(&srv.Authorization.RegistrationEndpoint, api+"/accounts/clients")
+		defaultString(&srv.Authorization.RegistrationEndpoint, api+"/v1/accounts/clients")
 	} else {
 		u.Path = strings.TrimRight(u.Path, "/") + "/clients"
 		defaultString(&srv.Authorization.RegistrationEndpoint, u.String())

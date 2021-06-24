@@ -28,7 +28,7 @@ import (
 	"github.com/thestormforge/optimize-go/pkg/api"
 )
 
-const endpointExperiments = "/experiments/"
+const endpointExperiments = "/v1/experiments/"
 
 // NewAPI returns a new API implementation for the specified client.
 func NewAPI(c api.Client) API {

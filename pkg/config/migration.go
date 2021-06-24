@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
@@ -40,6 +41,11 @@ func migrationLoader(cfg *OptimizeConfig) error {
 
 	// Migrate the old environment variables
 	if err := migrateRedSkyEnv(cfg); err != nil {
+		return err
+	}
+
+	// Migrate the server identifier to drop the /v1/
+	if err := migrateServerIdentifier(cfg); err != nil {
 		return err
 	}
 
@@ -153,4 +159,38 @@ func migrateRedSkyEnv(cfg *OptimizeConfig) error {
 	defaultString(&cfg.Overrides.Credential.ClientID, os.Getenv("REDSKY_AUTHORIZATION_CLIENT_ID"))
 	defaultString(&cfg.Overrides.Credential.ClientSecret, os.Getenv("REDSKY_AUTHORIZATION_CLIENT_SECRET"))
 	return nil
+}
+
+// migrateServerIdentifier removes the `/v1/` suffix from the server identifier.
+func migrateServerIdentifier(cfg *OptimizeConfig) error {
+	// Require both path separators, but leave the trailing slash in place
+	trimV1 := func(s string) string {
+		if strings.HasSuffix(s, "/v1/") {
+			return strings.TrimSuffix(s, "v1/")
+		}
+		return s
+	}
+
+	// Update the overrides for stale environment variables
+	cfg.Overrides.ServerIdentifier = trimV1(cfg.Overrides.ServerIdentifier)
+
+	// Check to see if we need to make a change to any persisted server identifiers
+	var needsUpdate bool
+	for _, svr := range cfg.data.Servers {
+		if svr.Server.Identifier != trimV1(svr.Server.Identifier) {
+			needsUpdate = true
+			break
+		}
+	}
+	if !needsUpdate {
+		return nil
+	}
+
+	// Update all servers with a `/v1/` suffix
+	return cfg.Update(func(cfg *Config) error {
+		for i := range cfg.Servers {
+			cfg.Servers[i].Server.Identifier = trimV1(cfg.Servers[i].Server.Identifier)
+		}
+		return nil
+	})
 }
