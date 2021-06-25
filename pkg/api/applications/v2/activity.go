@@ -1,0 +1,79 @@
+/*
+Copyright 2021 GramLabs, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package v2
+
+import (
+	"net/url"
+	"time"
+
+	"github.com/thestormforge/optimize-go/pkg/api"
+)
+
+type ActivityFeed struct {
+	HomePageURL string         `json:"home_page_url,omitempty"`
+	FeedURL     string         `json:"feed_url,omitempty"`
+	NextURL     string         `json:"next_url,omitempty"`
+	Hubs        []ActivityHub  `json:"hubs,omitempty"`
+	Items       []ActivityItem `json:"items"`
+}
+
+type ActivityHub struct {
+	Type string `json:"type"`
+	URL  string `json:"url"`
+}
+
+type ActivityItem struct {
+	ID            string             `json:"id"`
+	URL           string             `json:"url,omitempty"`
+	ExternalURL   string             `json:"external_url,omitempty"`
+	Title         string             `json:"title,omitempty"`
+	DatePublished time.Time          `json:"date_published,omitempty"`
+	DateModified  time.Time          `json:"date_modified,omitempty"`
+	Tags          []string           `json:"tags,omitempty"`
+	StormForge    *ActivityExtension `json:"_stormforge,omitempty"`
+}
+
+type ActivityExtension struct {
+	ActivityFailure
+}
+
+type ActivityFeedQuery struct {
+	Query map[string][]string
+}
+
+func (q *ActivityFeedQuery) SetType(t string) {
+	url.Values(q.Query).Set("type", t)
+}
+
+type Activity struct {
+	api.Metadata `json:"-"`
+	Run          *RunActivity  `json:"run,omitempty"`
+	Scan         *ScanActivity `json:"scan,omitempty"`
+}
+
+type RunActivity struct {
+	ActivityFailure
+}
+
+type ScanActivity struct {
+	ActivityFailure
+}
+
+type ActivityFailure struct {
+	FailureReason  string `json:"failure_reason,omitempty"`
+	FailureMessage string `json:"failure_message,omitempty"`
+}
