@@ -24,11 +24,6 @@ import (
 	"github.com/thestormforge/optimize-go/pkg/api"
 )
 
-// ExperimentName exists to clearly separate cases where an actual name can be used
-type ExperimentName interface {
-	Name() string
-}
-
 // NewExperimentName returns an experiment name for a given string
 func NewExperimentName(n string) ExperimentName {
 	return experimentName(n)
