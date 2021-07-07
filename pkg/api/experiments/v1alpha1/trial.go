@@ -80,7 +80,7 @@ const (
 type TrialListQuery struct{ api.IndexQuery }
 
 func (q *TrialListQuery) SetStatus(status ...TrialStatus) {
-	str := make([]string, len(status))
+	str := make([]string, 0, len(status))
 	for _, s := range status {
 		str = append(str, string(s))
 	}
