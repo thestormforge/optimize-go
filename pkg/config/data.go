@@ -65,6 +65,8 @@ type Server struct {
 
 // APIServer is the API server metadata
 type APIServer struct {
+	// ApplicationsEndpoint is the URL of the applications endpoint
+	ApplicationsEndpoint string `json:"applications_endpoint,omitempty"`
 	// ExperimentsEndpoint is the URL of the experiments endpoint
 	ExperimentsEndpoint string `json:"experiments_endpoint,omitempty"`
 	// AccountsEndpoint is the URL of the accounts endpoint

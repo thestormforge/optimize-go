@@ -24,14 +24,13 @@ import (
 	"time"
 
 	"github.com/thestormforge/optimize-go/pkg/api"
-	"github.com/thestormforge/optimize-go/pkg/api/experiments/v1alpha1/numstr"
 )
 
 type Assignment struct {
 	// The name of the parameter in the experiment the assignment corresponds to.
 	ParameterName string `json:"parameterName"`
 	// The assigned value of the parameter.
-	Value numstr.NumberOrString `json:"value"`
+	Value api.NumberOrString `json:"value"`
 }
 
 type TrialAssignments struct {

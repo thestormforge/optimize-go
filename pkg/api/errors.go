@@ -76,13 +76,8 @@ func NewError(t ErrorType, resp *http.Response, body []byte) *Error {
 	}
 
 	// Capture the Retry-After header for "service unavailable"
-	if resp.StatusCode == http.StatusServiceUnavailable {
-		if ra, raerr := strconv.Atoi(resp.Header.Get("Retry-After")); raerr == nil {
-			if ra < 1 {
-				ra = 5
-			} else if ra > 120 {
-				ra = 120
-			}
+	if resp.StatusCode == http.StatusServiceUnavailable || resp.StatusCode == http.StatusTooManyRequests {
+		if ra, _ := strconv.Atoi(resp.Header.Get("Retry-After")); ra > 0 {
 			err.RetryAfter = time.Duration(ra) * time.Second
 		}
 	}

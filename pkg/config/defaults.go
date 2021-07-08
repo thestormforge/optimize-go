@@ -128,6 +128,7 @@ func defaultServerEndpoints(srv *Server) error {
 	}
 
 	// Apply the API defaults
+	defaultString(&srv.API.ApplicationsEndpoint, api+"/v2/applications/")
 	defaultString(&srv.API.ExperimentsEndpoint, api+"/v1/experiments/")
 	defaultString(&srv.API.AccountsEndpoint, api+"/v1/accounts/")
 

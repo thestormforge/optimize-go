@@ -22,63 +22,63 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/thestormforge/optimize-go/pkg/api/experiments/v1alpha1/numstr"
+	"github.com/thestormforge/optimize-go/pkg/api"
 )
 
 // LowerBound attempts to return the lower bound for this parameter.
-func (p *Parameter) LowerBound() (*numstr.NumberOrString, error) {
+func (p *Parameter) LowerBound() (*api.NumberOrString, error) {
 	if p.Type == ParameterTypeCategorical {
 		if len(p.Values) == 0 {
 			return nil, fmt.Errorf("unable to determine categorical minimum bound")
 		}
-		return &numstr.NumberOrString{StrVal: p.Values[0], IsString: true}, nil
+		return &api.NumberOrString{StrVal: p.Values[0], IsString: true}, nil
 	}
 
 	if p.Bounds == nil {
 		return nil, fmt.Errorf("unable to determine numeric minimum bound")
 	}
 
-	return &numstr.NumberOrString{NumVal: p.Bounds.Min}, nil
+	return &api.NumberOrString{NumVal: p.Bounds.Min}, nil
 }
 
 // UpperBound attempts to return the upper bound for this parameter.
-func (p *Parameter) UpperBound() (*numstr.NumberOrString, error) {
+func (p *Parameter) UpperBound() (*api.NumberOrString, error) {
 	if p.Type == ParameterTypeCategorical {
 		if len(p.Values) == 0 {
 			return nil, fmt.Errorf("unable to determine categorical maximum bound")
 		}
-		return &numstr.NumberOrString{StrVal: p.Values[len(p.Values)-1], IsString: true}, nil
+		return &api.NumberOrString{StrVal: p.Values[len(p.Values)-1], IsString: true}, nil
 	}
 
 	if p.Bounds == nil {
 		return nil, fmt.Errorf("unable to determine numeric maximum bound")
 	}
 
-	return &numstr.NumberOrString{NumVal: p.Bounds.Max}, nil
+	return &api.NumberOrString{NumVal: p.Bounds.Max}, nil
 }
 
 // ParseValue attempts to parse the supplied value into a NumberOrString based on the type of this parameter.
-func (p *Parameter) ParseValue(s string) (*numstr.NumberOrString, error) {
-	var v numstr.NumberOrString
+func (p *Parameter) ParseValue(s string) (*api.NumberOrString, error) {
+	var v api.NumberOrString
 	switch p.Type {
 	case ParameterTypeInteger:
 		if _, err := strconv.ParseInt(s, 10, 64); err != nil {
 			return nil, err
 		}
-		v = numstr.FromNumber(json.Number(s))
+		v = api.FromNumber(json.Number(s))
 	case ParameterTypeDouble:
 		if _, err := strconv.ParseFloat(s, 64); err != nil {
 			return nil, err
 		}
-		v = numstr.FromNumber(json.Number(s))
+		v = api.FromNumber(json.Number(s))
 	case ParameterTypeCategorical:
-		v = numstr.FromString(s)
+		v = api.FromString(s)
 	}
 	return &v, nil
 }
 
 // CheckParameterValue validates that the supplied value can be used for a parameter.
-func CheckParameterValue(p *Parameter, v *numstr.NumberOrString) error {
+func CheckParameterValue(p *Parameter, v *api.NumberOrString) error {
 	if p.Type == ParameterTypeCategorical {
 		if !v.IsString {
 			return fmt.Errorf("categorical value must be a string: %s", v.String())
