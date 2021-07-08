@@ -17,6 +17,7 @@ limitations under the License.
 package api
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -53,4 +54,20 @@ func TestMetadata(t *testing.T) {
 	// Combined links, canonical relations
 	assert.Equal(t, "/list?offset=0", md.Link(RelationPrev))
 	assert.Equal(t, "/list?offset=10", md.Link(RelationNext))
+}
+
+func TestJsonMetadata_UnmarshalJSON(t *testing.T) {
+	// Verify last-entry-wins
+	data := []byte(`
+{
+  "Link": "</foo>; rel=foo",
+  "Link": "</bar>; rel=bar"
+}
+`)
+
+	md := jsonMetadata{}
+	err := json.Unmarshal(data, &md)
+	if assert.NoError(t, err) {
+		assert.Equal(t, []string{"</bar>; rel=bar"}, md["Link"])
+	}
 }

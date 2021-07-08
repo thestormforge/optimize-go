@@ -115,44 +115,48 @@ func CanonicalLinkRelation(rel string) string {
 // necessary. This should only be necessary on items in index (list) representations
 // as top-level "_metadata" fields should normally be populated from HTTP headers.
 func UnmarshalJSON(b []byte, v interface{}) error {
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
+	if f := findMetadataField(reflect.ValueOf(v)); f.IsValid() {
+		md := struct {
+			Metadata jsonMetadata `json:"_metadata"`
+		}{
+			Metadata: jsonMetadata{},
+		}
+		if err := json.Unmarshal(b, &md); err == nil {
+			f.Set(reflect.ValueOf(Metadata(md.Metadata)))
+		}
 	}
 
-	rv := reflect.Indirect(reflect.ValueOf(v))
+	return json.Unmarshal(b, v)
+}
+
+// findMetadataField searches for a `Metadata` typed field with a JSON tag of "-".
+func findMetadataField(rv reflect.Value) reflect.Value {
+	rv = reflect.Indirect(rv)
 	for i := 0; i < rv.NumField(); i++ {
-		f := rv.Field(i)
 		ft := rv.Type().Field(i)
-		k := strings.SplitN(ft.Tag.Get("json"), ",", 2)[0]
-		if len(raw[k]) > 0 {
-			if err := json.Unmarshal(raw[k], f.Addr().Interface()); err != nil {
-				return err
-			}
-		} else if k == "-" && f.Type() == reflect.TypeOf(Metadata{}) {
-			if err := unmarshalMetadata(f, raw["_metadata"]); err != nil {
-				return err
-			}
-		} else if ft.Anonymous {
-			if err := UnmarshalJSON(b, f.Addr().Interface()); err != nil {
-				return err
+		if ft.Tag.Get("json") == "-" && ft.Type == reflect.TypeOf(Metadata{}) {
+			return rv.Field(i)
+		} else if ft.Anonymous && ft.Type.Kind() == reflect.Struct {
+			if result := findMetadataField(rv.Field(i)); result.IsValid() {
+				return result
 			}
 		}
 	}
-	return nil
+	return reflect.Value{}
 }
 
-func unmarshalMetadata(f reflect.Value, raw json.RawMessage) error {
-	if len(raw) == 0 {
-		return nil
-	}
+// jsonMetadata is a helper for unmarshalling a mapping where values may or
+// may not be multi-valued strings. For example, `{"x":["y","z"],"a":"b"}` would
+// wrap `"b"` in an array.
+type jsonMetadata map[string][]string
 
+func (m jsonMetadata) UnmarshalJSON(data []byte) error {
+	// TODO Should `{"Link":"<x>;rel=x","Link":"<y>;rel=y"}` be allowed?
 	md := make(map[string]interface{})
-	if err := json.Unmarshal(raw, &md); err != nil {
+	if err := json.Unmarshal(data, &md); err != nil {
 		return err
 	}
 
-	m := Metadata{}
 	for k, v := range md {
 		switch t := v.(type) {
 		case string:
@@ -164,6 +168,5 @@ func unmarshalMetadata(f reflect.Value, raw json.RawMessage) error {
 		}
 	}
 
-	f.Set(reflect.ValueOf(m))
 	return nil
 }

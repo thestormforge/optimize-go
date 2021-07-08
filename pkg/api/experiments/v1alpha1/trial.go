@@ -114,7 +114,10 @@ type TrialItem struct {
 	Experiment *Experiment `json:"-"`
 }
 
-func (t *TrialItem) UnmarshalJSON(b []byte) error { return api.UnmarshalJSON(b, t) }
+func (ti *TrialItem) UnmarshalJSON(b []byte) error {
+	type t TrialItem
+	return api.UnmarshalJSON(b, (*t)(ti))
+}
 
 type TrialList struct {
 	// The trial list metadata.

@@ -128,11 +128,25 @@ type Experiment struct {
 	Labels map[string]string `json:"labels,omitempty"`
 }
 
+func (e *Experiment) UnmarshalJSON(data []byte) error {
+	if n := extractExperimentName(e.Metadata); n != "" {
+		e.Name = n
+	}
+
+	type t Experiment
+	return json.Unmarshal(data, (*t)(e))
+}
+
 type ExperimentListQuery struct{ api.IndexQuery }
 
-type ExperimentItem struct{ Experiment }
+type ExperimentItem struct {
+	Experiment
+}
 
-func (l *ExperimentItem) UnmarshalJSON(b []byte) error { return api.UnmarshalJSON(b, l) }
+func (ei *ExperimentItem) UnmarshalJSON(b []byte) error {
+	type t ExperimentItem
+	return api.UnmarshalJSON(b, (*t)(ei))
+}
 
 type ExperimentList struct {
 	// The experiment list metadata.

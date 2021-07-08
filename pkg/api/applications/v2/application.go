@@ -38,7 +38,10 @@ type ApplicationItem struct {
 	ScenarioCount int `json:"scenarioCount,omitempty"`
 }
 
-func (l *ApplicationItem) UnmarshalJSON(b []byte) error { return api.UnmarshalJSON(b, l) }
+func (ai *ApplicationItem) UnmarshalJSON(b []byte) error {
+	type t ApplicationItem
+	return api.UnmarshalJSON(b, (*t)(ai))
+}
 
 type ApplicationList struct {
 	// The application list metadata.
