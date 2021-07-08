@@ -1,0 +1,61 @@
+{
+  "Experiment": {
+    "optimization": [
+      {
+        "name": "experimentBudget",
+        "value": "20"
+      }
+    ],
+    "parameters": [
+      {
+        "name": "cpu",
+        "type": "int",
+        "bounds": {
+          "min": 2000,
+          "max": 4000
+        }
+      },
+      {
+        "name": "memory",
+        "type": "int",
+        "bounds": {
+          "min": 2048,
+          "max": 4096
+        }
+      }
+    ],
+    "metrics": [
+      {
+        "name": "cost",
+        "minimize": true
+      },
+      {
+        "name": "duration",
+        "minimize": true
+      }
+    ]
+  },
+  "Baseline": [
+    {
+      "parameterName": "cpu",
+      "value": 4000
+    },
+    {
+      "parameterName": "memory",
+      "value": 4096
+    }
+  ],
+  "Values": [
+    [0.017, 0.002],
+    [0.00003, -0.0005]
+  ],
+  "Failures": [
+    {
+      "Name": "cpu",
+      "Min": 3980,
+      "Max": 3999,
+      "Reason": "Unschedulable",
+      "Message": "0/3 nodes are available: 3 Insufficient cpu."
+    }
+  ]
+}
