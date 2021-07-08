@@ -34,7 +34,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/thestormforge/optimize-go/pkg/api"
 	experiments "github.com/thestormforge/optimize-go/pkg/api/experiments/v1alpha1"
-	"github.com/thestormforge/optimize-go/pkg/api/experiments/v1alpha1/numstr"
 	"github.com/thestormforge/optimize-go/pkg/api/internal/apitest"
 )
 
@@ -146,8 +145,8 @@ func runTest(t *testing.T, td *TestDefinition, expAPI experiments.API) {
 	})
 }
 
-func indexAssignments(ta *experiments.TrialAssignments) map[string]numstr.NumberOrString {
-	result := make(map[string]numstr.NumberOrString, len(ta.Assignments))
+func indexAssignments(ta *experiments.TrialAssignments) map[string]api.NumberOrString {
+	result := make(map[string]api.NumberOrString, len(ta.Assignments))
 	for _, a := range ta.Assignments {
 		result[a.ParameterName] = a.Value
 	}
