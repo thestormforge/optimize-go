@@ -240,7 +240,7 @@ func (h *httpAPI) CreateTrial(ctx context.Context, u string, asm TrialAssignment
 	case http.StatusCreated, http.StatusAccepted:
 		ta.Metadata = api.Metadata(resp.Header)
 		err = json.Unmarshal(body, &ta)
-		return ta, nil // TODO Stop ignoring this when the server starts sending a response body
+		return ta, err
 	case http.StatusConflict:
 		return ta, api.NewError(ErrExperimentStopped, resp, body)
 	case http.StatusUnprocessableEntity:
