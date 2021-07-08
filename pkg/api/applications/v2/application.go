@@ -20,26 +20,15 @@ import (
 	"github.com/thestormforge/optimize-go/pkg/api"
 )
 
-// NewApplicationName returns an application name for a given string.
-func NewApplicationName(n string) ApplicationName {
-	return applicationName(n)
-}
-
-type applicationName string
-
-func (n applicationName) Name() string   { return string(n) }
-func (n applicationName) String() string { return string(n) }
-
 type Application struct {
 	api.Metadata `json:"-"`
-	Name_        string        `json:"name"`
-	DisplayName  string        `json:"title,omitempty"`
-	Resources    []interface{} `json:"resources,omitempty"`
+	Name         ApplicationName `json:"name"`
+	DisplayName  string          `json:"title,omitempty"`
+	Resources    []interface{}   `json:"resources,omitempty"`
 }
 
-func (a *Application) Name() string {
-	return a.Name_
-}
+// NOTE: Use `DisplayName` as the field since `Title()` is a function on the embedded `Metadata`
+var _ = Application{}.Title()
 
 type ApplicationListQuery struct{ api.IndexQuery }
 
@@ -49,7 +38,10 @@ type ApplicationItem struct {
 	ScenarioCount int `json:"scenarioCount,omitempty"`
 }
 
-func (l *ApplicationItem) UnmarshalJSON(b []byte) error { return api.UnmarshalJSON(b, l) }
+func (ai *ApplicationItem) UnmarshalJSON(b []byte) error {
+	type t ApplicationItem
+	return api.UnmarshalJSON(b, (*t)(ai))
+}
 
 type ApplicationList struct {
 	// The application list metadata.

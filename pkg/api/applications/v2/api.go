@@ -32,12 +32,6 @@ const (
 	ErrActivityRateLimited api.ErrorType = "activity-rate-limited"
 )
 
-// ApplicationName represents a name token used to identify an application.
-type ApplicationName interface {
-	// Name returns the string representation of the application name.
-	Name() string
-}
-
 // Subscriber describes a strategy for subscribing to feed notifications.
 type Subscriber interface {
 	// Subscribe initiates a subscription that continues for the lifetime of the context.

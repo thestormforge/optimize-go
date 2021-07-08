@@ -17,9 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"fmt"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -116,15 +114,9 @@ type TrialItem struct {
 	Experiment *Experiment `json:"-"`
 }
 
-func (t *TrialItem) UnmarshalJSON(b []byte) error { return api.UnmarshalJSON(b, t) }
-
-// Name returns an effective name for uniquely identifying the trial.
-func (t *TrialItem) Name() string {
-	if t.Experiment != nil {
-		return fmt.Sprintf("%s-%03d", t.Experiment.Name(), t.Number)
-	}
-
-	return strconv.FormatInt(t.Number, 10)
+func (ti *TrialItem) UnmarshalJSON(b []byte) error {
+	type t TrialItem
+	return api.UnmarshalJSON(b, (*t)(ti))
 }
 
 type TrialList struct {
@@ -141,29 +133,4 @@ type TrialList struct {
 type TrialLabels struct {
 	// New labels for this trial.
 	Labels map[string]string `json:"labels"`
-}
-
-// SplitTrialName provides a consistent experience when trying to split a "trial name" into an experiment
-// name and a trial number. When the provided name does not contain a number, the resulting number will
-// be less then zero.
-func SplitTrialName(name string) (ExperimentName, int64) {
-	// Names with slashes are always split (since the slash can't be in the name)
-	p := strings.LastIndex(name, "/")
-	if p >= 0 {
-		if num, err := strconv.ParseInt(name[p+1:], 10, 64); err == nil {
-			return experimentName(name[0:p]), num
-		}
-		return experimentName(name[0:p]), -1
-	}
-
-	// The only other allowable separator is the hyphen
-	p = strings.LastIndex(name, "-")
-	if p >= 0 {
-		// Strip off a valid number after the "-". If your experiment name has a "-<NUM>" suffix, use a slash
-		if num, err := strconv.ParseInt(name[p+1:], 10, 64); err == nil {
-			return experimentName(name[0:p]), num
-		}
-	}
-
-	return experimentName(name), -1
 }

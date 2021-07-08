@@ -18,21 +18,9 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"net/url"
-	"strings"
 
 	"github.com/thestormforge/optimize-go/pkg/api"
 )
-
-// NewExperimentName returns an experiment name for a given string
-func NewExperimentName(n string) ExperimentName {
-	return experimentName(n)
-}
-
-type experimentName string
-
-func (n experimentName) Name() string   { return string(n) }
-func (n experimentName) String() string { return string(n) }
 
 type Optimization struct {
 	// The name of the optimization parameter.
@@ -120,7 +108,9 @@ type Parameter struct {
 type Experiment struct {
 	// The experiment metadata.
 	api.Metadata `json:"-"`
-	// The display name of the experiment. Do not use for generating URLs!
+	// The name of the experiment.
+	Name ExperimentName `json:"-"`
+	// The display name of the experiment.
 	DisplayName string `json:"displayName,omitempty"`
 	// The number of observations made for this experiment.
 	Observations int64 `json:"observations,omitempty"`
@@ -138,24 +128,25 @@ type Experiment struct {
 	Labels map[string]string `json:"labels,omitempty"`
 }
 
-// Name allows an experiment to be used as an ExperimentName
-func (e *Experiment) Name() string {
-	u, err := url.Parse(e.Link(api.RelationSelf))
-	if err != nil {
-		return ""
+func (e *Experiment) UnmarshalJSON(data []byte) error {
+	if n := extractExperimentName(e.Metadata); n != "" {
+		e.Name = n
 	}
-	i := strings.Index(u.Path, endpointExperiments)
-	if i < 0 {
-		return ""
-	}
-	return u.Path[len(endpointExperiments)+i:]
+
+	type t Experiment
+	return json.Unmarshal(data, (*t)(e))
 }
 
 type ExperimentListQuery struct{ api.IndexQuery }
 
-type ExperimentItem struct{ Experiment }
+type ExperimentItem struct {
+	Experiment
+}
 
-func (l *ExperimentItem) UnmarshalJSON(b []byte) error { return api.UnmarshalJSON(b, l) }
+func (ei *ExperimentItem) UnmarshalJSON(b []byte) error {
+	type t ExperimentItem
+	return api.UnmarshalJSON(b, (*t)(ei))
+}
 
 type ExperimentList struct {
 	// The experiment list metadata.
