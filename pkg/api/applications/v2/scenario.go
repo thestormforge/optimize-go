@@ -30,6 +30,9 @@ type Scenario struct {
 	Objective     []interface{} `json:"objective,omitempty"`
 }
 
+// NOTE: Use `DisplayName` as the field since `Title()` is a function on the embedded `Metadata`
+var _ = Scenario{}.Title()
+
 type ScenarioListQuery struct{ api.IndexQuery }
 
 type ScenarioItem struct {

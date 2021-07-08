@@ -34,12 +34,6 @@ const (
 	ErrTrialAlreadyReported   api.ErrorType = "trial-already-reported"
 )
 
-// ExperimentName represents a name token used to identify an experiment.
-type ExperimentName interface {
-	// Name returns the string representation of the experiment name.
-	Name() string
-}
-
 type Server struct {
 	api.Metadata `json:"-"`
 }

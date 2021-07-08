@@ -71,7 +71,7 @@ func TestAPI(t *testing.T) {
 	expAPI := experiments.NewAPI(client)
 
 	for i := range cases {
-		t.Run(cases[i].ExperimentName.Name(), func(t *testing.T) {
+		t.Run(string(cases[i].ExperimentName), func(t *testing.T) {
 			runTest(t, &cases[i], expAPI)
 		})
 	}
@@ -252,8 +252,8 @@ func ReadTestData(path string) ([]TestDefinition, error) {
 		if err := json.Unmarshal(data, &td); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal test definition: %w", err)
 		}
-		if td.ExperimentName == nil || td.ExperimentName.Name() == "" {
-			td.ExperimentName = experiments.NewExperimentName(strings.TrimSuffix(filepath.Base(entry.Name()), ".json"))
+		if td.ExperimentName == "" {
+			td.ExperimentName = experiments.ExperimentName(strings.TrimSuffix(filepath.Base(entry.Name()), ".json"))
 		}
 
 		result = append(result, td)

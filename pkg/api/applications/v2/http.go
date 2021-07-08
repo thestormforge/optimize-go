@@ -120,12 +120,12 @@ func (h *httpAPI) GetApplication(ctx context.Context, u string) (Application, er
 }
 
 func (h *httpAPI) GetApplicationByName(ctx context.Context, n ApplicationName) (Application, error) {
-	u := h.client.URL(endpointApplications + n.Name()).String()
+	u := h.client.URL(endpointApplications + n.String()).String()
 	result, err := h.GetApplication(ctx, u)
 
 	// Improve the "not found" error message using the name
 	if eerr, ok := err.(*api.Error); ok && eerr.Type == ErrApplicationNotFound {
-		eerr.Message = fmt.Sprintf(`application "%s" not found`, n.Name())
+		eerr.Message = fmt.Sprintf(`application "%s" not found`, n)
 	}
 
 	return result, err
@@ -155,7 +155,7 @@ func (h *httpAPI) UpsertApplication(ctx context.Context, u string, app Applicati
 }
 
 func (h *httpAPI) UpsertApplicationByName(ctx context.Context, n ApplicationName, app Application) (api.Metadata, error) {
-	u := h.client.URL(endpointApplications + n.Name()).String()
+	u := h.client.URL(endpointApplications + n.String()).String()
 	return h.UpsertApplication(ctx, u, app)
 }
 
