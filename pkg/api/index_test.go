@@ -57,3 +57,71 @@ func TestIndexQuery_nil(t *testing.T) {
 	assert.NotNil(t, q)
 	assert.Equal(t, []string{"97"}, q[ParamLimit])
 }
+
+func TestIndexQuery_AppendToURL(t *testing.T) {
+	cases := []struct {
+		desc     string
+		q        *IndexQuery
+		u        string
+		expected string
+	}{
+		{
+			desc: "empty",
+		},
+		{
+			desc:     "empty query",
+			q:        &IndexQuery{},
+			u:        "foobar",
+			expected: "foobar",
+		},
+		{
+			desc: "relative URL",
+			q: &IndexQuery{
+				"offset": []string{"10"},
+			},
+			u:        "foobar",
+			expected: "foobar?offset=10",
+		},
+		{
+			desc: "qualified URL",
+			q: &IndexQuery{
+				"offset": []string{"10"},
+			},
+			u:        "https://example.com/foobar/",
+			expected: "https://example.com/foobar/?offset=10",
+		},
+		{
+			desc: "query merges",
+			q: &IndexQuery{
+				"offset": []string{"10"},
+			},
+			u:        "https://example.com/foobar/?limit=20",
+			expected: "https://example.com/foobar/?limit=20&offset=10",
+		},
+		{
+			desc: "query appends",
+			q: &IndexQuery{
+				"limit": []string{"10"},
+			},
+			u:        "https://example.com/foobar/?limit=20",
+			expected: "https://example.com/foobar/?limit=20&limit=10",
+		},
+		{
+			desc: "multiple parameters",
+			q: &IndexQuery{
+				"limit":  []string{"10"},
+				"offset": []string{"30"},
+			},
+			u:        "https://example.com/foobar",
+			expected: "https://example.com/foobar?limit=10&offset=30",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.desc, func(t *testing.T) {
+			u, err := c.q.AppendToURL(c.u)
+			if assert.NoError(t, err) {
+				assert.Equal(t, c.expected, u)
+			}
+		})
+	}
+}

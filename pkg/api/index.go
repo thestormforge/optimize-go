@@ -71,3 +71,29 @@ func (q *IndexQuery) SetLabelSelector(kv map[string]string) {
 		url.Values(*q).Add(ParamLabelSelector, strings.Join(ls, ","))
 	}
 }
+
+// AppendToURL adds this index query to an existing URL.
+func (q *IndexQuery) AppendToURL(u string) (string, error) {
+	if q == nil || len(*q) == 0 {
+		return u, nil
+	}
+
+	uu, err := url.Parse(u)
+	if err != nil {
+		return "", err
+	}
+
+	qq, err := url.ParseQuery(uu.RawQuery)
+	if err != nil {
+		return "", err
+	}
+
+	for k, v := range *q {
+		for _, vv := range v {
+			qq.Add(k, vv)
+		}
+	}
+	uu.RawQuery = qq.Encode()
+
+	return uu.String(), nil
+}
