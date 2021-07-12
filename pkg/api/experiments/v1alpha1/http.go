@@ -48,32 +48,25 @@ type httpAPI struct {
 
 var _ API = &httpAPI{}
 
-func (h *httpAPI) Options(ctx context.Context) (Server, error) {
-	u := h.client.URL(h.endpoint).String()
-	s := Server{}
-
-	req, err := http.NewRequest(http.MethodOptions, u, nil)
+func (h *httpAPI) CheckEndpoint(ctx context.Context) (api.Metadata, error) {
+	req, err := http.NewRequest(http.MethodHead, h.client.URL(h.endpoint).String(), nil)
 	if err != nil {
-		return s, err
+		return nil, err
 	}
-
-	// We actually want to do OPTIONS for the whole server, now that the host:port has been captured, overwrite the RequestURL
-	// TODO This isn't working because of backend configuration issues
-	// req.URL.Opaque = "*"
 
 	resp, body, err := h.client.Do(ctx, req)
 	if err != nil {
-		return s, err
+		return nil, err
 	}
 
 	switch resp.StatusCode {
-	case http.StatusOK, http.StatusNoContent,
-		// TODO Current behavior is to return 404 or 405 instead of 204 (or 200?)
-		http.StatusNotFound, http.StatusMethodNotAllowed:
-		s.Metadata = api.Metadata(resp.Header)
-		return s, nil
+	case http.StatusOK, http.StatusNoContent:
+		return api.Metadata(resp.Header), nil
+	case http.StatusNotFound, http.StatusMethodNotAllowed:
+		// Special case for the time being so we can implement proper support for HEAD requests
+		return api.Metadata(resp.Header), nil
 	default:
-		return s, api.NewUnexpectedError(resp, body)
+		return nil, api.NewUnexpectedError(resp, body)
 	}
 }
 

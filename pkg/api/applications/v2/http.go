@@ -39,6 +39,28 @@ type httpAPI struct {
 
 var _ API = &httpAPI{}
 
+func (h *httpAPI) CheckEndpoint(ctx context.Context) (api.Metadata, error) {
+	req, err := http.NewRequest(http.MethodHead, h.client.URL(h.endpoint).String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, body, err := h.client.Do(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	switch resp.StatusCode {
+	case http.StatusOK, http.StatusNoContent:
+		return api.Metadata(resp.Header), nil
+	case http.StatusNotFound, http.StatusMethodNotAllowed:
+		// Special case for the time being so we can implement proper support for HEAD requests
+		return api.Metadata(resp.Header), nil
+	default:
+		return nil, api.NewUnexpectedError(resp, body)
+	}
+}
+
 func (h *httpAPI) ListApplications(ctx context.Context, q ApplicationListQuery) (ApplicationList, error) {
 	u := h.client.URL(h.endpoint)
 	u.RawQuery = url.Values(q.IndexQuery).Encode()

@@ -39,6 +39,9 @@ type Subscriber interface {
 }
 
 type API interface {
+	// CheckEndpoint verifies we can talk to the backend.
+	CheckEndpoint(ctx context.Context) (api.Metadata, error)
+
 	// ListApplications gets a list of existing applications for an authorized request.
 	ListApplications(ctx context.Context, q ApplicationListQuery) (ApplicationList, error)
 	// ListApplicationsByPage returns single page of applications identified by the supplied URL.
