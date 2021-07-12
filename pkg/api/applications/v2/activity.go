@@ -70,8 +70,8 @@ type ActivityFeedQuery struct {
 	Query map[string][]string
 }
 
-func (q *ActivityFeedQuery) SetType(t string) {
-	url.Values(q.Query).Set("type", t)
+func (q *ActivityFeedQuery) SetType(t ...string) {
+	url.Values(q.Query).Set("type", strings.Join(t, ","))
 }
 
 type Activity struct {
