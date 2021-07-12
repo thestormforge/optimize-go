@@ -23,26 +23,33 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path"
 	"time"
 
 	"github.com/thestormforge/optimize-go/pkg/api"
 )
 
-const endpointExperiments = "/v1/experiments/"
-
 // NewAPI returns a new API implementation for the specified client.
 func NewAPI(c api.Client) API {
-	return &httpAPI{client: c}
+	return &httpAPI{client: c, endpoint: "v1/experiments/"}
+}
+
+// NewAPIWithEndpoint returns a new API implementation with an alternate endpoint.
+func NewAPIWithEndpoint(c api.Client, endpoint string) (API, error) {
+	// If endpoint is not a valid URL, calling `c.URL(endpoint)` would panic
+	_, err := url.Parse(endpoint)
+	return &httpAPI{client: c, endpoint: endpoint}, err
 }
 
 type httpAPI struct {
-	client api.Client
+	client   api.Client
+	endpoint string
 }
 
 var _ API = &httpAPI{}
 
 func (h *httpAPI) Options(ctx context.Context) (Server, error) {
-	u := h.client.URL(endpointExperiments).String()
+	u := h.client.URL(h.endpoint).String()
 	s := Server{}
 
 	req, err := http.NewRequest(http.MethodOptions, u, nil)
@@ -71,7 +78,7 @@ func (h *httpAPI) Options(ctx context.Context) (Server, error) {
 }
 
 func (h *httpAPI) GetAllExperiments(ctx context.Context, q ExperimentListQuery) (ExperimentList, error) {
-	u := h.client.URL(endpointExperiments)
+	u := h.client.URL(h.endpoint)
 	u.RawQuery = url.Values(q.IndexQuery).Encode()
 
 	return h.GetAllExperimentsByPage(ctx, u.String())
@@ -101,7 +108,7 @@ func (h *httpAPI) GetAllExperimentsByPage(ctx context.Context, u string) (Experi
 }
 
 func (h *httpAPI) GetExperimentByName(ctx context.Context, n ExperimentName) (Experiment, error) {
-	u := h.client.URL(endpointExperiments + n.String()).String()
+	u := h.client.URL(path.Join(h.endpoint, n.String())).String()
 	exp, err := h.GetExperiment(ctx, u)
 
 	// Improve the "not found" error message using the name
@@ -138,7 +145,7 @@ func (h *httpAPI) GetExperiment(ctx context.Context, u string) (Experiment, erro
 }
 
 func (h *httpAPI) CreateExperimentByName(ctx context.Context, n ExperimentName, exp Experiment) (Experiment, error) {
-	u := h.client.URL(endpointExperiments + n.String()).String()
+	u := h.client.URL(path.Join(h.endpoint, n.String())).String()
 	return h.CreateExperiment(ctx, u, exp)
 }
 
@@ -195,13 +202,9 @@ func (h *httpAPI) DeleteExperiment(ctx context.Context, u string) error {
 func (h *httpAPI) GetAllTrials(ctx context.Context, u string, q TrialListQuery) (TrialList, error) {
 	lst := TrialList{}
 
-	rawQuery := url.Values(q.IndexQuery).Encode()
-	if rawQuery != "" {
-		if uu, err := url.Parse(u); err == nil {
-			// TODO Should we be merging the query in this case?
-			uu.RawQuery = rawQuery
-			u = uu.String()
-		}
+	u, err := q.IndexQuery.AppendToURL(u)
+	if err != nil {
+		return lst, err
 	}
 
 	req, err := http.NewRequest(http.MethodGet, u, nil)

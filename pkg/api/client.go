@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 )
 
@@ -39,7 +38,6 @@ func NewClient(address string, transport http.RoundTripper) (Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	u.Path = strings.TrimRight(u.Path, "/")
 
 	return &httpClient{
 		endpoint: u,
@@ -57,13 +55,13 @@ type httpClient struct {
 
 // URL resolves an endpoint to a fully qualified URL.
 func (c *httpClient) URL(ep string) *url.URL {
-	// IMPLICIT: c.endpoint.Path cannot end with "/" because it was stripped off in NewClient
-	// IMPORTANT: Do not use Path.Join as it will not properly preserve trailing slashes
-
-	p := c.endpoint.Path + "/" + strings.TrimLeft(ep, "/")
-	u := *c.endpoint
-	u.Path = p
-	return &u
+	u, err := c.endpoint.Parse(ep)
+	if err != nil {
+		// If code panics here, the caller needs to verify it's input before
+		// passing it on to the `Client.URL(endpoint string)` function.
+		panic(err)
+	}
+	return u
 }
 
 // Do executes an HTTP request using this client and the supplied context.

@@ -23,24 +23,24 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path"
 
 	"github.com/thestormforge/optimize-go/pkg/api"
 )
 
-const endpointApplications = "/v2/applications/"
-
 func NewAPI(c api.Client) API {
-	return &httpAPI{client: c}
+	return &httpAPI{client: c, endpoint: "v2/applications/"}
 }
 
 type httpAPI struct {
-	client api.Client
+	client   api.Client
+	endpoint string
 }
 
 var _ API = &httpAPI{}
 
 func (h *httpAPI) ListApplications(ctx context.Context, q ApplicationListQuery) (ApplicationList, error) {
-	u := h.client.URL(endpointApplications)
+	u := h.client.URL(h.endpoint)
 	u.RawQuery = url.Values(q.IndexQuery).Encode()
 
 	return h.ListApplicationsByPage(ctx, u.String())
@@ -70,7 +70,7 @@ func (h *httpAPI) ListApplicationsByPage(ctx context.Context, u string) (Applica
 }
 
 func (h *httpAPI) CreateApplication(ctx context.Context, app Application) (api.Metadata, error) {
-	u := h.client.URL(endpointApplications).String()
+	u := h.client.URL(h.endpoint).String()
 
 	req, err := httpNewJSONRequest(http.MethodPost, u, app)
 	if err != nil {
@@ -120,7 +120,7 @@ func (h *httpAPI) GetApplication(ctx context.Context, u string) (Application, er
 }
 
 func (h *httpAPI) GetApplicationByName(ctx context.Context, n ApplicationName) (Application, error) {
-	u := h.client.URL(endpointApplications + n.String()).String()
+	u := h.client.URL(path.Join(h.endpoint, n.String())).String()
 	result, err := h.GetApplication(ctx, u)
 
 	// Improve the "not found" error message using the name
@@ -155,7 +155,7 @@ func (h *httpAPI) UpsertApplication(ctx context.Context, u string, app Applicati
 }
 
 func (h *httpAPI) UpsertApplicationByName(ctx context.Context, n ApplicationName, app Application) (api.Metadata, error) {
-	u := h.client.URL(endpointApplications + n.String()).String()
+	u := h.client.URL(path.Join(h.endpoint, n.String())).String()
 	return h.UpsertApplication(ctx, u, app)
 }
 
