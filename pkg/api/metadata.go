@@ -30,11 +30,13 @@ const (
 	RelationNext        = "next"
 	RelationPrev        = "prev"
 	RelationAlternate   = "alternate"
+	RelationUp          = "up"
 	RelationLabels      = "https://stormforge.io/rel/labels"
 	RelationTrials      = "https://stormforge.io/rel/trials"
 	RelationNextTrial   = "https://stormforge.io/rel/next-trial"
 	RelationScenarios   = "https://stormforge.io/rel/scenarios"
 	RelationExperiments = "https://stormforge.io/rel/experiments"
+	RelationScan        = "https://stormforge.io/rel/scan"
 )
 
 // Metadata is used to hold single or multi-value metadata from list responses.
@@ -107,6 +109,10 @@ func CanonicalLinkRelation(rel string) string {
 	case "https://carbonrelay.com/rel/next-trial",
 		"https://carbonrelay.com/rel/nexttrial":
 		return RelationNextTrial
+
+	case "https://stormforge.io/rel/application":
+		// TODO This probably isn't necessary as it was pre-release software
+		return RelationUp
 
 	default:
 		return rel

@@ -18,6 +18,7 @@ package v2
 
 import (
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/thestormforge/optimize-go/pkg/api"
@@ -47,6 +48,20 @@ type ActivityItem struct {
 	StormForge    *ActivityExtension `json:"_stormforge,omitempty"`
 }
 
+func (ai *ActivityItem) HasTag(tag string) bool {
+	for _, t := range ai.Tags {
+		if strings.EqualFold(t, tag) {
+			return true
+		}
+	}
+	return false
+}
+
+const (
+	TagRun  string = "run"
+	TagScan string = "scan"
+)
+
 type ActivityExtension struct {
 	ActivityFailure
 }
@@ -55,8 +70,8 @@ type ActivityFeedQuery struct {
 	Query map[string][]string
 }
 
-func (q *ActivityFeedQuery) SetType(t string) {
-	url.Values(q.Query).Set("type", t)
+func (q *ActivityFeedQuery) SetType(t ...string) {
+	url.Values(q.Query).Set("type", strings.Join(t, ","))
 }
 
 type Activity struct {
@@ -66,10 +81,12 @@ type Activity struct {
 }
 
 type RunActivity struct {
+	Scenario string `json:"scenario"`
 	ActivityFailure
 }
 
 type ScanActivity struct {
+	Scenario string `json:"scenario"`
 	ActivityFailure
 }
 

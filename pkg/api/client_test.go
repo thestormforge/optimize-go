@@ -32,26 +32,32 @@ func TestHttpClient_URL(t *testing.T) {
 		{
 			desc:     "standard",
 			address:  "https://example.com/",
-			endpoint: "/v1/experiments/",
+			endpoint: "v1/experiments/",
 			url:      "https://example.com/v1/experiments/",
 		},
 		{
 			desc:     "named resource endpoint",
 			address:  "https://example.com/",
-			endpoint: "/v1/experiments/foobar",
+			endpoint: "v1/experiments/foobar",
 			url:      "https://example.com/v1/experiments/foobar",
 		},
 		{
 			desc:     "trailing address slash",
 			address:  "https://example.com/foobar/",
-			endpoint: "/v1/experiments/",
+			endpoint: "v1/experiments/",
 			url:      "https://example.com/foobar/v1/experiments/",
 		},
 		{
 			desc:     "no base path",
 			address:  "https://example.com",
-			endpoint: "/v1/experiments/",
+			endpoint: "v1/experiments/",
 			url:      "https://example.com/v1/experiments/",
+		},
+		{
+			desc:     "fully qualified endpoint",
+			address:  "https://example.com/",
+			endpoint: "https://invalid.example.com/v2/applications/foobar/experiments/",
+			url:      "https://invalid.example.com/v2/applications/foobar/experiments/",
 		},
 	}
 	for _, c := range cases {
