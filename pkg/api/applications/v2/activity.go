@@ -66,10 +66,12 @@ type Activity struct {
 }
 
 type RunActivity struct {
+	Scenario string `json:"scenario"`
 	ActivityFailure
 }
 
 type ScanActivity struct {
+	Scenario string `json:"scenario"`
 	ActivityFailure
 }
 
