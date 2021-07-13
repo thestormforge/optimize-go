@@ -498,7 +498,7 @@ func (h *httpAPI) UpdateApplicationActivity(ctx context.Context, u string, a Act
 }
 
 func (h *httpAPI) SubscribeActivity(ctx context.Context, q ActivityFeedQuery) (Subscriber, error) {
-	// TODO This should be a HEAD request
+	// TODO This should use CheckEndpoint to get the feed link via a HEAD request
 	lst, err := h.ListApplications(ctx, ApplicationListQuery{})
 	if err != nil {
 		return nil, err
