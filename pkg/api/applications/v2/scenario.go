@@ -28,6 +28,10 @@ type Scenario struct {
 	DisplayName   string        `json:"title,omitempty"`
 	Configuration []interface{} `json:"configuration,omitempty"`
 	Objective     []interface{} `json:"objective,omitempty"`
+
+	StormForgePerformance interface{} `json:"stormforger,omitempty"`
+	Locust                interface{} `json:"locust,omitempty"`
+	Custom                interface{} `json:"custom,omitempty"`
 }
 
 // NOTE: Use `DisplayName` as the field since `Title()` is a function on the embedded `Metadata`
