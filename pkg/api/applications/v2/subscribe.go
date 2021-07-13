@@ -52,6 +52,8 @@ type PollingSubscriber struct {
 	// Adjust the poll duration by a random amount. Defaults to 1.0, effectively
 	// a random amount up to the full poll interval.
 	JitterFactor float64
+	// Flag indicating that failed activities should still be reported.
+	ReportFailedActivities bool // TODO Should this be part of the ActivityFeedQuery?
 
 	// The server may periodically request a longer delay.
 	rateLimit time.Duration
@@ -122,10 +124,19 @@ func (s *PollingSubscriber) notify(items []ActivityItem, lastID string, ch chan<
 	// Make sure the items are sorted by their identifier
 	sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })
 	for i := range items {
-		if lastID == "" || items[i].ID > lastID {
-			ch <- items[i]
-			lastID = items[i].ID
+		// Ignore items that we have already seen
+		if lastID != "" && items[i].ID <= lastID {
+			continue
 		}
+
+		// Optionally skip items that have a failure reason associated with them
+		if !s.ReportFailedActivities && items[i].StormForge != nil && items[i].StormForge.FailureReason != "" {
+			continue
+		}
+
+		// Send the item to the channel and update the last ID
+		ch <- items[i]
+		lastID = items[i].ID
 	}
 
 	return lastID
