@@ -40,7 +40,8 @@ type Server struct {
 
 // API provides bindings for the supported endpoints
 type API interface {
-	Options(context.Context) (Server, error)
+	// CheckEndpoint verifies we can talk to the backend.
+	CheckEndpoint(ctx context.Context) (api.Metadata, error)
 
 	GetAllExperiments(context.Context, ExperimentListQuery) (ExperimentList, error)
 	GetAllExperimentsByPage(context.Context, string) (ExperimentList, error)
