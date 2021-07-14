@@ -18,12 +18,16 @@ package v2_test
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base32"
+	"encoding/binary"
 	"errors"
 	"flag"
 	"log"
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -153,7 +157,7 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 					expAPI, err := experiments.NewAPIWithEndpoint(client, scn.Link(api.RelationExperiments))
 					require.NoError(t, err, "failed to create experiment API for application")
 
-					exp, err := expAPI.CreateExperimentByName(ctx, td.ExperimentName, td.Experiment)
+					exp, err := expAPI.CreateExperimentByName(ctx, newExperimentName(), td.Experiment)
 					require.NoError(t, err, "failed to create experiment")
 					assert.NotEmpty(t, exp.Link(api.RelationTrials), "missing trials link")
 					assert.NotEmpty(t, exp.Link(api.RelationNextTrial), "missing next trial link")
@@ -225,4 +229,18 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 
 		// TODO Verify the experiment still exists via the /v1/experiments/ endpoint? Or will it be deleted?
 	})
+}
+
+// newExperimentName returns a random experiment name. For consistency with the
+// backend you would normally want to use a ULID here. To avoid introducing an
+// explicit dependencies for testing, we are just using something that looks ULID-ish.
+func newExperimentName() experiments.ExperimentName {
+	var name [16]byte
+	binary.BigEndian.PutUint64(name[:], uint64(time.Now().UTC().UnixNano()/int64(time.Millisecond))<<16)
+	_, _ = rand.Read(name[6:])
+
+	var notCrockford = base32.
+		NewEncoding("0123456789ABCDEFGHJKMNPQRSTVWXYZ").
+		WithPadding(base32.NoPadding)
+	return experiments.ExperimentName(notCrockford.EncodeToString(name[:]))
 }

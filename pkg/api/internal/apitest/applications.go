@@ -98,8 +98,6 @@ func ReadApplicationTestData(path string) ([]ApplicationTestDefinition, error) {
 			return nil, fmt.Errorf("failed to unmarshal test definition: %w", err)
 		}
 
-		td.ExperimentTestDefinition.ExperimentName = "" // TODO Make a new ULID here
-
 		result = append(result, td)
 	}
 	return result, nil
