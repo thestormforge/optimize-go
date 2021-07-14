@@ -110,10 +110,6 @@ func CanonicalLinkRelation(rel string) string {
 		"https://carbonrelay.com/rel/nexttrial":
 		return RelationNextTrial
 
-	case "https://stormforge.io/rel/application":
-		// TODO This probably isn't necessary as it was pre-release software
-		return RelationUp
-
 	default:
 		return rel
 	}
