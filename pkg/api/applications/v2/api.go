@@ -72,12 +72,12 @@ type API interface {
 	// PatchScenario updates attributes on a scenario.
 	PatchScenario(ctx context.Context, u string, scn Scenario) error
 
-	// GetScan gets application scenario scan.
-	GetScan(ctx context.Context, u string) (Scan, error)
-	// UpdateScan records or updates cluster scan results.
-	UpdateScan(ctx context.Context, u string, s Scan) error
-	// PatchScan updates partial cluster scan results.
-	PatchScan(ctx context.Context, u string, s Scan) error
+	// GetTemplate gets the application scenario template.
+	GetTemplate(ctx context.Context, u string) (Template, error)
+	// UpdateTemplate records or updates scenario template.
+	UpdateTemplate(ctx context.Context, u string, s Template) error
+	// PatchTemplate updates a partial scenario template.
+	PatchTemplate(ctx context.Context, u string, s Template) error
 
 	// ListActivity gets activity feed for an application.
 	ListActivity(ctx context.Context, u string, q ActivityFeedQuery) (ActivityFeed, error)

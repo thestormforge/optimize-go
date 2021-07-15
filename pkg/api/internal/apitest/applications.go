@@ -35,21 +35,21 @@ type ApplicationTestDefinition struct {
 	ExperimentTestDefinition
 }
 
-// GenerateScan returns details of experiment for this test definition.
-func (td *ApplicationTestDefinition) GenerateScan() applications.Scan {
-	result := applications.Scan{
-		Parameters: make([]applications.ScanParameter, 0, len(td.Experiment.Parameters)),
-		Metrics:    make([]applications.ScanMetric, 0, len(td.Experiment.Metrics)),
+// GenerateTemplate returns details of experiment for this test definition.
+func (td *ApplicationTestDefinition) GenerateTemplate() applications.Template {
+	result := applications.Template{
+		Parameters: make([]applications.TemplateParameter, 0, len(td.Experiment.Parameters)),
+		Metrics:    make([]applications.TemplateMetric, 0, len(td.Experiment.Metrics)),
 	}
 
 	for _, p := range td.Experiment.Parameters {
-		sp := applications.ScanParameter{
+		sp := applications.TemplateParameter{
 			Name:   p.Name,
 			Type:   string(p.Type),
 			Values: p.Values,
 		}
 		if p.Bounds != nil {
-			sp.Bounds = &applications.ScanParameterBounds{
+			sp.Bounds = &applications.TemplateParameterBounds{
 				Min: p.Bounds.Min,
 				Max: p.Bounds.Max,
 			}
@@ -63,7 +63,7 @@ func (td *ApplicationTestDefinition) GenerateScan() applications.Scan {
 	}
 
 	for _, m := range td.Experiment.Metrics {
-		sm := applications.ScanMetric{
+		sm := applications.TemplateMetric{
 			Name:     m.Name,
 			Minimize: m.Minimize,
 			Optimize: m.Optimize,
