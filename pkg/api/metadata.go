@@ -36,7 +36,7 @@ const (
 	RelationNextTrial   = "https://stormforge.io/rel/next-trial"
 	RelationScenarios   = "https://stormforge.io/rel/scenarios"
 	RelationExperiments = "https://stormforge.io/rel/experiments"
-	RelationScan        = "https://stormforge.io/rel/scan"
+	RelationTemplate    = "https://stormforge.io/rel/template"
 )
 
 // Metadata is used to hold single or multi-value metadata from list responses.

@@ -320,8 +320,8 @@ func (h *httpAPI) PatchScenario(ctx context.Context, u string, scn Scenario) err
 	}
 }
 
-func (h *httpAPI) GetScan(ctx context.Context, u string) (Scan, error) {
-	result := Scan{}
+func (h *httpAPI) GetTemplate(ctx context.Context, u string) (Template, error) {
+	result := Template{}
 
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
@@ -342,8 +342,8 @@ func (h *httpAPI) GetScan(ctx context.Context, u string) (Scan, error) {
 	}
 }
 
-func (h *httpAPI) UpdateScan(ctx context.Context, u string, s Scan) error {
-	req, err := httpNewJSONRequest(http.MethodPut, u, s)
+func (h *httpAPI) UpdateTemplate(ctx context.Context, u string, t Template) error {
+	req, err := httpNewJSONRequest(http.MethodPut, u, t)
 	if err != nil {
 		return err
 	}
@@ -365,8 +365,8 @@ func (h *httpAPI) UpdateScan(ctx context.Context, u string, s Scan) error {
 	}
 }
 
-func (h *httpAPI) PatchScan(ctx context.Context, u string, s Scan) error {
-	req, err := httpNewJSONRequest(http.MethodPatch, u, s)
+func (h *httpAPI) PatchTemplate(ctx context.Context, u string, t Template) error {
+	req, err := httpNewJSONRequest(http.MethodPatch, u, t)
 	if err != nil {
 		return err
 	}

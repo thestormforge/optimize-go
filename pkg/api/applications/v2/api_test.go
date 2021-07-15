@@ -113,7 +113,7 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 		scnMeta, err = appAPI.CreateScenario(ctx, appMeta.Link(api.RelationScenarios), td.Scenario)
 		require.NoError(t, err, "failed to create scenario")
 		assert.NotEmpty(t, scnMeta.Location(), "missing location")
-		assert.NotEmpty(t, scnMeta.Link(api.RelationScan), "missing scan link")
+		assert.NotEmpty(t, scnMeta.Link(api.RelationTemplate), "missing template link")
 		assert.Equal(t, appMeta.Location(), scnMeta.Link(api.RelationUp), "application link does not match")
 		assert.Equal(t, td.Scenario.DisplayName, scnMeta.Title(), "title metadata does not match")
 	})
@@ -131,7 +131,7 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 			// Both scan and run use the external URL to point at the scenario
 			scn, err := appAPI.GetScenario(ctx, ai.ExternalURL)
 			require.NoError(t, err, "failed to retrieve activity scenario")
-			require.NotEmpty(t, scn.Link(api.RelationScan), "missing scan link")
+			require.NotEmpty(t, scn.Link(api.RelationTemplate), "missing template link")
 			require.NotEmpty(t, scn.Link(api.RelationExperiments), "missing experiments link")
 			require.NotEmpty(t, scn.Link(api.RelationUp), "missing application link")
 
@@ -142,17 +142,17 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 
 			case ai.HasTag(applications.TagScan):
 				t.Run("Scan", func(t *testing.T) {
-					err = appAPI.UpdateScan(ctx, scn.Link(api.RelationScan), td.GenerateScan())
-					require.NoError(t, err, "failed to update scan")
+					err = appAPI.UpdateTemplate(ctx, scn.Link(api.RelationTemplate), td.GenerateTemplate())
+					require.NoError(t, err, "failed to update template")
 				})
 
 			case ai.HasTag(applications.TagRun):
 				t.Run("Run", func(t *testing.T) {
 					defer run.Done()
 
-					// Discard the scan for the test, the defined experiment is fixed
-					_, err = appAPI.GetScan(ctx, scn.Link(api.RelationScan))
-					require.NoError(t, err, "failed to retrieve scenario scan")
+					// Discard the template for the test, the defined experiment is fixed
+					_, err = appAPI.GetTemplate(ctx, scn.Link(api.RelationTemplate))
+					require.NoError(t, err, "failed to retrieve scenario template")
 
 					expAPI, err := experiments.NewAPIWithEndpoint(client, scn.Link(api.RelationExperiments))
 					require.NoError(t, err, "failed to create experiment API for application")

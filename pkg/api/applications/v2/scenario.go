@@ -54,14 +54,14 @@ type ScenarioList struct {
 	Scenarios []ScenarioItem `json:"scenarios,omitempty"`
 }
 
-type ScanParameterBounds struct {
+type TemplateParameterBounds struct {
 	// The minimum value for a numeric parameter.
 	Min json.Number `json:"min,omitempty"`
 	// The maximum value for a numeric parameter.
 	Max json.Number `json:"max,omitempty"`
 }
 
-type ScanParameter struct {
+type TemplateParameter struct {
 	// The name of the parameter.
 	Name string `json:"name"`
 	// The type of the parameter.
@@ -69,19 +69,19 @@ type ScanParameter struct {
 	// The optional baseline value of the parameter, either numeric or categorical.
 	Baseline *api.NumberOrString `json:"baseline,omitempty"`
 	// The domain of the parameter.
-	Bounds *ScanParameterBounds `json:"bounds,omitempty"`
+	Bounds *TemplateParameterBounds `json:"bounds,omitempty"`
 	// The list of allowed categorical values for the parameter.
 	Values []string `json:"values,omitempty"`
 }
 
-type ScanMetricBounds struct {
+type TemplateMetricBounds struct {
 	// The minimum value for a metric.
 	Min float64 `json:"min,omitempty"`
 	// The maximum value for a metric.
 	Max float64 `json:"max,omitempty"`
 }
 
-type ScanMetric struct {
+type TemplateMetric struct {
 	// The name of the metric.
 	Name string `json:"name"`
 	// The flag indicating this metric should be minimized.
@@ -89,12 +89,12 @@ type ScanMetric struct {
 	// The flag indicating this metric is optimized (nil defaults to true).
 	Optimize *bool `json:"optimize,omitempty"`
 	// The domain of the metric
-	Bounds *ScanMetricBounds `json:"bounds,omitempty"`
+	Bounds *TemplateMetricBounds `json:"bounds,omitempty"`
 }
 
-type Scan struct {
-	// The list of parameters for this scan.
-	Parameters []ScanParameter `json:"parameters,omitempty"`
-	// The list of metrics for this scan.
-	Metrics []ScanMetric `json:"metrics,omitempty"`
+type Template struct {
+	// The list of parameters for this template.
+	Parameters []TemplateParameter `json:"parameters,omitempty"`
+	// The list of metrics for this template.
+	Metrics []TemplateMetric `json:"metrics,omitempty"`
 }
