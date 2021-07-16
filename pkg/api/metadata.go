@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -89,6 +90,35 @@ func splitLink(value string) (rel, link string) {
 	rel = CanonicalLinkRelation(rel)
 
 	return
+}
+
+func UnmarshalMetadata(resp *http.Response, md *Metadata) {
+	// Resolve a URL against the request URL (same as `resp.Location()` just ignoring errors)
+	resolveURL := func(u string) string {
+		if resp.Request != nil && resp.Request.URL != nil {
+			if uu, err := resp.Request.URL.Parse(u); err == nil {
+				return uu.String()
+			}
+		}
+		return u
+	}
+
+	// For Link headers we only need to look between the brackets
+	linkURL := regexp.MustCompile("<[^>]+>")
+	resolveBracketURL := func(u string) string {
+		return "<" + resolveURL(strings.Trim(u, "< >")) + ">"
+	}
+
+	// Iterate over all the headers that need to be fixed
+	*md = Metadata(resp.Header)
+
+	for i := range (*md)["Location"] {
+		(*md)["Location"][i] = resolveURL((*md)["Location"][i])
+	}
+
+	for i := range (*md)["Link"] {
+		(*md)["Link"][i] = linkURL.ReplaceAllStringFunc((*md)["Link"][i], resolveBracketURL)
+	}
 }
 
 // CanonicalLinkRelation returns the supplied link relation name normalized for
