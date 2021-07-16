@@ -71,6 +71,9 @@ type ActivityFeedQuery struct {
 }
 
 func (q *ActivityFeedQuery) SetType(t ...string) {
+	if q.Query == nil {
+		q.Query = make(map[string][]string)
+	}
 	url.Values(q.Query).Set("type", strings.Join(t, ","))
 }
 
