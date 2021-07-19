@@ -92,6 +92,8 @@ func splitLink(value string) (rel, link string) {
 	return
 }
 
+var linkURL = regexp.MustCompile("<[^>]+>")
+
 func UnmarshalMetadata(resp *http.Response, md *Metadata) {
 	// Resolve a URL against the request URL (same as `resp.Location()` just ignoring errors)
 	resolveURL := func(u string) string {
@@ -104,7 +106,6 @@ func UnmarshalMetadata(resp *http.Response, md *Metadata) {
 	}
 
 	// For Link headers we only need to look between the brackets
-	linkURL := regexp.MustCompile("<[^>]+>")
 	resolveBracketURL := func(u string) string {
 		return "<" + resolveURL(strings.Trim(u, "< >")) + ">"
 	}
