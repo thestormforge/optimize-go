@@ -18,6 +18,8 @@ package api
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -69,5 +71,63 @@ func TestJsonMetadata_UnmarshalJSON(t *testing.T) {
 	err := json.Unmarshal(data, &md)
 	if assert.NoError(t, err) {
 		assert.Equal(t, []string{"</bar>; rel=bar"}, md["Link"])
+	}
+}
+
+func TestUnmarshalMetadata(t *testing.T) {
+	cases := []struct {
+		desc     string
+		resp     http.Response
+		expected Metadata
+	}{
+		{
+			desc: "location",
+			resp: http.Response{
+				Header: http.Header{
+					"Location": {`/foo`},
+				},
+				Request: &http.Request{
+					URL: &url.URL{Scheme: "https", Host: "invalid.example.com", Path: "/"},
+				},
+			},
+			expected: Metadata{
+				"Location": {`https://invalid.example.com/foo`},
+			},
+		},
+		{
+			desc: "simple link",
+			resp: http.Response{
+				Header: http.Header{
+					"Link": {`</foo>;rel="test"`},
+				},
+				Request: &http.Request{
+					URL: &url.URL{Scheme: "https", Host: "invalid.example.com", Path: "/"},
+				},
+			},
+			expected: Metadata{
+				"Link": {`<https://invalid.example.com/foo>;rel="test"`},
+			},
+		},
+		{
+			desc: "comma links",
+			resp: http.Response{
+				Header: http.Header{
+					"Link": {`</foo>;rel="test",</bar>;rel="test2"`},
+				},
+				Request: &http.Request{
+					URL: &url.URL{Scheme: "https", Host: "invalid.example.com", Path: "/"},
+				},
+			},
+			expected: Metadata{
+				"Link": {`<https://invalid.example.com/foo>;rel="test",<https://invalid.example.com/bar>;rel="test2"`},
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.desc, func(t *testing.T) {
+			md := Metadata{}
+			UnmarshalMetadata(&c.resp, &md)
+			assert.Equal(t, c.expected, md)
+		})
 	}
 }

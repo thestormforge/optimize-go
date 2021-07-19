@@ -40,6 +40,8 @@ type httpAPI struct {
 var _ API = &httpAPI{}
 
 func (h *httpAPI) CheckEndpoint(ctx context.Context) (api.Metadata, error) {
+	result := api.Metadata{}
+
 	req, err := http.NewRequest(http.MethodHead, h.client.URL(h.endpoint).String(), nil)
 	if err != nil {
 		return nil, err
@@ -52,10 +54,12 @@ func (h *httpAPI) CheckEndpoint(ctx context.Context) (api.Metadata, error) {
 
 	switch resp.StatusCode {
 	case http.StatusOK, http.StatusNoContent:
-		return api.Metadata(resp.Header), nil
+		api.UnmarshalMetadata(resp, &result)
+		return result, nil
 	case http.StatusNotFound, http.StatusMethodNotAllowed:
 		// Special case for the time being so we can implement proper support for HEAD requests
-		return api.Metadata(resp.Header), nil
+		api.UnmarshalMetadata(resp, &result)
+		return result, nil
 	default:
 		return nil, api.NewUnexpectedError(resp, body)
 	}
@@ -83,7 +87,7 @@ func (h *httpAPI) ListApplicationsByPage(ctx context.Context, u string) (Applica
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		result.Metadata = api.Metadata(resp.Header)
+		api.UnmarshalMetadata(resp, &result.Metadata)
 		err = json.Unmarshal(body, &result)
 		return result, err
 	default:
@@ -92,6 +96,7 @@ func (h *httpAPI) ListApplicationsByPage(ctx context.Context, u string) (Applica
 }
 
 func (h *httpAPI) CreateApplication(ctx context.Context, app Application) (api.Metadata, error) {
+	result := api.Metadata{}
 	u := h.client.URL(h.endpoint).String()
 
 	req, err := httpNewJSONRequest(http.MethodPost, u, app)
@@ -106,7 +111,8 @@ func (h *httpAPI) CreateApplication(ctx context.Context, app Application) (api.M
 
 	switch resp.StatusCode {
 	case http.StatusCreated:
-		return api.Metadata(resp.Header), nil
+		api.UnmarshalMetadata(resp, &result)
+		return result, nil
 	case http.StatusBadRequest:
 		return nil, api.NewError(ErrApplicationInvalid, resp, body)
 	case http.StatusUnprocessableEntity:
@@ -131,7 +137,7 @@ func (h *httpAPI) GetApplication(ctx context.Context, u string) (Application, er
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		result.Metadata = api.Metadata(resp.Header)
+		api.UnmarshalMetadata(resp, &result.Metadata)
 		err = json.Unmarshal(body, &result)
 		return result, err
 	case http.StatusNotFound:
@@ -154,6 +160,8 @@ func (h *httpAPI) GetApplicationByName(ctx context.Context, n ApplicationName) (
 }
 
 func (h *httpAPI) UpsertApplication(ctx context.Context, u string, app Application) (api.Metadata, error) {
+	result := api.Metadata{}
+
 	req, err := httpNewJSONRequest(http.MethodPut, u, app)
 	if err != nil {
 		return nil, err
@@ -166,7 +174,8 @@ func (h *httpAPI) UpsertApplication(ctx context.Context, u string, app Applicati
 
 	switch resp.StatusCode {
 	case http.StatusCreated, http.StatusAccepted:
-		return api.Metadata(resp.Header), nil
+		api.UnmarshalMetadata(resp, &result)
+		return result, nil
 	case http.StatusBadRequest:
 		return nil, api.NewError(ErrApplicationInvalid, resp, body)
 	case http.StatusUnprocessableEntity:
@@ -193,7 +202,7 @@ func (h *httpAPI) DeleteApplication(ctx context.Context, u string) error {
 	}
 
 	switch resp.StatusCode {
-	case http.StatusNoContent:
+	case http.StatusOK, http.StatusNoContent:
 		return nil
 	case http.StatusNotFound:
 		return api.NewError(ErrApplicationNotFound, resp, body)
@@ -226,6 +235,8 @@ func (h *httpAPI) ListScenarios(ctx context.Context, u string, q ScenarioListQue
 }
 
 func (h *httpAPI) CreateScenario(ctx context.Context, u string, scn Scenario) (api.Metadata, error) {
+	result := api.Metadata{}
+
 	req, err := httpNewJSONRequest(http.MethodPost, u, scn)
 	if err != nil {
 		return nil, err
@@ -238,7 +249,8 @@ func (h *httpAPI) CreateScenario(ctx context.Context, u string, scn Scenario) (a
 
 	switch resp.StatusCode {
 	case http.StatusCreated:
-		return api.Metadata(resp.Header), nil
+		api.UnmarshalMetadata(resp, &result)
+		return result, nil
 	case http.StatusBadRequest:
 		return nil, api.NewError(ErrScenarioInvalid, resp, body)
 	case http.StatusUnprocessableEntity:
@@ -263,7 +275,7 @@ func (h *httpAPI) GetScenario(ctx context.Context, u string) (Scenario, error) {
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		result.Metadata = api.Metadata(resp.Header)
+		api.UnmarshalMetadata(resp, &result.Metadata)
 		err = json.Unmarshal(body, &result)
 		return result, err
 	case http.StatusNotFound:
@@ -288,7 +300,7 @@ func (h *httpAPI) UpsertScenario(ctx context.Context, u string, scn Scenario) (S
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		result.Metadata = api.Metadata(resp.Header)
+		api.UnmarshalMetadata(resp, &result.Metadata)
 		err = json.Unmarshal(body, &result)
 		return result, err
 	case http.StatusBadRequest:
@@ -490,7 +502,7 @@ func (h *httpAPI) GetApplicationActivity(ctx context.Context, u string) (Activit
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		result.Metadata = api.Metadata(resp.Header)
+		api.UnmarshalMetadata(resp, &result.Metadata)
 		err = json.Unmarshal(body, &result)
 		return result, err
 	case http.StatusTooManyRequests:

@@ -49,6 +49,8 @@ type httpAPI struct {
 var _ API = &httpAPI{}
 
 func (h *httpAPI) CheckEndpoint(ctx context.Context) (api.Metadata, error) {
+	md := api.Metadata{}
+
 	req, err := http.NewRequest(http.MethodHead, h.client.URL(h.endpoint).String(), nil)
 	if err != nil {
 		return nil, err
@@ -61,10 +63,12 @@ func (h *httpAPI) CheckEndpoint(ctx context.Context) (api.Metadata, error) {
 
 	switch resp.StatusCode {
 	case http.StatusOK, http.StatusNoContent:
-		return api.Metadata(resp.Header), nil
+		api.UnmarshalMetadata(resp, &md)
+		return md, nil
 	case http.StatusNotFound, http.StatusMethodNotAllowed:
 		// Special case for the time being so we can implement proper support for HEAD requests
-		return api.Metadata(resp.Header), nil
+		api.UnmarshalMetadata(resp, &md)
+		return md, nil
 	default:
 		return nil, api.NewUnexpectedError(resp, body)
 	}
@@ -92,7 +96,7 @@ func (h *httpAPI) GetAllExperimentsByPage(ctx context.Context, u string) (Experi
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		lst.Metadata = api.Metadata(resp.Header)
+		api.UnmarshalMetadata(resp, &lst.Metadata)
 		err = json.Unmarshal(body, &lst)
 		return lst, err
 	default:
@@ -127,7 +131,7 @@ func (h *httpAPI) GetExperiment(ctx context.Context, u string) (Experiment, erro
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		e.Metadata = api.Metadata(resp.Header)
+		api.UnmarshalMetadata(resp, &e.Metadata)
 		err = json.Unmarshal(body, &e)
 		return e, err
 	case http.StatusNotFound:
@@ -157,7 +161,7 @@ func (h *httpAPI) CreateExperiment(ctx context.Context, u string, exp Experiment
 
 	switch resp.StatusCode {
 	case http.StatusOK, http.StatusCreated:
-		e.Metadata = api.Metadata(resp.Header)
+		api.UnmarshalMetadata(resp, &e.Metadata)
 		err = json.Unmarshal(body, &e)
 		return e, err
 	case http.StatusBadRequest:
@@ -234,7 +238,7 @@ func (h *httpAPI) CreateTrial(ctx context.Context, u string, asm TrialAssignment
 
 	switch resp.StatusCode {
 	case http.StatusCreated, http.StatusAccepted:
-		ta.Metadata = api.Metadata(resp.Header)
+		api.UnmarshalMetadata(resp, &ta.Metadata)
 		err = json.Unmarshal(body, &ta)
 		return ta, err
 	case http.StatusConflict:
@@ -261,7 +265,7 @@ func (h *httpAPI) NextTrial(ctx context.Context, u string) (TrialAssignments, er
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		asm.Metadata = api.Metadata(resp.Header)
+		api.UnmarshalMetadata(resp, &asm.Metadata)
 		err = json.Unmarshal(body, &asm)
 		return asm, err
 	case http.StatusGone:
