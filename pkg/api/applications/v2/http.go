@@ -439,6 +439,7 @@ func (h *httpAPI) ListActivity(ctx context.Context, u string, q ActivityFeedQuer
 	switch resp.StatusCode {
 	case http.StatusOK:
 		err = json.Unmarshal(body, &result)
+		result.SetBaseURL(u)
 		return result, err
 	default:
 		return result, api.NewUnexpectedError(resp, body)
@@ -457,7 +458,7 @@ func (h *httpAPI) CreateActivity(ctx context.Context, u string, a Activity) erro
 	}
 
 	switch resp.StatusCode {
-	case http.StatusNoContent:
+	case http.StatusNoContent, http.StatusCreated:
 		return nil
 	case http.StatusBadRequest:
 		return api.NewError(ErrActivityInvalid, resp, body)
