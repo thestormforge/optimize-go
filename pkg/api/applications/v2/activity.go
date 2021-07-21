@@ -97,3 +97,36 @@ type ActivityFailure struct {
 	FailureReason  string `json:"failure_reason,omitempty"`
 	FailureMessage string `json:"failure_message,omitempty"`
 }
+
+// SetBaseURL resolves the URLs on the activity feed against a supplied base.
+// Typically, the URL used to fetch the feed, the feed's `feed_url` field, and
+// the base URL should all match; however, it may be the case that the `feed_url`
+// field is returned as a relative URL (the JSON Feed spec does not specify a
+// behavior in this regard).
+func (af *ActivityFeed) SetBaseURL(u string) {
+	// Create a function to resolve references against the base URL
+	base, err := url.Parse(u)
+	if err != nil {
+		return
+	}
+	res := func(u string) string {
+		if u != "" {
+			if uu, err := base.Parse(u); err == nil {
+				return uu.String()
+			}
+		}
+		return u
+	}
+
+	// Resolve all known URLs on the feed
+	af.HomePageURL = res(af.HomePageURL)
+	af.FeedURL = res(af.FeedURL)
+	af.NextURL = res(af.NextURL)
+	for i := range af.Hubs {
+		af.Hubs[i].URL = res(af.Hubs[i].URL)
+	}
+	for i := range af.Items {
+		af.Items[i].URL = res(af.Items[i].URL)
+		af.Items[i].ExternalURL = res(af.Items[i].ExternalURL)
+	}
+}
