@@ -195,6 +195,7 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 	})
 
 	t.Run("Request Activity", func(t *testing.T) {
+		t.Parallel()
 		if !ok {
 			t.Skip("skipping activity request.")
 		}
