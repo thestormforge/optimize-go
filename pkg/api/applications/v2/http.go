@@ -488,33 +488,8 @@ func (h *httpAPI) DeleteActivity(ctx context.Context, u string) error {
 	}
 }
 
-func (h *httpAPI) GetApplicationActivity(ctx context.Context, u string) (Activity, error) {
-	result := Activity{}
-
-	req, err := http.NewRequest(http.MethodGet, u, nil)
-	if err != nil {
-		return result, err
-	}
-
-	resp, body, err := h.client.Do(ctx, req)
-	if err != nil {
-		return result, err
-	}
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		api.UnmarshalMetadata(resp, &result.Metadata)
-		err = json.Unmarshal(body, &result)
-		return result, err
-	case http.StatusTooManyRequests:
-		return result, api.NewError(ErrActivityRateLimited, resp, body)
-	default:
-		return result, api.NewUnexpectedError(resp, body)
-	}
-}
-
-func (h *httpAPI) UpdateApplicationActivity(ctx context.Context, u string, a Activity) error {
-	req, err := httpNewJSONRequest(http.MethodPut, u, a)
+func (h *httpAPI) PatchApplicationActivity(ctx context.Context, u string, a ActivityFailure) error {
+	req, err := httpNewJSONRequest(http.MethodPatch, u, a)
 	if err != nil {
 		return err
 	}
