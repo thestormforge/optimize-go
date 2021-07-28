@@ -508,14 +508,13 @@ func (h *httpAPI) PatchApplicationActivity(ctx context.Context, u string, a Acti
 }
 
 func (h *httpAPI) SubscribeActivity(ctx context.Context, q ActivityFeedQuery) (Subscriber, error) {
-	// TODO This should use CheckEndpoint to get the feed link via a HEAD request
-	lst, err := h.ListApplications(ctx, ApplicationListQuery{})
+	md, err := h.CheckEndpoint(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO Also filter on `type=application/feed+json`
-	u := lst.Link(api.RelationAlternate)
+	u := md.Link(api.RelationAlternate)
 	if u == "" {
 		return nil, fmt.Errorf("missing activity feed URL")
 	}
