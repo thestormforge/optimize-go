@@ -85,10 +85,8 @@ type API interface {
 	CreateActivity(ctx context.Context, u string, a Activity) error
 	// DeleteActivity resolves application activity.
 	DeleteActivity(ctx context.Context, u string) error
-	// GetApplicationActivity retrieves an application activity item by ID.
-	GetApplicationActivity(ctx context.Context, u string) (Activity, error)
-	// UpdateApplicationActivity updates application activity.
-	UpdateApplicationActivity(ctx context.Context, u string, a Activity) error
+	// PatchApplicationActivity updates application activity.
+	PatchApplicationActivity(ctx context.Context, u string, a ActivityFailure) error
 
 	// SubscribeActivity returns a subscriber for the activity feed.
 	SubscribeActivity(ctx context.Context, q ActivityFeedQuery) (Subscriber, error)

@@ -89,6 +89,9 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 		q.SetType(applications.TagScan, applications.TagRun)
 		sub, err := appAPI.SubscribeActivity(subCtx, q)
 		if assert.NoError(t, err, "failed to create activity subscriber") {
+			if ps, ok := sub.(*applications.PollingSubscriber); ok {
+				ps.PollInterval = 3 * time.Second
+			}
 			sub.Subscribe(ctx, activity)
 		} else {
 			close(activity)
@@ -192,6 +195,7 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 	})
 
 	t.Run("Request Activity", func(t *testing.T) {
+		t.Parallel()
 		if !ok {
 			t.Skip("skipping activity request.")
 		}
