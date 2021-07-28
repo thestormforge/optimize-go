@@ -26,8 +26,8 @@ import (
 	"github.com/thestormforge/optimize-go/pkg/api"
 )
 
-// NewSubscriber returns a subscriber for the supplied feed.
-func NewSubscriber(api API, feed ActivityFeed) Subscriber {
+// newSubscriber returns a subscriber for the supplied feed.
+func newSubscriber(api API, feed ActivityFeed) Subscriber {
 	// Check the feed hubs for any subscription strategies we support
 	for _, hub := range feed.Hubs {
 		switch hub.Type {

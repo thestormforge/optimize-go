@@ -550,7 +550,7 @@ func (h *httpAPI) SubscribeActivity(ctx context.Context, q ActivityFeedQuery) (S
 		return nil, err
 	}
 
-	return NewSubscriber(h, feed), nil
+	return newSubscriber(h, feed), nil
 }
 
 // httpNewJSONRequest returns a new HTTP request with a JSON payload
