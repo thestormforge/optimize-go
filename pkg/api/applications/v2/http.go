@@ -148,8 +148,9 @@ func (h *httpAPI) GetApplication(ctx context.Context, u string) (Application, er
 }
 
 func (h *httpAPI) GetApplicationByName(ctx context.Context, n ApplicationName) (Application, error) {
-	u := h.client.URL(path.Join(h.endpoint, n.String())).String()
-	result, err := h.GetApplication(ctx, u)
+	u := h.client.URL(h.endpoint)
+	u.Path = path.Join(u.Path, n.String())
+	result, err := h.GetApplication(ctx, u.String())
 
 	// Improve the "not found" error message using the name
 	if eerr, ok := err.(*api.Error); ok && eerr.Type == ErrApplicationNotFound {
@@ -186,8 +187,9 @@ func (h *httpAPI) UpsertApplication(ctx context.Context, u string, app Applicati
 }
 
 func (h *httpAPI) UpsertApplicationByName(ctx context.Context, n ApplicationName, app Application) (api.Metadata, error) {
-	u := h.client.URL(path.Join(h.endpoint, n.String())).String()
-	return h.UpsertApplication(ctx, u, app)
+	u := h.client.URL(h.endpoint)
+	u.Path = path.Join(u.Path, n.String())
+	return h.UpsertApplication(ctx, u.String(), app)
 }
 
 func (h *httpAPI) DeleteApplication(ctx context.Context, u string) error {

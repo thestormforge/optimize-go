@@ -105,8 +105,9 @@ func (h *httpAPI) GetAllExperimentsByPage(ctx context.Context, u string) (Experi
 }
 
 func (h *httpAPI) GetExperimentByName(ctx context.Context, n ExperimentName) (Experiment, error) {
-	u := h.client.URL(path.Join(h.endpoint, n.String())).String()
-	exp, err := h.GetExperiment(ctx, u)
+	u := h.client.URL(h.endpoint)
+	u.Path = path.Join(u.Path, n.String())
+	exp, err := h.GetExperiment(ctx, u.String())
 
 	// Improve the "not found" error message using the name
 	if eerr, ok := err.(*api.Error); ok && eerr.Type == ErrExperimentNotFound {
@@ -142,8 +143,9 @@ func (h *httpAPI) GetExperiment(ctx context.Context, u string) (Experiment, erro
 }
 
 func (h *httpAPI) CreateExperimentByName(ctx context.Context, n ExperimentName, exp Experiment) (Experiment, error) {
-	u := h.client.URL(path.Join(h.endpoint, n.String())).String()
-	return h.CreateExperiment(ctx, u, exp)
+	u := h.client.URL(h.endpoint)
+	u.Path = path.Join(u.Path, n.String())
+	return h.CreateExperiment(ctx, u.String(), exp)
 }
 
 func (h *httpAPI) CreateExperiment(ctx context.Context, u string, exp Experiment) (Experiment, error) {
