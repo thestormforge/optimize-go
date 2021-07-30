@@ -160,6 +160,8 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 			case ai.HasTag(applications.TagRun):
 				t.Run("Run", func(t *testing.T) {
 					defer run.Done()
+					exp := td.Experiment
+					exp.DisplayName = ai.Title
 
 					// Normally we would reconcile changes between exp and the template, not necessary for the test
 					_, err = appAPI.GetTemplate(ctx, scn.Link(api.RelationTemplate))
@@ -168,7 +170,7 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 					expAPI, err := experiments.NewAPIWithEndpoint(client, scn.Link(api.RelationExperiments))
 					require.NoError(t, err, "failed to create experiment API for application")
 
-					exp, err := expAPI.CreateExperimentByName(ctx, newExperimentName(), td.Experiment)
+					exp, err = expAPI.CreateExperimentByName(ctx, newExperimentName(), exp)
 					require.NoError(t, err, "failed to create experiment")
 					assert.NotEmpty(t, exp.Link(api.RelationTrials), "missing trials link")
 					assert.NotEmpty(t, exp.Link(api.RelationNextTrial), "missing next trial link")
