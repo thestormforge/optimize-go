@@ -132,7 +132,12 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 			// NOTE: We limited the activity types when we subscribed
 			assert.True(t, ai.HasTag(applications.TagScan) || ai.HasTag(applications.TagRun), "unexpected item tag")
 
-			// Both scan and run use the external URL to point at the scenario
+			// Both scan and run use the external URL to point at the scenario, ignore activity not from this test
+			// NOTE: The subscription will time out if the activities we requested do not show up
+			if ai.ExternalURL != scnMeta.Location() {
+				continue
+			}
+
 			scn, err := appAPI.GetScenario(ctx, ai.ExternalURL)
 			require.NoError(t, err, "failed to retrieve activity scenario")
 			require.NotEmpty(t, scn.Link(api.RelationTemplate), "missing template link")
