@@ -208,20 +208,19 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 			t.Skip("skipping activity request.")
 		}
 
-		// TODO This should use CheckEndpoint to get the feed link via a HEAD request
-		lst, err := appAPI.ListApplications(ctx, applications.ApplicationListQuery{})
+		md, err := appAPI.CheckEndpoint(ctx)
 		require.NoError(t, err, "failed to fetch the application list necessary for the feed URL")
 
 		sa := &applications.ScanActivity{
 			Scenario: scnMeta.Location(),
 		}
-		err = appAPI.CreateActivity(ctx, lst.Link(api.RelationAlternate), applications.Activity{Scan: sa})
+		err = appAPI.CreateActivity(ctx, md.Link(api.RelationAlternate), applications.Activity{Scan: sa})
 		require.NoError(t, err, "failed to request scan")
 
 		ra := &applications.RunActivity{
 			Scenario: scnMeta.Location(),
 		}
-		err = appAPI.CreateActivity(ctx, lst.Link(api.RelationAlternate), applications.Activity{Run: ra})
+		err = appAPI.CreateActivity(ctx, md.Link(api.RelationAlternate), applications.Activity{Run: ra})
 		require.NoError(t, err, "failed to request run")
 		run.Add(1)
 	})
