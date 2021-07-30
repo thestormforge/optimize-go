@@ -138,12 +138,14 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 				continue
 			}
 
+			// Verify we can fetch the scenario
 			scn, err := appAPI.GetScenario(ctx, ai.ExternalURL)
 			require.NoError(t, err, "failed to retrieve activity scenario")
 			require.NotEmpty(t, scn.Link(api.RelationTemplate), "missing template link")
 			require.NotEmpty(t, scn.Link(api.RelationExperiments), "missing experiments link")
 			require.NotEmpty(t, scn.Link(api.RelationUp), "missing application link")
 
+			//  Verify we can fetch the application
 			app, err := appAPI.GetApplication(ctx, scn.Link(api.RelationUp))
 			require.NoError(t, err, "failed to retrieve scenario application")
 
@@ -159,7 +161,7 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 				t.Run("Run", func(t *testing.T) {
 					defer run.Done()
 
-					// Discard the template for the test, the defined experiment is fixed
+					// Normally we would reconcile changes between exp and the template, not necessary for the test
 					_, err = appAPI.GetTemplate(ctx, scn.Link(api.RelationTemplate))
 					require.NoError(t, err, "failed to retrieve scenario template")
 
@@ -210,7 +212,6 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 		lst, err := appAPI.ListApplications(ctx, applications.ApplicationListQuery{})
 		require.NoError(t, err, "failed to fetch the application list necessary for the feed URL")
 
-		// TODO Do we need to create this or is it implicit from create scenario?
 		sa := &applications.ScanActivity{
 			Scenario: scnMeta.Location(),
 		}
@@ -236,8 +237,6 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 
 		err := appAPI.DeleteApplication(ctx, appMeta.Location())
 		require.NoError(t, err, "failed to delete application")
-
-		// TODO Verify the experiment still exists via the /v1/experiments/ endpoint? Or will it be deleted?
 	})
 }
 
