@@ -502,7 +502,7 @@ func (h *httpAPI) PatchApplicationActivity(ctx context.Context, u string, a Acti
 	}
 
 	switch resp.StatusCode {
-	case http.StatusCreated, http.StatusAccepted:
+	case http.StatusOK:
 		return nil
 	default:
 		return api.NewUnexpectedError(resp, body)
