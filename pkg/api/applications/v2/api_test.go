@@ -209,7 +209,7 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 					assert.NotEmpty(t, exp.Link(api.RelationTrials), "missing trials link")
 					assert.NotEmpty(t, exp.Link(api.RelationNextTrial), "missing next trial link")
 					assert.NotEmpty(t, exp.Link(api.RelationSelf), "missing self link")
-					assert.Equal(t, app.Name, exp.Labels["application"], "incorrect application label")
+					assert.Equal(t, app.Name.String(), exp.Labels["application"], "incorrect application label")
 					assert.Equal(t, scn.Name, exp.Labels["scenario"], "incorrect scenario label")
 
 					_, err = expAPI.CreateTrial(ctx, exp.Link(api.RelationTrials), experiments.TrialAssignments{
