@@ -1,16 +1,16 @@
-name: Master
+name: Main
 
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
 
 jobs:
   master_build:
-    name: Master Build
+    name: Main Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
