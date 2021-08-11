@@ -1,5 +1,9 @@
 {
   "Experiment": {
+    "labels": {
+      "application": "my-app",
+      "scenario": "testing"
+    },
     "optimization": [
       {
         "name": "experimentBudget",
