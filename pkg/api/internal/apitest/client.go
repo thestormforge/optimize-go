@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"net/http"
+	"os"
 
 	"github.com/thestormforge/optimize-go/pkg/api"
 	"golang.org/x/oauth2"
@@ -62,11 +63,14 @@ var DefaultConfig = ClientConfiguration{
 	},
 }
 
-// init sets the values for integration testing via flags.
+// init sets the values for integration testing via flags or environment variables.
 func init() {
+	DefaultConfig.ClientCredentials.ClientID = os.Getenv("STORMFORGE_AUTHORIZATION_CLIENT_ID")
+	DefaultConfig.ClientCredentials.ClientSecret = os.Getenv("STORMFORGE_AUTHORIZATION_CLIENT_SECRET")
+	DefaultConfig.StaticToken.AccessToken = os.Getenv("STORMFORGE_AUTHORIZATION_ACCESS_TOKEN")
+
 	flag.StringVar(&DefaultConfig.Address, "stormforge.address", "https://api.stormforge.dev/", "the `url` of the StormForge API server")
 	flag.StringVar(&DefaultConfig.ClientCredentials.TokenURL, "stormforge.token-url", "https://auth.stormforge.dev/oauth/token", "the `url` of the StormForge token endpoint")
 	flag.StringVar(&DefaultConfig.ClientCredentials.ClientID, "stormforge.client-id", "", "the client `identifier` used to obtain an access token")
 	flag.StringVar(&DefaultConfig.ClientCredentials.ClientSecret, "stormforge.client-secret", "", "the client `secret` used to obtain an access token")
-	flag.StringVar(&DefaultConfig.StaticToken.AccessToken, "stormforge.access-token", "", "the bearer `token` to authorize requests with")
 }

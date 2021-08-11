@@ -25,7 +25,6 @@ import (
 	"flag"
 	"log"
 	"os"
-	"sync"
 	"strings"
 	"testing"
 	"time"
@@ -80,37 +79,25 @@ func TestAPI(t *testing.T) {
 
 func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applications.API) {
 	ctx := context.Background()
+	ok := true
 	var appMeta, scnMeta api.Metadata
-	var run sync.WaitGroup
-	subCtx, cancelSub := context.WithCancel(ctx)
-	activity := make(chan applications.ActivityItem)
 
-	t.Run("Subscribe", func(t *testing.T) {
-		q := applications.ActivityFeedQuery{}
-		q.SetType(applications.TagScan, applications.TagRun)
-		sub, err := appAPI.SubscribeActivity(subCtx, q)
-		if assert.NoError(t, err, "failed to create activity subscriber") {
-			if ps, ok := sub.(*applications.PollingSubscriber); ok {
-				ps.PollInterval = 3 * time.Second
-			}
-			sub.Subscribe(ctx, activity)
-		} else {
-			close(activity)
+	ok = t.Run("Create Application", func(t *testing.T) {
+		if !ok {
+			t.Skip("skipping create application.")
 		}
-	})
 
-	ok := t.Run("Create Application", func(t *testing.T) {
 		var err error
 		appMeta, err = appAPI.CreateApplication(ctx, td.Application)
 		require.NoError(t, err, "failed to create application")
 		assert.NotEmpty(t, appMeta.Location(), "missing location")
 		assert.NotEmpty(t, appMeta.Link(api.RelationScenarios), "missing scenarios link")
 		assert.Equal(t, td.Application.DisplayName, appMeta.Title(), "title metadata does not match")
-	})
+	}) && ok
 
 	ok = t.Run("Create Scenario", func(t *testing.T) {
 		if !ok {
-			t.Skip("skipping scenario.")
+			t.Skip("skipping create scenario.")
 		}
 
 		var err error
@@ -120,14 +107,58 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 		assert.NotEmpty(t, scnMeta.Link(api.RelationTemplate), "missing template link")
 		assert.Equal(t, appMeta.Location(), scnMeta.Link(api.RelationUp), "application link does not match")
 		assert.Equal(t, td.Scenario.DisplayName, scnMeta.Title(), "title metadata does not match")
-	})
+	}) && ok
 
-	t.Run("Handle Activity", func(t *testing.T) {
-		t.Parallel()
+	ok = t.Run("Create Activity", func(t *testing.T) {
 		if !ok {
-			t.Skip("skipping activity handling.")
+			t.Skip("skipping create activity.")
 		}
 
+		md, err := appAPI.CheckEndpoint(ctx)
+		require.NoError(t, err, "failed to check the endpoint necessary for the feed URL")
+		require.NotEmpty(t, md.Link(api.RelationAlternate), "missing activity link")
+
+		t.Run("Create Scan Request", func(t *testing.T) {
+			sa := &applications.ScanActivity{
+				Scenario: scnMeta.Location(),
+			}
+			err = appAPI.CreateActivity(ctx, md.Link(api.RelationAlternate), applications.Activity{Scan: sa})
+			require.NoError(t, err, "failed to request scan")
+		})
+
+		t.Run("Create Run Request", func(t *testing.T) {
+			ra := &applications.RunActivity{
+				Scenario: scnMeta.Location(),
+			}
+			err = appAPI.CreateActivity(ctx, md.Link(api.RelationAlternate), applications.Activity{Run: ra})
+			require.NoError(t, err, "failed to request run")
+		})
+	}) && ok
+
+	ok = t.Run("Application Activity", func(t *testing.T) {
+		if !ok {
+			t.Skip("skipping application activity.")
+		}
+
+		activity := make(chan applications.ActivityItem)
+		subCtx, cancelSub := context.WithTimeout(ctx, 30*time.Second)
+		defer cancelSub()
+
+		t.Run("Subscribe", func(t *testing.T) {
+			q := applications.ActivityFeedQuery{}
+			q.SetType(applications.TagScan, applications.TagRun)
+			sub, err := appAPI.SubscribeActivity(ctx, q)
+			require.NoError(t, err, "failed to create activity subscriber")
+
+			// Reduce the poll time for testing
+			if ps, ok := sub.(*applications.PollingSubscriber); ok {
+				ps.PollInterval = 3 * time.Second
+			}
+
+			sub.Subscribe(subCtx, activity)
+		})
+
+		var okScan, okRun bool
 		for ai := range activity {
 			// NOTE: We limited the activity types when we subscribed
 			assert.True(t, ai.HasTag(applications.TagScan) || ai.HasTag(applications.TagRun), "unexpected item tag")
@@ -152,14 +183,17 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 			switch {
 
 			case ai.HasTag(applications.TagScan):
-				t.Run("Scan", func(t *testing.T) {
+				okScan = t.Run("Handle Scan Activity", func(t *testing.T) {
 					err = appAPI.UpdateTemplate(ctx, scn.Link(api.RelationTemplate), td.GenerateTemplate())
 					require.NoError(t, err, "failed to update template")
 				})
+				t.Run("Acknowledge Scan Activity", func(t *testing.T) {
+					err = appAPI.DeleteActivity(ctx, ai.URL)
+					require.NoError(t, err, "failed to acknowledge scan activity")
+				})
 
 			case ai.HasTag(applications.TagRun):
-				t.Run("Run", func(t *testing.T) {
-					defer run.Done()
+				okRun = t.Run("Handle Run Activity", func(t *testing.T) {
 					exp := td.Experiment
 					exp.DisplayName = ai.Title
 
@@ -175,7 +209,7 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 					assert.NotEmpty(t, exp.Link(api.RelationTrials), "missing trials link")
 					assert.NotEmpty(t, exp.Link(api.RelationNextTrial), "missing next trial link")
 					assert.NotEmpty(t, exp.Link(api.RelationSelf), "missing self link")
-					assert.Equal(t, app.Name, exp.Labels["application"], "incorrect application label")
+					assert.Equal(t, app.Name.String(), exp.Labels["application"], "incorrect application label")
 					assert.Equal(t, scn.Name, exp.Labels["scenario"], "incorrect scenario label")
 
 					_, err = expAPI.CreateTrial(ctx, exp.Link(api.RelationTrials), experiments.TrialAssignments{
@@ -197,39 +231,23 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 						require.NoError(t, err, "failed to report trial")
 					}
 				})
+				t.Run("Acknowledge Run Activity", func(t *testing.T) {
+					err = appAPI.DeleteActivity(ctx, ai.URL)
+					require.NoError(t, err, "failed to acknowledge run activity")
+				})
+
 			}
 
-			err = appAPI.DeleteActivity(ctx, ai.URL)
-			require.NoError(t, err, "failed to acknowledge activity")
-		}
-	})
-
-	t.Run("Request Activity", func(t *testing.T) {
-		t.Parallel()
-		if !ok {
-			t.Skip("skipping activity request.")
+			// If we processed both activities, cancel the subscription early instead of waiting for the timeout
+			if okScan && okRun {
+				cancelSub()
+			}
 		}
 
-		md, err := appAPI.CheckEndpoint(ctx)
-		require.NoError(t, err, "failed to fetch the application list necessary for the feed URL")
-
-		sa := &applications.ScanActivity{
-			Scenario: scnMeta.Location(),
-		}
-		err = appAPI.CreateActivity(ctx, md.Link(api.RelationAlternate), applications.Activity{Scan: sa})
-		require.NoError(t, err, "failed to request scan")
-
-		ra := &applications.RunActivity{
-			Scenario: scnMeta.Location(),
-		}
-		err = appAPI.CreateActivity(ctx, md.Link(api.RelationAlternate), applications.Activity{Run: ra})
-		require.NoError(t, err, "failed to request run")
-		run.Add(1)
-	})
-
-	// Wait for all run activities to finish
-	run.Wait()
-	cancelSub()
+		// Make sure we witnessed both the scan and run activities for our scenario
+		assert.True(t, okScan, "never received the scan activity")
+		assert.True(t, okRun, "never received the run activity")
+	}) && ok
 
 	t.Run("Delete Application", func(t *testing.T) {
 		if appMeta.Location() == "" {

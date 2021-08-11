@@ -86,6 +86,10 @@ func runTest(t *testing.T, td *apitest.ExperimentTestDefinition, expAPI experime
 
 		// Since this was a PUT instead of a POST we are expecting a self link instead of a location
 		assert.NotEmpty(t, exp.Link(api.RelationSelf), "missing self link")
+
+		// Ensure we have the required application and scenario labels
+		assert.NotEmpty(t, exp.Labels["application"], "missing application label")
+		assert.NotEmpty(t, exp.Labels["scenario"], "missing scenario label")
 	})
 
 	t.Run("Send Baseline", func(t *testing.T) {
