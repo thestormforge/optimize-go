@@ -30,7 +30,7 @@
         "name": "p95-latency"
       }
     ],
-    "stormforger": {
+    "stormforge-perf": {
       "testCase": "myorg/large-load-test"
     }
   },
