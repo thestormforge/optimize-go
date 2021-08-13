@@ -29,7 +29,7 @@ type Scenario struct {
 	Configuration []interface{} `json:"configuration,omitempty"`
 	Objective     []interface{} `json:"objective,omitempty"`
 
-	StormForgePerformance interface{} `json:"stormforge-perf,omitempty"`
+	StormForgePerformance interface{} `json:"stormforgePerf,omitempty"`
 	Locust                interface{} `json:"locust,omitempty"`
 	Custom                interface{} `json:"custom,omitempty"`
 }
