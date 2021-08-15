@@ -390,7 +390,7 @@ func (h *httpAPI) UpdateTemplate(ctx context.Context, u string, t Template) erro
 	}
 
 	switch resp.StatusCode {
-	case http.StatusCreated, http.StatusAccepted:
+	case http.StatusOK, http.StatusCreated, http.StatusAccepted:
 		return nil
 	case http.StatusBadRequest:
 		return api.NewError(ErrScanInvalid, resp, body)
