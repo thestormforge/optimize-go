@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"math/rand"
+	"os"
 	"sort"
 	"time"
 
@@ -61,10 +62,15 @@ type PollingSubscriber struct {
 
 // PollTimer returns a new timer for the next polling operation.
 func (s *PollingSubscriber) PollTimer() *time.Timer {
-	// Default to 30 seconds
+	// Allow the default polling interval to be configured via an environment variable
 	interval := s.PollInterval
 	if interval <= 0 {
-		interval = 30 * time.Second
+		if d, err := time.ParseDuration(os.Getenv("STORMFORGE_API_POLL_INTERVAL")); err != nil {
+			// Default to 30 seconds
+			interval = 30 * time.Second
+		} else {
+			interval = d
+		}
 	}
 
 	// Default to a factor of 1.0 (i.e. a random value from 0 to a full extra interval)
