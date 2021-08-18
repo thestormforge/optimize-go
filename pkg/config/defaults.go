@@ -66,22 +66,6 @@ func bootstrapClusterName() string {
 	return "default"
 }
 
-// applicationRoot returns the base URL of the UI.
-func applicationRoot(baseURL string) (base string, err error) {
-	b, err := url.Parse(baseURL)
-	if err != nil {
-		return "", err
-	}
-	if b.RawQuery != "" {
-		return "", fmt.Errorf("query component is not allowed: %s", baseURL)
-	}
-	if b.Fragment != "" {
-		return "", fmt.Errorf("fragment component is not allowed: %s", baseURL)
-	}
-	b.Path = strings.TrimRight(b.Path, "/")
-	return b.String(), nil
-}
-
 // defaultString overwrites an empty s1 with the value of s2
 func defaultString(s1 *string, s2 string) {
 	if *s1 == "" {
