@@ -71,6 +71,8 @@ type APIServer struct {
 	ExperimentsEndpoint string `json:"experiments_endpoint,omitempty"`
 	// AccountsEndpoint is the URL of the accounts endpoint
 	AccountsEndpoint string `json:"accounts_endpoint,omitempty"`
+	// PerformanceTokenEndpoint is the URL of the Performance API token endpoint
+	PerformanceTokenEndpoint string `json:"performance_token_endpoint,omitempty"`
 }
 
 // ApplicationServer is the user facing application.

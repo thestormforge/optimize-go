@@ -127,6 +127,7 @@ func defaultServerEndpoints(srv *Server) error {
 	defaultString(&srv.API.ApplicationsEndpoint, api+"/v2/applications/")
 	defaultString(&srv.API.ExperimentsEndpoint, api+"/v1/experiments/")
 	defaultString(&srv.API.AccountsEndpoint, api+"/v1/accounts/")
+	defaultString(&srv.API.PerformanceTokenEndpoint, "https://app.stormforger.com/optimize/oauth/tokens")
 
 	// Apply the authorization defaults
 	// TODO We should try discovery, e.g. fetch `discovery.WellKnownURI(issuer, "oauth-authorization-server")` and _merge_ (not _default_ since the server reported values win)
