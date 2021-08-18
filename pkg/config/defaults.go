@@ -122,10 +122,6 @@ func defaultServerEndpoints(srv *Server) error {
 	if err != nil {
 		return err
 	}
-	base, err := applicationRoot(srv.Application.BaseURL)
-	if err != nil {
-		return err
-	}
 
 	// Apply the API defaults
 	defaultString(&srv.API.ApplicationsEndpoint, api+"/v2/applications/")
@@ -143,7 +139,6 @@ func defaultServerEndpoints(srv *Server) error {
 
 	// Apply the application defaults
 	defaultString(&srv.Application.AuthSuccessEndpoint, "https://docs.stormforge.io/api/auth_success/")
-	defaultString(&srv.Application.ExperimentsEndpoint, base+"/experiments")
 
 	// Special case for the registration service which is actually part of the accounts API
 	if u, err := url.Parse(srv.API.AccountsEndpoint); err != nil {

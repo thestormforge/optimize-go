@@ -79,8 +79,6 @@ type ApplicationServer struct {
 	BaseURL string `json:"base_url,omitempty"`
 	// AuthSuccessEndpoint is URL to direct the user to after a successful login.
 	AuthSuccessEndpoint string `json:"auth_success_endpoint,omitempty"`
-	// ExperimentsEndpoint is the URL of the experiments UI.
-	ExperimentsEndpoint string `json:"experiments_endpoint,omitempty"`
 }
 
 // NOTE: AuthorizationServer is defined by https://tools.ietf.org/html/rfc8414 do not add non-standard fields!
