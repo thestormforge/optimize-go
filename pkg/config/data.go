@@ -71,6 +71,8 @@ type APIServer struct {
 	ExperimentsEndpoint string `json:"experiments_endpoint,omitempty"`
 	// AccountsEndpoint is the URL of the accounts endpoint
 	AccountsEndpoint string `json:"accounts_endpoint,omitempty"`
+	// PerformanceTokenEndpoint is the URL of the Performance API token endpoint
+	PerformanceTokenEndpoint string `json:"performance_token_endpoint,omitempty"`
 }
 
 // ApplicationServer is the user facing application.
@@ -79,8 +81,6 @@ type ApplicationServer struct {
 	BaseURL string `json:"base_url,omitempty"`
 	// AuthSuccessEndpoint is URL to direct the user to after a successful login.
 	AuthSuccessEndpoint string `json:"auth_success_endpoint,omitempty"`
-	// ExperimentsEndpoint is the URL of the experiments UI.
-	ExperimentsEndpoint string `json:"experiments_endpoint,omitempty"`
 }
 
 // NOTE: AuthorizationServer is defined by https://tools.ietf.org/html/rfc8414 do not add non-standard fields!

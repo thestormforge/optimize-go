@@ -66,22 +66,6 @@ func bootstrapClusterName() string {
 	return "default"
 }
 
-// applicationRoot returns the base URL of the UI.
-func applicationRoot(baseURL string) (base string, err error) {
-	b, err := url.Parse(baseURL)
-	if err != nil {
-		return "", err
-	}
-	if b.RawQuery != "" {
-		return "", fmt.Errorf("query component is not allowed: %s", baseURL)
-	}
-	if b.Fragment != "" {
-		return "", fmt.Errorf("fragment component is not allowed: %s", baseURL)
-	}
-	b.Path = strings.TrimRight(b.Path, "/")
-	return b.String(), nil
-}
-
 // defaultString overwrites an empty s1 with the value of s2
 func defaultString(s1 *string, s2 string) {
 	if *s1 == "" {
@@ -122,15 +106,12 @@ func defaultServerEndpoints(srv *Server) error {
 	if err != nil {
 		return err
 	}
-	base, err := applicationRoot(srv.Application.BaseURL)
-	if err != nil {
-		return err
-	}
 
 	// Apply the API defaults
 	defaultString(&srv.API.ApplicationsEndpoint, api+"/v2/applications/")
 	defaultString(&srv.API.ExperimentsEndpoint, api+"/v1/experiments/")
 	defaultString(&srv.API.AccountsEndpoint, api+"/v1/accounts/")
+	defaultString(&srv.API.PerformanceTokenEndpoint, "https://app.stormforger.com/optimize/oauth/tokens")
 
 	// Apply the authorization defaults
 	// TODO We should try discovery, e.g. fetch `discovery.WellKnownURI(issuer, "oauth-authorization-server")` and _merge_ (not _default_ since the server reported values win)
@@ -143,7 +124,6 @@ func defaultServerEndpoints(srv *Server) error {
 
 	// Apply the application defaults
 	defaultString(&srv.Application.AuthSuccessEndpoint, "https://docs.stormforge.io/api/auth_success/")
-	defaultString(&srv.Application.ExperimentsEndpoint, base+"/experiments")
 
 	// Special case for the registration service which is actually part of the accounts API
 	if u, err := url.Parse(srv.API.AccountsEndpoint); err != nil {
