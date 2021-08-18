@@ -26,6 +26,7 @@ import (
 	"github.com/thestormforge/optimize-go/pkg/oauth2/authorizationcode"
 	"github.com/thestormforge/optimize-go/pkg/oauth2/devicecode"
 	"github.com/thestormforge/optimize-go/pkg/oauth2/registration"
+	"github.com/thestormforge/optimize-go/pkg/oauth2/tokenexchange"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 )
@@ -301,6 +302,38 @@ func (rsc *OptimizeConfig) Authorize(ctx context.Context, transport http.RoundTr
 		return &oauth2.Transport{Source: src, Base: transport}, nil
 	}
 	return transport, nil
+}
+
+// PerformanceAuthorization returns a source of authorization tokens for accessing Performance APIs.
+func (rsc *OptimizeConfig) PerformanceAuthorization(ctx context.Context) (tokenexchange.ExchangeTokenSource, error) {
+	r := rsc.Reader()
+	srv, err := CurrentServer(r)
+	if err != nil {
+		return nil, err
+	}
+
+	ec := tokenexchange.Config{
+		TokenURL:           srv.API.PerformanceTokenEndpoint,
+		Resource:           "https://api.stormforger.com/",
+		RequestedTokenType: tokenexchange.TokenTypeJWT,
+		// NOTE: The "actor" should be a JWT exchange token where the "access_token"
+		// is a "software statement" (https://datatracker.ietf.org/doc/html/rfc7591#section-2.3).
+		// In the current implementation, the "id-token" type is overloaded to
+		// mean a simple string ID rather than an actual OpenID identifier token.
+		Actor: tokenexchange.StaticExchangeTokenSource(&tokenexchange.ExchangeToken{
+			Token:           oauth2.Token{AccessToken: "forge-www"},
+			IssuedTokenType: tokenexchange.TokenTypeIdentifierToken,
+		}),
+	}
+
+	// The tokens produced by the configuration constitute the subject identity
+	ts, err := rsc.tokenSource(ctx)
+	if err != nil {
+		return nil, err
+	}
+	sub := tokenexchange.OAuth2ExchangeTokenSource(ts)
+
+	return ec.TokenSource(ctx, sub), nil
 }
 
 func (rsc *OptimizeConfig) tokenSource(ctx context.Context) (oauth2.TokenSource, error) {
