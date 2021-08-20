@@ -19,6 +19,7 @@ package config
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os/exec"
@@ -330,6 +331,9 @@ func (rsc *OptimizeConfig) PerformanceAuthorization(ctx context.Context) (tokene
 	ts, err := rsc.tokenSource(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if ts == nil {
+		return nil, fmt.Errorf("missing required authorization source")
 	}
 	sub := tokenexchange.OAuth2ExchangeTokenSource(ts)
 
