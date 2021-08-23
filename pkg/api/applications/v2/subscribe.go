@@ -34,12 +34,12 @@ func newSubscriber(api API, feed ActivityFeed) Subscriber {
 		switch hub.Type {
 		case "poll":
 			// Allow the server to force polling
-			return &PollingSubscriber{API: api, FeedURL: hub.URL}
+			return &PollingSubscriber{API: api, FeedURL: hub.URL, doneCh: make(chan struct{})}
 		}
 	}
 
 	// By default, return a simple polling subscriber on the feed URL
-	return &PollingSubscriber{API: api, FeedURL: feed.FeedURL}
+	return &PollingSubscriber{API: api, FeedURL: feed.FeedURL, doneCh: make(chan struct{})}
 }
 
 // PollingSubscriber is a primitive strategy that simply polls for changes.
@@ -58,6 +58,13 @@ type PollingSubscriber struct {
 
 	// The server may periodically request a longer delay.
 	rateLimit time.Duration
+
+	doneCh chan struct{}
+}
+
+// Done is used to indicate if the subscriber is complete.
+func (s *PollingSubscriber) Done() <-chan struct{} {
+	return s.doneCh
 }
 
 // PollTimer returns a new timer for the next polling operation.
@@ -91,7 +98,7 @@ func (s *PollingSubscriber) PollTimer() *time.Timer {
 func (s *PollingSubscriber) Subscribe(ctx context.Context, ch chan<- ActivityItem) {
 	go func() {
 		// Close the channel when we are done sending things
-		defer close(ch)
+		defer close(s.doneCh)
 
 		lastID := ""
 		for {

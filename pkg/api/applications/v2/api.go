@@ -36,6 +36,8 @@ const (
 type Subscriber interface {
 	// Subscribe initiates a subscription that continues for the lifetime of the context.
 	Subscribe(ctx context.Context, ch chan<- ActivityItem)
+	// Done notifies the caller that the subscriber is finished and no longer running.
+	Done() <-chan struct{}
 }
 
 type API interface {
