@@ -58,6 +58,8 @@ type PollingSubscriber struct {
 
 	// The server may periodically request a longer delay.
 	rateLimit time.Duration
+	// The last feed item identifier acknowledged by this subscriber.
+	lastID string
 }
 
 // PollTimer returns a new timer for the next polling operation.
@@ -93,7 +95,6 @@ func (s *PollingSubscriber) Subscribe(ctx context.Context, ch chan<- ActivityIte
 	// Close the channel when we are done sending things
 	defer close(ch)
 
-	lastID := ""
 	for {
 		// Wait for the timer
 		t := s.PollTimer()
@@ -118,18 +119,18 @@ func (s *PollingSubscriber) Subscribe(ctx context.Context, ch chan<- ActivityIte
 			return err
 		}
 
-		lastID = s.notify(f.Items, lastID, ch)
+		s.notify(f.Items, ch)
 	}
 }
 
-// notify sends all of the items from the supplied feed to the channel.
+// notify sends all the items from the supplied feed to the channel.
 // IMPORTANT: this function assumes item identifiers can be compared lexicographically.
-func (s *PollingSubscriber) notify(items []ActivityItem, lastID string, ch chan<- ActivityItem) string {
+func (s *PollingSubscriber) notify(items []ActivityItem, ch chan<- ActivityItem) {
 	// Make sure the items are sorted by their identifier
 	sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })
 	for i := range items {
 		// Ignore items that we have already seen
-		if lastID != "" && items[i].ID <= lastID {
+		if s.lastID != "" && items[i].ID <= s.lastID {
 			continue
 		}
 
@@ -140,8 +141,6 @@ func (s *PollingSubscriber) notify(items []ActivityItem, lastID string, ch chan<
 
 		// Send the item to the channel and update the last ID
 		ch <- items[i]
-		lastID = items[i].ID
+		s.lastID = items[i].ID
 	}
-
-	return lastID
 }
