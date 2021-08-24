@@ -155,7 +155,10 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 				ps.PollInterval = 3 * time.Second
 			}
 
-			sub.Subscribe(subCtx, activity)
+			go func() {
+				err := sub.Subscribe(subCtx, activity)
+				require.NoError(t, err)
+			}()
 		})
 
 		var okScan, okRun bool

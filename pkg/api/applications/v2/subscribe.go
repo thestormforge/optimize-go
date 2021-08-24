@@ -58,6 +58,8 @@ type PollingSubscriber struct {
 
 	// The server may periodically request a longer delay.
 	rateLimit time.Duration
+	// The last feed item identifier acknowledged by this subscriber.
+	lastID string
 }
 
 // PollTimer returns a new timer for the next polling operation.
@@ -87,51 +89,48 @@ func (s *PollingSubscriber) PollTimer() *time.Timer {
 	return time.NewTimer(interval + time.Duration(jitter))
 }
 
-// Subscribe starts fetching the activity feed
-func (s *PollingSubscriber) Subscribe(ctx context.Context, ch chan<- ActivityItem) {
-	go func() {
-		// Close the channel when we are done sending things
-		defer close(ch)
+// Subscribe polls for activity, blocking until the supplied context is finished
+// or a fatal error occurs talking to the activity endpoint.
+func (s *PollingSubscriber) Subscribe(ctx context.Context, ch chan<- ActivityItem) error {
+	// Close the channel when we are done sending things
+	defer close(ch)
 
-		lastID := ""
-		for {
-			// Wait for the timer
-			t := s.PollTimer()
-			select {
-			case <-ctx.Done():
-				return
-			case <-t.C:
-			}
-
-			// Fetch the feed and send new items to the channel
-			f, err := s.API.ListActivity(ctx, s.FeedURL, ActivityFeedQuery{})
-			if err != nil {
-				var apiErr *api.Error
-				if errors.As(err, &apiErr) {
-					switch apiErr.Type {
-					case ErrActivityRateLimited:
-						s.rateLimit = apiErr.RetryAfter
-						continue
-					}
-				}
-
-				// TODO What other errors should just be ignored or reported?
-				return
-			}
-
-			lastID = s.notify(f.Items, lastID, ch)
+	for {
+		// Wait for the timer
+		t := s.PollTimer()
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-t.C:
 		}
-	}()
+
+		// Fetch the feed and send new items to the channel
+		f, err := s.API.ListActivity(ctx, s.FeedURL, ActivityFeedQuery{})
+		if err != nil {
+			var apiErr *api.Error
+			if errors.As(err, &apiErr) {
+				switch apiErr.Type {
+				case ErrActivityRateLimited:
+					s.rateLimit = apiErr.RetryAfter
+					continue
+				}
+			}
+
+			return err
+		}
+
+		s.notify(f.Items, ch)
+	}
 }
 
-// notify sends all of the items from the supplied feed to the channel.
+// notify sends all the items from the supplied feed to the channel.
 // IMPORTANT: this function assumes item identifiers can be compared lexicographically.
-func (s *PollingSubscriber) notify(items []ActivityItem, lastID string, ch chan<- ActivityItem) string {
+func (s *PollingSubscriber) notify(items []ActivityItem, ch chan<- ActivityItem) {
 	// Make sure the items are sorted by their identifier
 	sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })
 	for i := range items {
 		// Ignore items that we have already seen
-		if lastID != "" && items[i].ID <= lastID {
+		if s.lastID != "" && items[i].ID <= s.lastID {
 			continue
 		}
 
@@ -142,8 +141,6 @@ func (s *PollingSubscriber) notify(items []ActivityItem, lastID string, ch chan<
 
 		// Send the item to the channel and update the last ID
 		ch <- items[i]
-		lastID = items[i].ID
+		s.lastID = items[i].ID
 	}
-
-	return lastID
 }

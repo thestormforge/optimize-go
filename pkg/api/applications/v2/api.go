@@ -35,7 +35,7 @@ const (
 // Subscriber describes a strategy for subscribing to feed notifications.
 type Subscriber interface {
 	// Subscribe initiates a subscription that continues for the lifetime of the context.
-	Subscribe(ctx context.Context, ch chan<- ActivityItem)
+	Subscribe(ctx context.Context, ch chan<- ActivityItem) error
 }
 
 type API interface {
