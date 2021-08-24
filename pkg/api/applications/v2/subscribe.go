@@ -87,41 +87,39 @@ func (s *PollingSubscriber) PollTimer() *time.Timer {
 	return time.NewTimer(interval + time.Duration(jitter))
 }
 
-// Subscribe starts fetching the activity feed
-func (s *PollingSubscriber) Subscribe(ctx context.Context, ch chan<- ActivityItem) {
-	go func() {
-		// Close the channel when we are done sending things
-		defer close(ch)
+// Subscribe polls for activity, blocking until the supplied context is finished
+// or a fatal error occurs talking to the activity endpoint.
+func (s *PollingSubscriber) Subscribe(ctx context.Context, ch chan<- ActivityItem) error {
+	// Close the channel when we are done sending things
+	defer close(ch)
 
-		lastID := ""
-		for {
-			// Wait for the timer
-			t := s.PollTimer()
-			select {
-			case <-ctx.Done():
-				return
-			case <-t.C:
-			}
-
-			// Fetch the feed and send new items to the channel
-			f, err := s.API.ListActivity(ctx, s.FeedURL, ActivityFeedQuery{})
-			if err != nil {
-				var apiErr *api.Error
-				if errors.As(err, &apiErr) {
-					switch apiErr.Type {
-					case ErrActivityRateLimited:
-						s.rateLimit = apiErr.RetryAfter
-						continue
-					}
-				}
-
-				// TODO What other errors should just be ignored or reported?
-				return
-			}
-
-			lastID = s.notify(f.Items, lastID, ch)
+	lastID := ""
+	for {
+		// Wait for the timer
+		t := s.PollTimer()
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-t.C:
 		}
-	}()
+
+		// Fetch the feed and send new items to the channel
+		f, err := s.API.ListActivity(ctx, s.FeedURL, ActivityFeedQuery{})
+		if err != nil {
+			var apiErr *api.Error
+			if errors.As(err, &apiErr) {
+				switch apiErr.Type {
+				case ErrActivityRateLimited:
+					s.rateLimit = apiErr.RetryAfter
+					continue
+				}
+			}
+
+			return err
+		}
+
+		lastID = s.notify(f.Items, lastID, ch)
+	}
 }
 
 // notify sends all of the items from the supplied feed to the channel.
