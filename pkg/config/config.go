@@ -128,7 +128,7 @@ func (rsc *OptimizeConfig) Environment() string {
 	if env := rsc.data.Environment; env != "" {
 		return env
 	}
-	return "production"
+	return environmentProduction
 }
 
 // SystemNamespace returns the namespace where the Optimize Controller is/should be installed

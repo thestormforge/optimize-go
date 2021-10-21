@@ -31,6 +31,12 @@ var (
 	DecodeJWT bool
 )
 
+const (
+	environmentProduction  = "production"
+	environmentStaging     = "staging"
+	environmentDevelopment = "development"
+)
+
 // Config is the top level configuration structure for Optimize
 type Config struct {
 	// Servers is a named list of server configurations
