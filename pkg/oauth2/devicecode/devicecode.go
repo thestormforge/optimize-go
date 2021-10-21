@@ -24,7 +24,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -113,7 +112,7 @@ func doDeviceAuthorizationRoundTrip(ctx context.Context, req *http.Request) (*de
 	if err != nil {
 		return nil, err
 	}
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1<<20))
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 	_ = r.Body.Close()
 	if err != nil {
 		return nil, fmt.Errorf("device: cannot fetch device authorization: %v", err)
