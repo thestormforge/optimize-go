@@ -97,9 +97,11 @@ func SetExecutionEnvironment(env string) Change {
 		if env != "" {
 			switch strings.ToLower(env) {
 			case "production", "prod":
-				env = "production"
+				env = environmentProduction
+			case "staging", "stage":
+				env = environmentStaging
 			case "development", "dev":
-				env = "development"
+				env = environmentDevelopment
 			default:
 				return fmt.Errorf("unknown environment: %s", env)
 			}
@@ -107,7 +109,7 @@ func SetExecutionEnvironment(env string) Change {
 
 		// Do not explicitly persist the "production" value
 		mergeString(&cfg.Environment, env)
-		if cfg.Environment == "production" {
+		if cfg.Environment == environmentProduction {
 			cfg.Environment = ""
 		}
 		return nil

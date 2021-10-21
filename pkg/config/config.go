@@ -32,15 +32,6 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 )
 
-const (
-	// EnvironmentProduction is the label for the production environment.
-	EnvironmentProduction = "production"
-	// EnvironmentStaging is the label for the staging environment.
-	EnvironmentStaging = "staging"
-	// EnvironmentDevelopment is the label for the development environment.
-	EnvironmentDevelopment = "development"
-)
-
 // Loader is used to initially populate an Optimize configuration
 type Loader func(cfg *OptimizeConfig) error
 
@@ -137,7 +128,7 @@ func (rsc *OptimizeConfig) Environment() string {
 	if env := rsc.data.Environment; env != "" {
 		return env
 	}
-	return EnvironmentProduction
+	return environmentProduction
 }
 
 // SystemNamespace returns the namespace where the Optimize Controller is/should be installed
