@@ -18,7 +18,6 @@ package config
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -91,7 +90,7 @@ func (l *file) write() error {
 	if err := os.MkdirAll(filepath.Dir(l.filename), 0700); err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(l.filename, output, 0600); err != nil {
+	if err := os.WriteFile(l.filename, output, 0600); err != nil {
 		return err
 	}
 	return nil

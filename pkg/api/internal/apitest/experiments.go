@@ -19,7 +19,6 @@ package apitest
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -119,7 +118,7 @@ func ReadExperimentsTestData(path string) ([]ExperimentTestDefinition, error) {
 			continue
 		}
 
-		data, err := ioutil.ReadFile(filepath.Join(path, entry.Name()))
+		data, err := os.ReadFile(filepath.Join(path, entry.Name()))
 		if err != nil {
 			return nil, fmt.Errorf("failed to read test data %q: %w", entry.Name(), err)
 		}

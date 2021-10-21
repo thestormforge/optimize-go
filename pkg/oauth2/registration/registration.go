@@ -28,7 +28,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime"
 	"net/http"
 	"strings"
@@ -168,7 +167,7 @@ func doRegistrationRoundTrip(ctx context.Context, req *http.Request, src oauth2.
 	if err != nil {
 		return nil, err
 	}
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1<<20))
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 	_ = r.Body.Close()
 	if err != nil {
 		return nil, fmt.Errorf("registration: cannot fetch client information: %v", err)
@@ -196,7 +195,7 @@ func doReadRoundTrip(ctx context.Context, req *http.Request, src oauth2.TokenSou
 	if err != nil {
 		return nil, err
 	}
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1<<20))
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 	_ = r.Body.Close()
 	if err != nil {
 		return nil, fmt.Errorf("registration: cannot fetch client information: %v", err)
