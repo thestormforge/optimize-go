@@ -25,6 +25,21 @@ func mergeString(s1 *string, s2 string) {
 	}
 }
 
+// mergeStringMap overwrites keys in m1 with the non-empty values from m2.
+func mergeStringMap(m1 *map[string]string, m2 map[string]string) {
+	if len(m2) == 0 {
+		return
+	}
+	if *m1 == nil {
+		*m1 = make(map[string]string, len(m2))
+	}
+	for k, v := range m2 {
+		if v != "" {
+			(*m1)[k] = v
+		}
+	}
+}
+
 // Merge elements
 
 func mergeConfig(c1, c2 *Config) {
@@ -90,6 +105,13 @@ func mergeController(c1, c2 *Controller) {
 	}
 	for k, v := range idx {
 		c1.Env = append(c1.Env, ControllerEnvVar{Name: k, Value: v})
+	}
+	if c2.Resources != nil {
+		if c1.Resources == nil {
+			c1.Resources = new(ControllerResources)
+		}
+		mergeStringMap(&c1.Resources.Requests, c2.Resources.Requests)
+		mergeStringMap(&c1.Resources.Limits, c2.Resources.Limits)
 	}
 }
 
