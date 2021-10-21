@@ -118,13 +118,12 @@ func SetExecutionEnvironment(env string) Change {
 
 // SetProperty is a configuration change that updates a single property using a dotted name notation.
 func SetProperty(name, value string) Change {
-	if name == "env" {
-		return SetExecutionEnvironment(value)
-	}
 	// TODO This is a giant hack. Consider not even supporting `config set` generically
 	return func(cfg *Config) error {
 		path := strings.Split(name, ".")
 		switch path[0] {
+		case "env":
+			return SetExecutionEnvironment(value)(cfg)
 		case "current-context":
 			cfg.CurrentContext = value
 			return nil
@@ -133,12 +132,24 @@ func SetProperty(name, value string) Change {
 				return setClusterProperty(cfg, path[1], path[2], value)
 			}
 		case "controller":
-			if len(path) == 4 && path[2] == "env" {
-				mergeControllers(cfg, []NamedController{{
-					Name:       path[1],
-					Controller: Controller{Env: []ControllerEnvVar{{Name: path[3], Value: value}}},
-				}})
-				return nil
+			if len(path) == 4 {
+				switch path[2] {
+				case "env":
+					mergeControllers(cfg, []NamedController{{
+						Name:       path[1],
+						Controller: Controller{Env: []ControllerEnvVar{{Name: path[3], Value: value}}},
+					}})
+					return nil
+				case "resources":
+					mergeControllers(cfg, []NamedController{{
+						Name: path[1],
+						Controller: Controller{Resources: &ControllerResources{
+							Requests: map[string]string{path[3]: value},
+							Limits:   map[string]string{path[3]: value},
+						}},
+					}})
+					return nil
+				}
 			}
 		case "context":
 			if len(path) == 3 {
