@@ -75,17 +75,17 @@ func defaultString(s1 *string, s2 string) {
 
 func defaultServerRoots(env string, srv *Server) error {
 	// The environment corresponds to deployment details of the proprietary backend
-	switch strings.ToLower(env) {
-	case "production", "prod":
+	switch env {
+	case EnvironmentProduction:
 		defaultString(&srv.Identifier, "https://api.stormforge.io/")
 		defaultString(&srv.Authorization.Issuer, "https://auth.stormforge.io/")
 		defaultString(&srv.Application.BaseURL, "https://app.stormforge.io/")
-	case "staging", "stage":
+	case EnvironmentStaging:
 		defaultString(&srv.Identifier, "https://api.stormforge.dev/")
 		defaultString(&srv.Authorization.Issuer, "https://auth.stormforge.dev/")
 		defaultString(&srv.Application.BaseURL, "https://app.stormforge.dev/")
-	case "development", "dev":
-		return fmt.Errorf("unknown environment: '%s' (did you mean 'staging'?)", env)
+	case EnvironmentDevelopment:
+		return fmt.Errorf("unknown environment: '%s' (did you mean '%s'?)", env, EnvironmentStaging)
 	default:
 		return fmt.Errorf("unknown environment: '%s'", env)
 	}
