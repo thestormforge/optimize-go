@@ -118,80 +118,181 @@ func SetExecutionEnvironment(env string) Change {
 
 // SetProperty is a configuration change that updates a single property using a dotted name notation.
 func SetProperty(name, value string) Change {
-	if name == "env" {
-		return SetExecutionEnvironment(value)
-	}
 	// TODO This is a giant hack. Consider not even supporting `config set` generically
 	return func(cfg *Config) error {
 		path := strings.Split(name, ".")
 		switch path[0] {
+
+		case "env":
+			return SetExecutionEnvironment(value)(cfg)
+
 		case "current-context":
 			cfg.CurrentContext = value
 			return nil
+
 		case "cluster":
 			if len(path) == 3 {
-				return setClusterProperty(cfg, path[1], path[2], value)
+				switch path[2] {
+				case "context":
+					mergeClusters(cfg, []NamedCluster{{
+						Name:    path[1],
+						Cluster: Cluster{Context: value},
+					}})
+					return nil
+				case "bin":
+					mergeClusters(cfg, []NamedCluster{{
+						Name:    path[1],
+						Cluster: Cluster{Bin: value},
+					}})
+					return nil
+				case "controller":
+					mergeClusters(cfg, []NamedCluster{{
+						Name:    path[1],
+						Cluster: Cluster{Controller: value},
+					}})
+					return nil
+				}
 			}
+
 		case "controller":
-			if len(path) == 4 && path[2] == "env" {
-				mergeControllers(cfg, []NamedController{{
-					Name:       path[1],
-					Controller: Controller{Env: []ControllerEnvVar{{Name: path[3], Value: value}}},
-				}})
-				return nil
+			if len(path) == 4 {
+				switch path[2] {
+				case "env":
+					mergeControllers(cfg, []NamedController{{
+						Name:       path[1],
+						Controller: Controller{Env: []ControllerEnvVar{{Name: path[3], Value: value}}},
+					}})
+					return nil
+				case "resources":
+					mergeControllers(cfg, []NamedController{{
+						Name: path[1],
+						Controller: Controller{Resources: &ControllerResources{
+							Requests: map[string]string{path[3]: value},
+							Limits:   map[string]string{path[3]: value},
+						}},
+					}})
+					return nil
+				}
 			}
+
 		case "context":
 			if len(path) == 3 {
-				return setContextProperty(cfg, path[1], path[2], value)
+				var context *Context
+				switch path[2] {
+				case "server":
+					if findServer(cfg.Servers, value) == nil {
+						return fmt.Errorf("unknown server reference: %s", value)
+					}
+					context = &Context{Server: value}
+				case "authorization":
+					if findAuthorization(cfg.Authorizations, value) == nil {
+						return fmt.Errorf("unknown authorization reference: %s", value)
+					}
+					context = &Context{Authorization: value}
+				case "cluster":
+					if findCluster(cfg.Clusters, value) == nil {
+						return fmt.Errorf("unknown cluster reference: %s", value)
+					}
+					context = &Context{Cluster: value}
+				}
+
+				if context != nil {
+					mergeContexts(cfg, []NamedContext{{
+						Name:    path[1],
+						Context: *context,
+					}})
+					return nil
+				}
 			}
 		}
+
 		return fmt.Errorf("unknown config property: %s", name)
 	}
 }
 
-func setClusterProperty(cfg *Config, clusterName, name, value string) error {
-	cstr := findCluster(cfg.Clusters, clusterName)
-	if cstr == nil {
-		return fmt.Errorf("unknown cluster: %s", clusterName)
-	}
+// UnsetProperty eliminates a configuration property. Note that in general, just
+// setting a property to an empty value will not overwrite the existing value.
+func UnsetProperty(name string) Change {
+	// TODO This is just as bad a hack as SetProperty...what are we doing here?
+	return func(cfg *Config) error {
+		path := strings.Split(name, ".")
+		switch path[0] {
 
-	switch name {
-	case "context":
-		cstr.Context = value
-	case "bin":
-		cstr.Bin = value
-	case "controller":
-		cstr.Controller = value
-	default:
+		case "env":
+			cfg.Environment = ""
+			return nil
+
+		case "current-context":
+			cfg.CurrentContext = ""
+			return nil
+
+		case "cluster":
+			if len(path) == 3 {
+				if cstr := findCluster(cfg.Clusters, path[1]); cstr != nil {
+					switch path[2] {
+					case "context":
+						cstr.Context = ""
+						return nil
+					case "bin":
+						cstr.Bin = ""
+						return nil
+					case "controller":
+						cstr.Controller = ""
+						return nil
+					}
+				}
+			}
+
+		case "controller":
+			if len(path) == 4 {
+				if ctrl := findController(cfg.Controllers, path[1]); ctrl != nil {
+					switch path[2] {
+					case "env":
+						if len(ctrl.Env) == 1 && ctrl.Env[0].Name == path[3] {
+							ctrl.Env = nil
+						} else if len(ctrl.Env) > 1 {
+							j := 0
+							for i := 0; i < len(ctrl.Env); i++ {
+								if ctrl.Env[i].Name != path[3] {
+									ctrl.Env[j] = ctrl.Env[i]
+									j++
+								}
+							}
+							ctrl.Env = ctrl.Env[0:j]
+						}
+						return nil
+					case "resources":
+						if ctrl.Resources != nil {
+							delete(ctrl.Resources.Requests, path[3])
+							delete(ctrl.Resources.Limits, path[3])
+							if len(ctrl.Resources.Requests)+len(ctrl.Resources.Limits) == 0 {
+								ctrl.Resources = nil
+							}
+						}
+						return nil
+					}
+				}
+			}
+
+		case "context":
+			if len(path) == 3 {
+				if ctx := findContext(cfg.Contexts, path[1]); ctx != nil {
+					switch path[2] {
+					case "server":
+						ctx.Server = ""
+						return nil
+					case "authorization":
+						ctx.Authorization = ""
+						return nil
+					case "cluster":
+						ctx.Cluster = ""
+						return nil
+					}
+				}
+			}
+
+		}
+
 		return fmt.Errorf("unknown config property: %s", name)
 	}
-	return nil
-}
-
-func setContextProperty(cfg *Config, contextName, name, value string) error {
-	ctx := findContext(cfg.Contexts, contextName)
-	if ctx == nil {
-		return fmt.Errorf("unknown context: %s", contextName)
-	}
-
-	switch name {
-	case "server":
-		if findServer(cfg.Servers, value) == nil {
-			return fmt.Errorf("unknown %s reference: %s", name, value)
-		}
-		ctx.Server = value
-	case "authorization":
-		if findAuthorization(cfg.Authorizations, value) == nil {
-			return fmt.Errorf("unknown %s reference: %s", name, value)
-		}
-		ctx.Authorization = value
-	case "cluster":
-		if findCluster(cfg.Clusters, value) == nil {
-			return fmt.Errorf("unknown %s reference: %s", name, value)
-		}
-		ctx.Cluster = value
-	default:
-		return fmt.Errorf("unknown config property: %s", name)
-	}
-	return nil
 }
