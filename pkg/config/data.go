@@ -157,6 +157,8 @@ type Controller struct {
 	RegistrationAccessToken string `json:"registration_access_token,omitempty"`
 	// Env defines additional environment variables to load into the controller during authorization
 	Env []ControllerEnvVar `json:"env,omitempty"`
+	// Resources allows overriding the default container resources for the controller.
+	Resources *ControllerResources `json:"resources,omitempty"`
 }
 
 // ControllerEnvVar is used to specify additional environment variables for a controller during authorization
@@ -165,6 +167,14 @@ type ControllerEnvVar struct {
 	Name string `json:"name"`
 	// Value of the environment variable
 	Value string `json:"value"`
+}
+
+// ControllerResources is used to override the container resources for a controller during initialization.
+type ControllerResources struct {
+	// Requests for container resources, keyed by resource type.
+	Requests map[string]string `json:"requests,omitempty"`
+	// Limits for container resources, keyed by resource type.
+	Limits map[string]string `json:"limits,omitempty"`
 }
 
 // Context references a remote server...
