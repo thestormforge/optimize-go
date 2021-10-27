@@ -43,7 +43,10 @@ type ScenarioItem struct {
 	Scenario
 }
 
-func (l *ScenarioItem) UnmarshalJSON(b []byte) error { return api.UnmarshalJSON(b, l) }
+func (l *ScenarioItem) UnmarshalJSON(b []byte) error {
+	type t ScenarioItem
+	return api.UnmarshalJSON(b, (*t)(l))
+}
 
 type ScenarioList struct {
 	// The scenario list metadata.
