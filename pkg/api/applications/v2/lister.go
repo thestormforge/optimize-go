@@ -93,6 +93,9 @@ func (l *Lister) ForEachScenario(ctx context.Context, app *Application, q Scenar
 	u := app.Link(api.RelationScenarios)
 	for u != "" && err == nil {
 		u, err = forEach(u)
+
+		// Reset the query so it is only used once
+		q = ScenarioListQuery{}
 	}
 	return
 }

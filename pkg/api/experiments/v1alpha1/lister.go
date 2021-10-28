@@ -93,6 +93,9 @@ func (l *Lister) ForEachTrial(ctx context.Context, exp *Experiment, q TrialListQ
 	u := exp.Link(api.RelationTrials)
 	for u != "" && err == nil {
 		u, err = forEach(u)
+
+		// Reset the query so it is only used once
+		q = TrialListQuery{}
 	}
 	return
 }
