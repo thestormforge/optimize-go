@@ -85,8 +85,9 @@ func defaultServerRoots(env string, srv *Server) error {
 		defaultString(&srv.Authorization.Issuer, "https://auth.stormforge.dev/")
 		defaultString(&srv.Application.BaseURL, "https://app.stormforge.dev/")
 	case environmentDevelopment:
-		// TODO Remove temporary migration and update validation when this gets fixed
-		return fmt.Errorf("unknown environment: '%s' (did you mean '%s'?)", env, environmentStaging)
+		defaultString(&srv.Identifier, "https://api.dev-1.dev.gramlabs.dev/")
+		defaultString(&srv.Authorization.Issuer, "https://auth.dev-1.dev.gramlabs.dev/")
+		defaultString(&srv.Application.BaseURL, "https://app.dev-1.dev.gramlabs.dev/")
 	default:
 		return fmt.Errorf("unknown environment: '%s'", env)
 	}

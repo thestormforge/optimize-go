@@ -101,7 +101,7 @@ func SetExecutionEnvironment(env string) Change {
 			case "staging", "stage":
 				env = environmentStaging
 			case "development", "dev":
-				return fmt.Errorf("unknown environment: '%s' (did you mean '%s'?)", env, environmentStaging)
+				env = environmentDevelopment
 			default:
 				return fmt.Errorf("unknown environment: '%s'", env)
 			}
