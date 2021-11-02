@@ -49,14 +49,6 @@ func migrationLoader(cfg *OptimizeConfig) error {
 		return err
 	}
 
-	// TODO Remove this when we add development back in
-	if cfg.data.Environment == environmentDevelopment {
-		_ = cfg.Update(func(cfg *Config) error {
-			cfg.Environment = environmentStaging
-			return nil
-		})
-	}
-
 	return nil
 }
 
