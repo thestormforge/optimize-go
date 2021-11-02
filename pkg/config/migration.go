@@ -241,10 +241,10 @@ func migrateCarbonRelayHostnames(cfg *OptimizeConfig) error {
 
 				u, err := url.Parse(*s)
 				if err != nil {
-					return err
-				}
-
-				if strings.Contains(u.Hostname(), ".carbonrelay.") {
+					// Silently ignore the error and try a direct string replacement instead
+					*s = strings.ReplaceAll(*s, ".carbonrelay.", ".stormforge.")
+				} else {
+					// For valid URLs, only replace the value in the host field
 					u.Host = strings.ReplaceAll(u.Host, ".carbonrelay.", ".stormforge.")
 					*s = u.String()
 				}
