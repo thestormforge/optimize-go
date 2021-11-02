@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,6 +47,11 @@ func migrationLoader(cfg *OptimizeConfig) error {
 
 	// Migrate the server identifier to drop the /v1/
 	if err := migrateServerIdentifier(cfg); err != nil {
+		return err
+	}
+
+	// Migrate the old "carbonrelay" hostnames
+	if err := migrateCarbonRelayHostnames(cfg); err != nil {
 		return err
 	}
 
@@ -175,22 +181,76 @@ func migrateServerIdentifier(cfg *OptimizeConfig) error {
 	cfg.Overrides.ServerIdentifier = trimV1(cfg.Overrides.ServerIdentifier)
 
 	// Check to see if we need to make a change to any persisted server identifiers
-	var needsUpdate bool
 	for _, svr := range cfg.data.Servers {
-		if svr.Server.Identifier != trimV1(svr.Server.Identifier) {
-			needsUpdate = true
-			break
+		if svr.Server.Identifier == trimV1(svr.Server.Identifier) {
+			continue
 		}
+
+		// Update all servers with a `/v1/` suffix
+		return cfg.Update(func(cfg *Config) error {
+			for i := range cfg.Servers {
+				cfg.Servers[i].Server.Identifier = trimV1(cfg.Servers[i].Server.Identifier)
+			}
+			return nil
+		})
 	}
-	if !needsUpdate {
-		return nil
+	return nil
+}
+
+// migrateCarbonRelayHostnames updates the old "carbonrelay" hostnames to use "stormforge" instead.
+func migrateCarbonRelayHostnames(cfg *OptimizeConfig) error {
+	// Helper to get all the URLs in the configuration
+	allEndpoints := func(cfg *Config) []*string {
+		var locators []*string
+		for i := range cfg.Servers {
+			locators = append(locators,
+				&cfg.Servers[i].Server.Identifier,
+				&cfg.Servers[i].Server.API.ApplicationsEndpoint,
+				&cfg.Servers[i].Server.API.ExperimentsEndpoint,
+				&cfg.Servers[i].Server.API.AccountsEndpoint,
+				&cfg.Servers[i].Server.API.PerformanceTokenEndpoint,
+				&cfg.Servers[i].Server.Authorization.Issuer,
+				&cfg.Servers[i].Server.Authorization.AuthorizationEndpoint,
+				&cfg.Servers[i].Server.Authorization.TokenEndpoint,
+				&cfg.Servers[i].Server.Authorization.RevocationEndpoint,
+				&cfg.Servers[i].Server.Authorization.RegistrationEndpoint,
+				&cfg.Servers[i].Server.Authorization.DeviceAuthorizationEndpoint,
+				&cfg.Servers[i].Server.Authorization.JSONWebKeySetURI,
+			)
+		}
+		for i := range cfg.Controllers {
+			locators = append(locators,
+				&cfg.Controllers[i].Controller.RegistrationClientURI,
+			)
+		}
+		return locators
 	}
 
-	// Update all servers with a `/v1/` suffix
-	return cfg.Update(func(cfg *Config) error {
-		for i := range cfg.Servers {
-			cfg.Servers[i].Server.Identifier = trimV1(cfg.Servers[i].Server.Identifier)
+	// Check to see if we need to make a change to any endpoints
+	for _, s := range allEndpoints(&cfg.data) {
+		if *s == "" || !strings.Contains(*s, ".carbonrelay.") {
+			continue
 		}
-		return nil
-	})
+
+		// Update all endpoints with an outdated hostname
+		return cfg.Update(func(cfg *Config) error {
+			for _, s := range allEndpoints(cfg) {
+				if *s == "" {
+					continue
+				}
+
+				u, err := url.Parse(*s)
+				if err != nil {
+					return err
+				}
+
+				if strings.Contains(u.Hostname(), ".carbonrelay.") {
+					u.Host = strings.ReplaceAll(u.Host, ".carbonrelay.", ".stormforge.")
+					*s = u.String()
+				}
+			}
+			return nil
+		})
+	}
+	return nil
 }
