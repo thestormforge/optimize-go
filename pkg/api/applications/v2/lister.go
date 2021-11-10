@@ -18,6 +18,8 @@ package v2
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/thestormforge/optimize-go/pkg/api"
 )
@@ -98,4 +100,76 @@ func (l *Lister) ForEachScenario(ctx context.Context, app *Application, q Scenar
 		q = ScenarioListQuery{}
 	}
 	return
+}
+
+// GetApplicationByNameOrTitle tries to get an application by name and falls back to a
+// linear search over all the applications by title.
+func (l *Lister) GetApplicationByNameOrTitle(ctx context.Context, name string) (*Application, error) {
+	// First try to get the application by name
+	app, err := l.API.GetApplicationByName(ctx, ApplicationName(name))
+	if err == nil {
+		return &app, nil
+	}
+
+	// Unless it's an "app not found" error, there is nothing we can do
+	var notFoundErr *api.Error
+	if !errors.As(err, &notFoundErr) || notFoundErr.Type != ErrApplicationNotFound {
+		return nil, err
+	}
+
+	// Try to find the application by title
+	found := false
+	err = l.ForEachApplication(ctx, ApplicationListQuery{}, func(item *ApplicationItem) error {
+		if item.Title() == name {
+			app = item.Application
+			found = true
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Not found, return the original "app not found" error
+	if !found {
+		return nil, notFoundErr
+	}
+
+	return &app, nil
+}
+
+// GetScenarioByNameOrTitle tries to get a scenario by name and falls back to a
+// linear search over all the scenarios by title.
+func (l *Lister) GetScenarioByNameOrTitle(ctx context.Context, app *Application, name string) (*Scenario, error) {
+	var scnByName, scnByTitle *Scenario
+	err := l.ForEachScenario(ctx, app, ScenarioListQuery{}, func(scn *ScenarioItem) error {
+		// This should be unique
+		if scn.Name == name {
+			scnByName = &scn.Scenario
+		}
+
+		// This might be ambiguous
+		if scn.Title() == name {
+			scnByTitle = &scn.Scenario
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// If we didn't find anything, report it as an error
+	if scnByName == nil && scnByTitle == nil {
+		return nil, &api.Error{
+			Type:    ErrScenarioNotFound,
+			Message: fmt.Sprintf("scenario %q not found", name),
+		}
+	}
+
+	// Prefer the scenario with the matching name
+	if scnByName != nil {
+		return scnByName, nil
+	}
+	return scnByTitle, nil
 }
