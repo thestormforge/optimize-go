@@ -93,9 +93,12 @@ type API interface {
 	// SubscribeActivity returns a subscriber for the activity feed.
 	SubscribeActivity(ctx context.Context, q ActivityFeedQuery) (Subscriber, error)
 
-	//
+	// CreateRecommendation creates an application recommendation using the most recently published values.
 	CreateRecommendation(ctx context.Context, u string) (api.Metadata, error)
+	// GetRecommendation retrieves a recommendation.
 	GetRecommendation(ctx context.Context, u string) (Recommendation, error)
-	GetRecommendationDetails(ctx context.Context, u string) (RecommendationDetails, error)
-	PatchRecommendationDetails(ctx context.Context, u string, details RecommendationDetails) error
+	// ListRecommendations lists recommendations and recommendation configuration for an application.
+	ListRecommendations(ctx context.Context, u string) (RecommendationList, error)
+	// PatchRecommendations updates recommendation configuration.
+	PatchRecommendations(ctx context.Context, u string, details RecommendationList) error
 }
