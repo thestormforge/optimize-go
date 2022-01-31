@@ -29,8 +29,8 @@ type Recommendation struct {
 }
 
 type Parameter struct {
-	Target             TargetRef     `json:"target,omitempty"`
-	ContainerResources []interface{} `json:"containerResources,omitempty"`
+	Target             TargetRef     `json:"target"`
+	ContainerResources []interface{} `json:"containerResources"`
 }
 
 type TargetRef struct {
@@ -39,11 +39,20 @@ type TargetRef struct {
 	Workload  string `json:"workload,omitempty"`
 }
 
+type RecommendationItem struct {
+	Recommendation
+}
+
+func (l *RecommendationItem) UnmarshalJSON(b []byte) error {
+	type t RecommendationItem
+	return api.UnmarshalJSON(b, (*t)(l))
+}
+
 type RecommendationList struct {
 	api.Metadata        `json:"-"`
-	DeployConfiguration DeployConfiguration `json:"deploy,omitempty"`
-	Configuration       []interface{}       `jsonn:"configuration,omitempty"`
-	Recommendations     api.Metadata        `json:"-"`
+	DeployConfiguration DeployConfiguration  `json:"deploy,omitempty"`
+	Configuration       []interface{}        `json:"configuration,omitempty"`
+	Recommendations     []RecommendationItem `json:"recommendations,omitempty"`
 }
 
 type DeployConfiguration struct {
