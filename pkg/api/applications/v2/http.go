@@ -580,8 +580,8 @@ func (h *httpAPI) GetRecommendation(ctx context.Context, u string) (Recommendati
 	}
 }
 
-func (h *httpAPI) GetRecommendationDetails(ctx context.Context, u string) (RecommendationDetails, error) {
-	result := RecommendationDetails{}
+func (h *httpAPI) ListRecommendations(ctx context.Context, u string) (RecommendationList, error) {
+	result := RecommendationList{}
 
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
@@ -598,14 +598,12 @@ func (h *httpAPI) GetRecommendationDetails(ctx context.Context, u string) (Recom
 		api.UnmarshalMetadata(resp, &result.Metadata)
 		err = json.Unmarshal(body, &result)
 		return result, err
-	case http.StatusNotFound:
-		return result, api.NewError(ErrRecommendationNotFound, resp, body)
 	default:
 		return result, api.NewUnexpectedError(resp, body)
 	}
 }
 
-func (h *httpAPI) PatchRecommendationDetails(ctx context.Context, u string, details RecommendationDetails) error {
+func (h *httpAPI) PatchRecommendations(ctx context.Context, u string, details RecommendationList) error {
 	req, err := httpNewJSONRequest(http.MethodPatch, u, details)
 	if err != nil {
 		return err

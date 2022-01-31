@@ -39,7 +39,7 @@ type TargetRef struct {
 	Workload  string `json:"workload,omitempty"`
 }
 
-type RecommendationDetails struct {
+type RecommendationList struct {
 	api.Metadata        `json:"-"`
 	DeployConfiguration DeployConfiguration `json:"deploy,omitempty"`
 	Configuration       []interface{}       `jsonn:"configuration,omitempty"`
