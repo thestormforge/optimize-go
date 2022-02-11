@@ -72,6 +72,27 @@ func SaveClientRegistration(name string, info *registration.ClientInformationRes
 	}
 }
 
+// DeleteClientRegistration removes all references to a client given its registration URL.
+func DeleteClientRegistration(u string) Change {
+	return func(cfg *Config) error {
+		for i := range cfg.Controllers {
+			if cfg.Controllers[i].Controller.RegistrationClientURI != u {
+				continue
+			}
+
+			cfg.Controllers[i].Controller.RegistrationClientURI = ""
+			cfg.Controllers[i].Controller.RegistrationAccessToken = ""
+
+			for j := range cfg.Clusters {
+				if cfg.Clusters[j].Cluster.Controller == cfg.Controllers[i].Name {
+					cfg.Clusters[j].Cluster.Controller = ""
+				}
+			}
+		}
+		return nil
+	}
+}
+
 // ApplyCurrentContext is a configuration change that updates the values of a context and sets that context as the
 // current context. If the context exists, non-empty values will overwrite; otherwise a new named context is created.
 func ApplyCurrentContext(contextName, serverName, authorizationName, clusterName string) Change {
