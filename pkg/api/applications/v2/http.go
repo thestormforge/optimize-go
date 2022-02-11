@@ -53,11 +53,7 @@ func (h *httpAPI) CheckEndpoint(ctx context.Context) (api.Metadata, error) {
 	}
 
 	switch resp.StatusCode {
-	case http.StatusOK, http.StatusNoContent:
-		api.UnmarshalMetadata(resp, &result)
-		return result, nil
-	case http.StatusNotFound, http.StatusMethodNotAllowed:
-		// Special case for the time being so we can implement proper support for HEAD requests
+	case http.StatusOK:
 		api.UnmarshalMetadata(resp, &result)
 		return result, nil
 	default:
