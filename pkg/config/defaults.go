@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/url"
 	"os/exec"
+	"path"
 	"strings"
 
 	"github.com/thestormforge/optimize-go/pkg/oauth2/discovery"
@@ -129,12 +130,18 @@ func defaultServerEndpoints(srv *Server) error {
 	// Apply the application defaults
 	defaultString(&srv.Application.AuthSuccessEndpoint, "https://docs.stormforge.io/api/auth_success/")
 
-	// Special case for the registration service which is actually part of the accounts API
+	// Special case for the registration services which claim to be part of the accounts API
 	if u, err := url.Parse(srv.API.AccountsEndpoint); err != nil {
 		defaultString(&srv.Authorization.RegistrationEndpoint, api+"/v1/accounts/clients")
+		defaultString(&srv.API.RegistryRegistrationEndpoint, api+"/v1/accounts/robots")
 	} else {
-		u.Path = strings.TrimRight(u.Path, "/") + "/clients"
-		defaultString(&srv.Authorization.RegistrationEndpoint, u.String())
+		cu := *u
+		cu.Path = path.Join(cu.Path, "clients")
+		defaultString(&srv.Authorization.RegistrationEndpoint, cu.String())
+
+		ru := *u
+		ru.Path = path.Join(ru.Path, "robots")
+		defaultString(&srv.API.RegistryRegistrationEndpoint, ru.String())
 	}
 
 	return nil

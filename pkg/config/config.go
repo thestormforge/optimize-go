@@ -17,9 +17,12 @@ limitations under the License.
 package config
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os/exec"
@@ -28,6 +31,7 @@ import (
 	"github.com/thestormforge/optimize-go/pkg/oauth2/devicecode"
 	"github.com/thestormforge/optimize-go/pkg/oauth2/registration"
 	"github.com/thestormforge/optimize-go/pkg/oauth2/tokenexchange"
+	"golang.org/x/net/context/ctxhttp"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 )
@@ -254,6 +258,55 @@ func (rsc *OptimizeConfig) RegisterClient(ctx context.Context, client *registrat
 	return c.Register(ctx, client)
 }
 
+var ErrUnlicensed = errors.New("unlicensed feature")
+
+// RegisterRobot provisions a software distribution robot account (i.e. image pull secret credentials).
+func (rsc *OptimizeConfig) RegisterRobot(ctx context.Context, clientID string) (*RegistryCredential, error) {
+	srv, err := CurrentServer(rsc.Reader())
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a new request that will associate the robot with the client
+	reqBody, err := json.Marshal(map[string]interface{}{"client_id": clientID})
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest(http.MethodPost, srv.API.RegistryRegistrationEndpoint, bytes.NewReader(reqBody))
+	if err != nil {
+		return nil, err
+	}
+
+	// Handle the request with the current authorization
+	src, err := rsc.tokenSource(ctx)
+	if err != nil {
+		return nil, err
+	}
+	r, err := ctxhttp.Do(ctx, oauth2.NewClient(ctx, src), req)
+	if err != nil {
+		return nil, err
+	}
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	_ = r.Body.Close()
+	if err != nil {
+		return nil, fmt.Errorf("robot registration: cannot create robot: %w", err)
+	}
+	if r.StatusCode == http.StatusPaymentRequired {
+		return nil, ErrUnlicensed
+	}
+	if r.StatusCode != http.StatusCreated {
+		return nil, fmt.Errorf("robot registration: server response had unexpected status: %v", r.StatusCode)
+	}
+
+	// Return the generated credentials along with the registry URL
+	robot := &RegistryCredential{}
+	if err := json.Unmarshal(body, robot); err != nil {
+		return nil, err
+	}
+
+	return robot, nil
+}
+
 // NewAuthorization creates a new authorization code flow with PKCE using the current context
 func (rsc *OptimizeConfig) NewAuthorization() (*authorizationcode.Config, error) {
 	srv, err := CurrentServer(rsc.Reader())
@@ -417,4 +470,11 @@ func (u *updateTokenSource) Token() (*oauth2.Token, error) {
 		}
 	}
 	return t, nil
+}
+
+// RegistryCredential is a credential for accessing a software distribution registry.
+type RegistryCredential struct {
+	ServerURL string `json:"server_url"`
+	Username  string `json:"username"`
+	Secret    string `json:"secret"`
 }
