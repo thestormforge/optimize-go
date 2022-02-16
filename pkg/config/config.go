@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -257,6 +258,8 @@ func (rsc *OptimizeConfig) RegisterClient(ctx context.Context, client *registrat
 	return c.Register(ctx, client)
 }
 
+var ErrUnlicensed = errors.New("unlicensed feature")
+
 // RegisterRobot provisions a software distribution robot account (i.e. image pull secret credentials).
 func (rsc *OptimizeConfig) RegisterRobot(ctx context.Context, clientID string) (*RegistryCredential, error) {
 	srv, err := CurrentServer(rsc.Reader())
@@ -288,7 +291,10 @@ func (rsc *OptimizeConfig) RegisterRobot(ctx context.Context, clientID string) (
 	if err != nil {
 		return nil, fmt.Errorf("robot registration: cannot create robot: %w", err)
 	}
-	if r.StatusCode != 201 {
+	if r.StatusCode == http.StatusPaymentRequired {
+		return nil, ErrUnlicensed
+	}
+	if r.StatusCode != http.StatusCreated {
 		return nil, fmt.Errorf("robot registration: server response had unexpected status: %v", r.StatusCode)
 	}
 
