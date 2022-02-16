@@ -27,17 +27,23 @@ import (
 )
 
 const (
-	RelationSelf        = "self"
-	RelationNext        = "next"
-	RelationPrev        = "prev"
-	RelationAlternate   = "alternate"
-	RelationUp          = "up"
-	RelationLabels      = "https://stormforge.io/rel/labels"
-	RelationTrials      = "https://stormforge.io/rel/trials"
-	RelationNextTrial   = "https://stormforge.io/rel/next-trial"
-	RelationScenarios   = "https://stormforge.io/rel/scenarios"
-	RelationExperiments = "https://stormforge.io/rel/experiments"
-	RelationTemplate    = "https://stormforge.io/rel/template"
+	// Registered relations
+
+	RelationSelf      = "self"
+	RelationNext      = "next"
+	RelationPrev      = "prev"
+	RelationAlternate = "alternate"
+	RelationUp        = "up"
+
+	// StormForge extension relations
+
+	RelationExperiments     = "https://stormforge.io/rel/experiments"
+	RelationLabels          = "https://stormforge.io/rel/labels"
+	RelationNextTrial       = "https://stormforge.io/rel/next-trial"
+	RelationRecommendations = "https://stormforge.io/rel/recommendations"
+	RelationScenarios       = "https://stormforge.io/rel/scenarios"
+	RelationTemplate        = "https://stormforge.io/rel/template"
+	RelationTrials          = "https://stormforge.io/rel/trials"
 )
 
 // Metadata is used to hold single or multi-value metadata from list responses.

@@ -17,6 +17,8 @@ limitations under the License.
 package v2
 
 import (
+	"time"
+
 	"github.com/thestormforge/optimize-go/pkg/api"
 )
 
@@ -27,7 +29,7 @@ type Application struct {
 	Resources    []interface{}   `json:"resources,omitempty"`
 }
 
-// NOTE: Use `DisplayName` as the field since `Title()` is a function on the embedded `Metadata`
+// NOTE: Use `DisplayName` as the field since `Title()` is a function on the embedded `Metadata`.
 var _ = Application{}.Title()
 
 type ApplicationListQuery struct{ api.IndexQuery }
@@ -35,8 +37,18 @@ type ApplicationListQuery struct{ api.IndexQuery }
 type ApplicationItem struct {
 	Application
 	// The number of scenarios associated with this application.
-	ScenarioCount int `json:"scenarioCount,omitempty"`
+	ScenarioCount   int                 `json:"scenarioCount,omitempty"`
+	LastDeployedAt  time.Time           `json:"lastDeployedAt,omitempty"`
+	Recommendations RecommendationsMode `json:"recommendations,omitempty"`
 }
+
+type RecommendationsMode string
+
+const (
+	RecommendationsDisabled RecommendationsMode = "disabled"
+	RecommendationsManual   RecommendationsMode = "manual"
+	RecommendationsAuto     RecommendationsMode = "auto"
+)
 
 func (ai *ApplicationItem) UnmarshalJSON(b []byte) error {
 	type t ApplicationItem

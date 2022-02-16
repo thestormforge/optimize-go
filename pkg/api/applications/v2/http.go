@@ -525,7 +525,104 @@ func (h *httpAPI) SubscribeActivity(ctx context.Context, q ActivityFeedQuery) (S
 	return newSubscriber(h, feed), nil
 }
 
-// httpNewJSONRequest returns a new HTTP request with a JSON payload
+func (h *httpAPI) CreateRecommendation(ctx context.Context, u string) (api.Metadata, error) {
+	result := api.Metadata{}
+
+	req, err := httpNewJSONRequest(http.MethodPost, h.client.URL(h.endpoint).String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, body, err := h.client.Do(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	switch resp.StatusCode {
+	case http.StatusCreated:
+		api.UnmarshalMetadata(resp, &result)
+		return result, nil
+	case http.StatusBadRequest:
+		return nil, api.NewError(ErrApplicationInvalid, resp, body)
+	case http.StatusUnprocessableEntity:
+		return nil, api.NewError(ErrApplicationInvalid, resp, body)
+	default:
+		return nil, api.NewUnexpectedError(resp, body)
+	}
+}
+
+func (h *httpAPI) GetRecommendation(ctx context.Context, u string) (Recommendation, error) {
+	result := Recommendation{}
+
+	req, err := http.NewRequest(http.MethodGet, u, nil)
+	if err != nil {
+		return result, err
+	}
+
+	resp, body, err := h.client.Do(ctx, req)
+	if err != nil {
+		return result, err
+	}
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		api.UnmarshalMetadata(resp, &result.Metadata)
+		err = json.Unmarshal(body, &result)
+		return result, err
+	case http.StatusNotFound:
+		return result, api.NewError(ErrRecommendationNotFound, resp, body)
+	default:
+		return result, api.NewUnexpectedError(resp, body)
+	}
+}
+
+func (h *httpAPI) ListRecommendations(ctx context.Context, u string) (RecommendationList, error) {
+	result := RecommendationList{}
+
+	req, err := http.NewRequest(http.MethodGet, u, nil)
+	if err != nil {
+		return result, err
+	}
+
+	resp, body, err := h.client.Do(ctx, req)
+	if err != nil {
+		return result, err
+	}
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		api.UnmarshalMetadata(resp, &result.Metadata)
+		err = json.Unmarshal(body, &result)
+		return result, err
+	default:
+		return result, api.NewUnexpectedError(resp, body)
+	}
+}
+
+func (h *httpAPI) PatchRecommendations(ctx context.Context, u string, details RecommendationList) error {
+	req, err := httpNewJSONRequest(http.MethodPatch, u, details)
+	if err != nil {
+		return err
+	}
+
+	resp, body, err := h.client.Do(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	switch resp.StatusCode {
+	case http.StatusNoContent:
+		return nil
+	case http.StatusBadRequest:
+		return api.NewError(ErrRecommendationInvalid, resp, body)
+	case http.StatusUnprocessableEntity:
+		return api.NewError(ErrRecommendationInvalid, resp, body)
+	default:
+		return api.NewUnexpectedError(resp, body)
+	}
+}
+
+// httpNewJSONRequest returns a new HTTP request with a JSON payload.
 func httpNewJSONRequest(method, u string, body interface{}) (*http.Request, error) {
 	b, err := json.Marshal(body)
 	if err != nil {

@@ -23,13 +23,15 @@ import (
 )
 
 const (
-	ErrApplicationInvalid  api.ErrorType = "application-invalid"
-	ErrApplicationNotFound api.ErrorType = "application-not-found"
-	ErrScenarioInvalid     api.ErrorType = "scenario-invalid"
-	ErrScenarioNotFound    api.ErrorType = "scenario-not-found"
-	ErrScanInvalid         api.ErrorType = "scan-invalid"
-	ErrActivityInvalid     api.ErrorType = "activity-invalid"
-	ErrActivityRateLimited api.ErrorType = "activity-rate-limited"
+	ErrApplicationInvalid     api.ErrorType = "application-invalid"
+	ErrApplicationNotFound    api.ErrorType = "application-not-found"
+	ErrScenarioInvalid        api.ErrorType = "scenario-invalid"
+	ErrScenarioNotFound       api.ErrorType = "scenario-not-found"
+	ErrScanInvalid            api.ErrorType = "scan-invalid"
+	ErrActivityInvalid        api.ErrorType = "activity-invalid"
+	ErrActivityRateLimited    api.ErrorType = "activity-rate-limited"
+	ErrRecommendationInvalid  api.ErrorType = "recommendation-invalid"
+	ErrRecommendationNotFound api.ErrorType = "recommendation-not-found"
 )
 
 // Subscriber describes a strategy for subscribing to feed notifications.
@@ -90,4 +92,13 @@ type API interface {
 
 	// SubscribeActivity returns a subscriber for the activity feed.
 	SubscribeActivity(ctx context.Context, q ActivityFeedQuery) (Subscriber, error)
+
+	// CreateRecommendation creates an application recommendation using the most recently published values.
+	CreateRecommendation(ctx context.Context, u string) (api.Metadata, error)
+	// GetRecommendation retrieves a recommendation.
+	GetRecommendation(ctx context.Context, u string) (Recommendation, error)
+	// ListRecommendations lists recommendations and recommendation configuration for an application.
+	ListRecommendations(ctx context.Context, u string) (RecommendationList, error)
+	// PatchRecommendations updates recommendation configuration.
+	PatchRecommendations(ctx context.Context, u string, details RecommendationList) error
 }

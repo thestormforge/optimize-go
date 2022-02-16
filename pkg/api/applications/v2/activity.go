@@ -58,8 +58,10 @@ func (ai *ActivityItem) HasTag(tag string) bool {
 }
 
 const (
-	TagRun  string = "run"
-	TagScan string = "scan"
+	TagRun     string = "run"
+	TagScan    string = "scan"
+	TagApprove string = "approve"
+	TagRefresh string = "refresh"
 )
 
 type ActivityExtension struct {
@@ -79,8 +81,10 @@ func (q *ActivityFeedQuery) SetType(t ...string) {
 
 type Activity struct {
 	api.Metadata `json:"-"`
-	Run          *RunActivity  `json:"run,omitempty"`
-	Scan         *ScanActivity `json:"scan,omitempty"`
+	Run          *RunActivity     `json:"run,omitempty"`
+	Scan         *ScanActivity    `json:"scan,omitempty"`
+	Approve      *ApproveActivity `json:"approve,omitempty"`
+	Refresh      *RefreshActivity `json:"refresh,omitempty"`
 }
 
 type RunActivity struct {
@@ -90,6 +94,16 @@ type RunActivity struct {
 
 type ScanActivity struct {
 	Scenario string `json:"scenario"`
+	ActivityFailure
+}
+
+type ApproveActivity struct {
+	Recommendation string `json:"recommendation"`
+	ActivityFailure
+}
+
+type RefreshActivity struct {
+	Application string `json:"application"`
 	ActivityFailure
 }
 
