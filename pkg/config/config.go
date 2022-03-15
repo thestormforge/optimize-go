@@ -323,7 +323,7 @@ func (rsc *OptimizeConfig) NewAuthorization() (*authorizationcode.Config, error)
 	c.Endpoint.AuthURL = srv.Authorization.AuthorizationEndpoint
 	c.Endpoint.TokenURL = srv.Authorization.TokenEndpoint
 	c.Endpoint.AuthStyle = oauth2.AuthStyleInParams
-	c.EndpointParams = rsc.AuthorizationParameters
+	c.EndpointParams = rsc.endpointParams(&srv)
 	return c, nil
 }
 
@@ -341,7 +341,7 @@ func (rsc *OptimizeConfig) NewDeviceAuthorization() (*devicecode.Config, error) 
 			AuthStyle: oauth2.AuthStyleInParams,
 		},
 		DeviceAuthorizationURL: srv.Authorization.DeviceAuthorizationEndpoint,
-		EndpointParams:         rsc.AuthorizationParameters,
+		EndpointParams:         rsc.endpointParams(&srv),
 	}, nil
 }
 
@@ -393,6 +393,14 @@ func (rsc *OptimizeConfig) PerformanceAuthorization(ctx context.Context) (tokene
 	return ec.TokenSource(ctx, sub), nil
 }
 
+func (rsc *OptimizeConfig) endpointParams(srv *Server) url.Values {
+	ep := url.Values{"audience": []string{srv.Identifier}}
+	for k, v := range rsc.AuthorizationParameters {
+		ep[k] = v
+	}
+	return ep
+}
+
 func (rsc *OptimizeConfig) tokenSource(ctx context.Context) (oauth2.TokenSource, error) {
 	// TODO We could make OptimizeConfig implement the TokenSource interface, but we need a way to handle the context
 	r := rsc.Reader()
@@ -414,7 +422,7 @@ func (rsc *OptimizeConfig) tokenSource(ctx context.Context) (oauth2.TokenSource,
 			ClientID:       az.Credential.ClientID,
 			ClientSecret:   az.Credential.ClientSecret,
 			TokenURL:       srv.Authorization.TokenEndpoint,
-			EndpointParams: url.Values(rsc.AuthorizationParameters),
+			EndpointParams: rsc.endpointParams(&srv),
 			AuthStyle:      oauth2.AuthStyleInParams,
 		}
 		return cc.TokenSource(ctx), nil
