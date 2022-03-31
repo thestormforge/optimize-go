@@ -65,6 +65,25 @@ func (l *Lister) ForEachApplication(ctx context.Context, q ApplicationListQuery,
 	return err
 }
 
+// ForEachNamedApplication iterates over all the named applications, optionally ignoring those that do not exist.
+func (l *Lister) ForEachNamedApplication(ctx context.Context, names []string, ignoreNotFound bool, f func(item *ApplicationItem) error) error {
+	for _, name := range names {
+		app, err := l.API.GetApplicationByName(ctx, ApplicationName(name))
+		if err != nil {
+			var notFoundErr *api.Error
+			if errors.As(err, &notFoundErr) && notFoundErr.Type == ErrApplicationNotFound && ignoreNotFound {
+				continue
+			}
+			return err
+		}
+
+		if err := f(&ApplicationItem{Application: app}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // ForEachScenario iterates over all scenarios for an application matching the supplied query.
 func (l *Lister) ForEachScenario(ctx context.Context, app *Application, q ScenarioListQuery, f func(*ScenarioItem) error) (err error) {
 	// Define a helper to iteratively (NOT recursively) list and visit scenarios

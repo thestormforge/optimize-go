@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"context"
+	"errors"
 
 	"github.com/thestormforge/optimize-go/pkg/api"
 )
@@ -61,6 +62,25 @@ func (l *Lister) ForEachExperiment(ctx context.Context, q ExperimentListQuery, f
 		u, err = forEach(l.API.GetAllExperimentsByPage(ctx, u))
 	}
 	return err
+}
+
+// ForEachNamedExperiment iterates over all the named experiments, optionally ignoring those that do not exist.
+func (l *Lister) ForEachNamedExperiment(ctx context.Context, names []string, ignoreNotFound bool, f func(item *ExperimentItem) error) error {
+	for _, name := range names {
+		exp, err := l.API.GetExperimentByName(ctx, ExperimentName(name))
+		if err != nil {
+			var notFoundErr *api.Error
+			if errors.As(err, &notFoundErr) && notFoundErr.Type == ErrExperimentNotFound && ignoreNotFound {
+				continue
+			}
+			return err
+		}
+
+		if err := f(&ExperimentItem{Experiment: exp}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // ForEachTrial iterates over all trials for an experiment matching the supplied query.
