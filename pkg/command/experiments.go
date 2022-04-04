@@ -159,7 +159,7 @@ func validExperimentArgs(cfg Config, singleMatchSuffix string) func(*cobra.Comma
 			API: experiments.NewAPI(client),
 		}
 
-		names := make([]string, 0, 16)
+		var names []string
 		_ = l.ForEachExperiment(ctx, experiments.ExperimentListQuery{}, func(item *experiments.ExperimentItem) error {
 			if name := item.Name.String(); strings.HasPrefix(name, toComplete) {
 				names = append(names, name)
