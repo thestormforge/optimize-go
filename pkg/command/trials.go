@@ -18,6 +18,7 @@ package command
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/spf13/cobra"
 	"github.com/thestormforge/optimize-go/pkg/api"
@@ -94,8 +95,7 @@ func NewDeleteTrialsCommand(cfg Config, p Printer) *cobra.Command {
 		return forExperimentTrials(ctx, &l, q, parseTrialArgs(args), func(item *experiments.TrialItem) error {
 			selfURL := item.Link(api.RelationSelf)
 			if selfURL == "" {
-				// TODO Should this fail?
-				return nil
+				return fmt.Errorf("malformed response, missing self link")
 			}
 
 			err = l.API.AbandonRunningTrial(ctx, selfURL)
@@ -131,8 +131,7 @@ func NewLabelTrialsCommand(cfg Config, p Printer) *cobra.Command {
 		return forExperimentTrials(ctx, &l, q, parseTrialArgs(names), func(item *experiments.TrialItem) error {
 			labelsURL := item.Link(api.RelationLabels)
 			if labelsURL == "" {
-				// TODO Should this fail?
-				return nil
+				return fmt.Errorf("malformed response, missing labels link")
 			}
 
 			err = l.API.LabelTrial(ctx, labelsURL, experiments.TrialLabels{Labels: labels})

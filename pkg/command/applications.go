@@ -17,6 +17,7 @@ limitations under the License.
 package command
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -52,11 +53,11 @@ func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 		}
 
 		result := &ApplicationOutput{Items: make([]ApplicationRow, 0, len(args))}
-		if err := l.ForEachNamedApplication(ctx, args, false, result.Add); err != nil {
-			return err
-		}
-
-		if len(args) == 0 {
+		if len(args) > 0 {
+			if err := l.ForEachNamedApplication(ctx, args, false, result.Add); err != nil {
+				return err
+			}
+		} else {
 			q := applications.ApplicationListQuery{}
 			if err := l.ForEachApplication(ctx, q, result.Add); err != nil {
 				return err
@@ -92,8 +93,7 @@ func NewDeleteApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 		return l.ForEachNamedApplication(ctx, args, ignoreNotFound, func(item *applications.ApplicationItem) error {
 			selfURL := item.Link(api.RelationSelf)
 			if selfURL == "" {
-				// TODO Should this fail?
-				return nil
+				return fmt.Errorf("malformed response, missing self link")
 			}
 
 			if err := l.API.DeleteApplication(ctx, selfURL); err != nil {

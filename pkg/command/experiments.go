@@ -17,6 +17,7 @@ limitations under the License.
 package command
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -53,11 +54,11 @@ func NewGetExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 		}
 
 		result := &ExperimentOutput{Items: make([]ExperimentRow, 0, len(args))}
-		if err := l.ForEachNamedExperiment(ctx, args, false, result.Add); err != nil {
-			return err
-		}
-
-		if len(args) == 0 {
+		if len(args) > 0 {
+			if err := l.ForEachNamedExperiment(ctx, args, false, result.Add); err != nil {
+				return err
+			}
+		} else {
 			q := experiments.ExperimentListQuery{}
 			q.SetLabelSelector(parseLabelSelector(selector))
 			if err := l.ForEachExperiment(ctx, q, result.Add); err != nil {
@@ -95,8 +96,7 @@ func NewDeleteExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 		return l.ForEachNamedExperiment(ctx, args, ignoreNotFound, func(item *experiments.ExperimentItem) error {
 			selfURL := item.Link(api.RelationSelf)
 			if selfURL == "" {
-				// TODO Should this fail?
-				return nil
+				return fmt.Errorf("malformed response, missing self link")
 			}
 
 			if err := l.API.DeleteExperiment(ctx, selfURL); err != nil {
@@ -131,8 +131,7 @@ func NewLabelExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 		return l.ForEachNamedExperiment(ctx, names, false, func(item *experiments.ExperimentItem) error {
 			labelsURL := item.Link(api.RelationLabels)
 			if labelsURL == "" {
-				// TODO Should this fail?
-				return nil
+				return fmt.Errorf("malformed response, missing labels link")
 			}
 
 			if err := l.API.LabelExperiment(ctx, labelsURL, experiments.ExperimentLabels{Labels: labels}); err != nil {
