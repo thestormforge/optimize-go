@@ -25,8 +25,10 @@ import (
 type Application struct {
 	api.Metadata `json:"-"`
 	Name         ApplicationName `json:"name"`
-	DisplayName  string          `json:"title,omitempty"`
+	DisplayName  string          `json:"title,omitempty"` // TODO This doesn't seem to get set
 	Resources    []interface{}   `json:"resources,omitempty"`
+	Cluster      string          `json:"cluster,omitempty"` // TODO This is write only?
+	CreatedAt    time.Time       `json:"createdAt"`
 }
 
 // NOTE: Use `DisplayName` as the field since `Title()` is a function on the embedded `Metadata`.
@@ -36,7 +38,6 @@ type ApplicationListQuery struct{ api.IndexQuery }
 
 type ApplicationItem struct {
 	Application
-	CreatedAt time.Time `json:"createdAt"`
 	// The number of scenarios associated with this application.
 	ScenarioCount   int                 `json:"scenarioCount,omitempty"`
 	LastDeployedAt  time.Time           `json:"lastDeployedAt,omitempty"`
@@ -62,5 +63,5 @@ type ApplicationList struct {
 	// The total number of items in the collection.
 	TotalCount int `json:"totalCount,omitempty"`
 	// The list of applications.
-	Applications []ApplicationItem `json:"applications,omitempty"`
+	Applications []ApplicationItem `json:"applications"`
 }

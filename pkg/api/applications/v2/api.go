@@ -32,6 +32,7 @@ const (
 	ErrActivityRateLimited    api.ErrorType = "activity-rate-limited"
 	ErrRecommendationInvalid  api.ErrorType = "recommendation-invalid"
 	ErrRecommendationNotFound api.ErrorType = "recommendation-not-found"
+	ErrClusterNotFound        api.ErrorType = "cluster-not-found"
 )
 
 // Subscriber describes a strategy for subscribing to feed notifications.
@@ -101,4 +102,13 @@ type API interface {
 	ListRecommendations(ctx context.Context, u string) (RecommendationList, error)
 	// PatchRecommendations updates recommendation configuration.
 	PatchRecommendations(ctx context.Context, u string, details RecommendationList) error
+
+	// GetCluster retrieves a cluster.
+	GetCluster(ctx context.Context, u string) (Cluster, error)
+	// ListClusters lists clusters.
+	ListClusters(ctx context.Context) (ClusterList, error)
+	// PatchCluster updates a cluster title.
+	PatchCluster(ctx context.Context, u string, c ClusterTitle) error
+	// DeleteCluster deletes a cluster.
+	DeleteCluster(ctx context.Context, u string) error
 }
