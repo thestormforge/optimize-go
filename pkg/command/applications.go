@@ -64,6 +64,23 @@ func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 			}
 		}
 
+		for i := range result.Items {
+			if result.Items[i].Recommendations == applications.RecommendationsDisabled {
+				continue
+			}
+
+			u := result.Items[i].ApplicationItem.Link(api.RelationRecommendations)
+			if u == "" {
+				continue
+			}
+
+			rl, err := l.API.ListRecommendations(ctx, u)
+			if err != nil {
+				return err
+			}
+			result.Items[i].DeployInterval = rl.DeployConfiguration.Interval
+		}
+
 		return p.Fprint(out, result)
 	}
 

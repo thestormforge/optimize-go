@@ -19,7 +19,9 @@ package command
 import (
 	"io"
 	"strconv"
+	"time"
 
+	"github.com/dustin/go-humanize"
 	applications "github.com/thestormforge/optimize-go/pkg/api/applications/v2"
 	experiments "github.com/thestormforge/optimize-go/pkg/api/experiments/v1alpha1"
 	"golang.org/x/text/cases"
@@ -34,9 +36,14 @@ type Printer interface {
 
 // ApplicationRow is a table row representation of an application.
 type ApplicationRow struct {
-	Name        string `table:"name" csv:"name" json:"-"`
-	DisplayName string `table:"Name,custom" json:"-"`
-	Scenarios   int    `table:"scenarios,wide" csv:"scenarios" json:"-"`
+	Name                string `table:"name" csv:"name" json:"-"`
+	DisplayName         string `table:"Name,custom" json:"-"`
+	ScenarioCount       int    `table:"scenarios,wide" csv:"scenario_count" json:"-"`
+	RecommendationMode  string `table:"recommendations" csv:"recommendations" json:"-"`
+	DeployInterval      string `table:"deploy_interval" csv:"deploy_interval" json:"-"`
+	LastDeployedHuman   string `table:"last_deployed" csv:"-" json:"-"`
+	LastDeployedMachine string `table:"-" csv:"last_deployed" json:"-"`
+	Age                 string `table:"age,wide" csv:"-" json:"-"`
 
 	applications.ApplicationItem `table:"-" csv:"-"`
 }
@@ -48,10 +55,20 @@ type ApplicationOutput struct {
 
 // Add an experiment item to the output.
 func (o *ApplicationOutput) Add(item *applications.ApplicationItem) error {
+	ldh, ldm := "", ""
+	if !item.LastDeployedAt.IsZero() {
+		ldh = humanize.Time(item.LastDeployedAt)
+		ldm = item.LastDeployedAt.Format(time.RFC3339)
+	}
+
 	o.Items = append(o.Items, ApplicationRow{
-		Name:        item.Name.String(),
-		DisplayName: item.Title(),
-		Scenarios:   item.ScenarioCount,
+		Name:                item.Name.String(),
+		DisplayName:         item.Title(),
+		ScenarioCount:       item.ScenarioCount,
+		RecommendationMode:  cases.Title(language.AmericanEnglish).String(string(item.Recommendations)),
+		LastDeployedHuman:   ldh,
+		LastDeployedMachine: ldm,
+		Age:                 humanize.Time(item.CreatedAt),
 
 		ApplicationItem: *item,
 	})

@@ -36,6 +36,7 @@ type ApplicationListQuery struct{ api.IndexQuery }
 
 type ApplicationItem struct {
 	Application
+	CreatedAt time.Time `json:"createdAt"`
 	// The number of scenarios associated with this application.
 	ScenarioCount   int                 `json:"scenarioCount,omitempty"`
 	LastDeployedAt  time.Time           `json:"lastDeployedAt,omitempty"`
