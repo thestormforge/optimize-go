@@ -19,6 +19,7 @@ package command
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/thestormforge/optimize-go/pkg/api"
@@ -31,7 +32,21 @@ func newTrialsCommand(cfg Config) *cobra.Command {
 		Aliases: []string{"trial"},
 
 		// Trial names start with experiment names, so we can reuse the completion code
-		ValidArgsFunction: validExperimentArgs(cfg, "-"),
+		ValidArgsFunction: validArgs(cfg, func(l *completionLister, toComplete string) (completions []string, directive cobra.ShellCompDirective) {
+			directive |= cobra.ShellCompDirectiveNoFileComp
+			l.forEachExperiment(func(item *experiments.ExperimentItem) {
+				if strings.HasPrefix(item.Name.String(), toComplete) {
+					completions = append(completions, item.Name.String())
+				}
+			})
+
+			if len(completions) == 1 && completions[0] == toComplete {
+				completions[0] += "-"
+				directive |= cobra.ShellCompDirectiveNoSpace
+			}
+
+			return
+		}),
 	}
 }
 

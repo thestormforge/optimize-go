@@ -27,9 +27,18 @@ import (
 
 func newApplicationsCommand(cfg Config) *cobra.Command {
 	return &cobra.Command{
-		Use:               "applications [NAME ...]",
-		Aliases:           []string{"application", "apps", "app"},
-		ValidArgsFunction: validApplicationArgs(cfg),
+		Use:     "applications [NAME ...]",
+		Aliases: []string{"application", "apps", "app"},
+
+		ValidArgsFunction: validArgs(cfg, func(l *completionLister, toComplete string) (completions []string, directive cobra.ShellCompDirective) {
+			directive |= cobra.ShellCompDirectiveNoFileComp
+			l.forEachApplication(func(item *applications.ApplicationItem) {
+				if strings.HasPrefix(item.Name.String(), toComplete) {
+					completions = append(completions, item.Name.String())
+				}
+			})
+			return
+		}),
 	}
 }
 
@@ -124,29 +133,4 @@ func NewDeleteApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 	cmd.Flags().BoolVar(&ignoreNotFound, "ignore-not-found", ignoreNotFound, "treat not found errors as successful deletes")
 
 	return cmd
-}
-
-// validApplicationArgs returns shell completion logic for application names.
-func validApplicationArgs(cfg Config) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
-	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		ctx := cmd.Context()
-		client, err := api.NewClient(cfg.Address(), nil)
-		if err != nil {
-			return nil, cobra.ShellCompDirectiveNoFileComp
-		}
-
-		l := applications.Lister{
-			API: applications.NewAPI(client),
-		}
-
-		names := make([]string, 0, 16)
-		_ = l.ForEachApplication(ctx, applications.ApplicationListQuery{}, func(item *applications.ApplicationItem) error {
-			if name := item.Name.String(); strings.HasPrefix(name, toComplete) {
-				names = append(names, name)
-			}
-			return nil
-		})
-
-		return names, cobra.ShellCompDirectiveNoFileComp
-	}
 }

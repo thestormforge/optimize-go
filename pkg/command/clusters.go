@@ -11,9 +11,18 @@ import (
 
 func newClustersCommand(cfg Config) *cobra.Command {
 	return &cobra.Command{
-		Use:               "clusters [NAME ...]",
-		Aliases:           []string{"cluster"},
-		ValidArgsFunction: validClusterArgs(cfg),
+		Use:     "clusters [NAME ...]",
+		Aliases: []string{"cluster"},
+
+		ValidArgsFunction: validArgs(cfg, func(l *completionLister, toComplete string) (completions []string, directive cobra.ShellCompDirective) {
+			directive |= cobra.ShellCompDirectiveNoFileComp
+			l.forEachCluster(func(item *applications.ClusterItem) {
+				if strings.HasPrefix(item.Name.String(), toComplete) {
+					completions = append(completions, item.Name.String())
+				}
+			})
+			return
+		}),
 	}
 }
 
@@ -44,29 +53,4 @@ func NewGetClustersCommand(cfg Config, p Printer) *cobra.Command {
 	}
 
 	return cmd
-}
-
-// validClusterArgs returns shell completion logic for cluster names.
-func validClusterArgs(cfg Config) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
-	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		ctx := cmd.Context()
-		client, err := api.NewClient(cfg.Address(), nil)
-		if err != nil {
-			return nil, cobra.ShellCompDirectiveNoFileComp
-		}
-
-		l := applications.Lister{
-			API: applications.NewAPI(client),
-		}
-
-		names := make([]string, 0, 16)
-		_ = l.ForEachCluster(ctx, func(item *applications.ClusterItem) error {
-			if name := item.Name.String(); strings.HasPrefix(name, toComplete) {
-				names = append(names, name)
-			}
-			return nil
-		})
-
-		return names, cobra.ShellCompDirectiveNoFileComp
-	}
 }

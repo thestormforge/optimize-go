@@ -17,7 +17,13 @@ limitations under the License.
 package command
 
 import (
+	"context"
 	"strings"
+
+	"github.com/spf13/cobra"
+	"github.com/thestormforge/optimize-go/pkg/api"
+	applications "github.com/thestormforge/optimize-go/pkg/api/applications/v2"
+	experiments "github.com/thestormforge/optimize-go/pkg/api/experiments/v1alpha1"
 )
 
 // Config represents the configuration necessary to run a command.
@@ -63,4 +69,47 @@ func argsToNamesAndLabels(args []string) ([]string, map[string]string) {
 	}
 
 	return names, labels
+}
+
+func validArgs(cfg Config, f func(*completionLister, string) ([]string, cobra.ShellCompDirective)) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		client, err := api.NewClient(cfg.Address(), nil)
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		return f(&completionLister{ctx: cmd.Context(), client: client}, toComplete)
+	}
+}
+
+// completionLister is a helper for creating lists used for completions.
+type completionLister struct {
+	ctx    context.Context
+	client api.Client
+}
+
+// forEachApplication lists all applications, ignoring errors.
+func (c *completionLister) forEachApplication(f func(item *applications.ApplicationItem)) {
+	l := applications.Lister{API: applications.NewAPI(c.client)}
+	_ = l.ForEachApplication(c.ctx, applications.ApplicationListQuery{}, func(item *applications.ApplicationItem) error {
+		f(item)
+		return nil
+	})
+}
+
+// forEachExperiment lists all experiments, ignoring errors.
+func (c *completionLister) forEachExperiment(f func(item *experiments.ExperimentItem)) {
+	l := experiments.Lister{API: experiments.NewAPI(c.client)}
+	_ = l.ForEachExperiment(c.ctx, experiments.ExperimentListQuery{}, func(item *experiments.ExperimentItem) error {
+		f(item)
+		return nil
+	})
+}
+
+// forEachCluster lists all cluster, ignoring errors.
+func (c *completionLister) forEachCluster(f func(item *applications.ClusterItem)) {
+	l := applications.Lister{API: applications.NewAPI(c.client)}
+	_ = l.ForEachCluster(c.ctx, func(item *applications.ClusterItem) error {
+		f(item)
+		return nil
+	})
 }

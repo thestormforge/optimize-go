@@ -27,9 +27,18 @@ import (
 
 func newExperimentsCommand(cfg Config) *cobra.Command {
 	return &cobra.Command{
-		Use:               "experiments [NAME ...]",
-		Aliases:           []string{"experiment", "exps", "exp"},
-		ValidArgsFunction: validExperimentArgs(cfg, ""),
+		Use:     "experiments [NAME ...]",
+		Aliases: []string{"experiment", "exps", "exp"},
+
+		ValidArgsFunction: validArgs(cfg, func(l *completionLister, toComplete string) (completions []string, directive cobra.ShellCompDirective) {
+			directive |= cobra.ShellCompDirectiveNoFileComp
+			l.forEachExperiment(func(item *experiments.ExperimentItem) {
+				if strings.HasPrefix(item.Name.String(), toComplete) {
+					completions = append(completions, item.Name.String())
+				}
+			})
+			return
+		}),
 	}
 }
 
@@ -143,39 +152,4 @@ func NewLabelExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 	}
 
 	return cmd
-}
-
-// validExperimentArgs returns shell completion logic for experiment/trial names.
-func validExperimentArgs(cfg Config, singleMatchSuffix string) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
-	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		ctx := cmd.Context()
-		client, err := api.NewClient(cfg.Address(), nil)
-		if err != nil {
-			return nil, cobra.ShellCompDirectiveNoFileComp
-		}
-
-		l := experiments.Lister{
-			API: experiments.NewAPI(client),
-		}
-
-		var names []string
-		_ = l.ForEachExperiment(ctx, experiments.ExperimentListQuery{}, func(item *experiments.ExperimentItem) error {
-			if name := item.Name.String(); strings.HasPrefix(name, toComplete) {
-				names = append(names, name)
-			}
-			return nil
-		})
-
-		// Add the suffix for single matches
-		if singleMatchSuffix != "" && len(names) == 1 && names[0] == toComplete {
-			names[0] += singleMatchSuffix
-		}
-
-		directive := cobra.ShellCompDirectiveNoFileComp
-		if singleMatchSuffix != "" {
-			directive |= cobra.ShellCompDirectiveNoSpace
-		}
-
-		return names, directive
-	}
 }
