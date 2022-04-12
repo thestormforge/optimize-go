@@ -70,7 +70,7 @@ type ApplicationOutput struct {
 	Items []ApplicationRow `json:"items"`
 }
 
-// Add an experiment item to the output.
+// Add an application item to the output.
 func (o *ApplicationOutput) Add(item *applications.ApplicationItem) error {
 	o.Items = append(o.Items, ApplicationRow{
 		Name:                item.Name.String(),
@@ -82,6 +82,24 @@ func (o *ApplicationOutput) Add(item *applications.ApplicationItem) error {
 		Age:                 formatTime(item.CreatedAt, ""),
 
 		ApplicationItem: *item,
+	})
+	return nil
+}
+
+// RecommendationRow is a table row representation of a recommendation.
+type RecommendationRow struct {
+	applications.RecommendationItem `table:"-" csv:"-"`
+}
+
+// RecommendationOutput wraps a recommendation list for output.
+type RecommendationOutput struct {
+	Items []RecommendationRow `json:"items"`
+}
+
+// Add a recommendation item to the output.
+func (o *RecommendationOutput) Add(item *applications.RecommendationItem) error {
+	o.Items = append(o.Items, RecommendationRow{
+		RecommendationItem: *item,
 	})
 	return nil
 }
