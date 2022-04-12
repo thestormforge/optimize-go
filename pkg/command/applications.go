@@ -32,7 +32,7 @@ func newApplicationsCommand(cfg Config) *cobra.Command {
 
 		ValidArgsFunction: validArgs(cfg, func(l *completionLister, toComplete string) (completions []string, directive cobra.ShellCompDirective) {
 			directive |= cobra.ShellCompDirectiveNoFileComp
-			l.forEachApplication(func(item *applications.ApplicationItem) {
+			l.forAllApplications(func(item *applications.ApplicationItem) {
 				if strings.HasPrefix(item.Name.String(), toComplete) {
 					completions = append(completions, item.Name.String())
 				}

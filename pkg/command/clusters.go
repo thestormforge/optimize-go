@@ -16,7 +16,7 @@ func newClustersCommand(cfg Config) *cobra.Command {
 
 		ValidArgsFunction: validArgs(cfg, func(l *completionLister, toComplete string) (completions []string, directive cobra.ShellCompDirective) {
 			directive |= cobra.ShellCompDirectiveNoFileComp
-			l.forEachCluster(func(item *applications.ClusterItem) {
+			l.forAllClusters(func(item *applications.ClusterItem) {
 				if strings.HasPrefix(item.Name.String(), toComplete) {
 					completions = append(completions, item.Name.String())
 				}

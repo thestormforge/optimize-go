@@ -32,7 +32,7 @@ func newExperimentsCommand(cfg Config) *cobra.Command {
 
 		ValidArgsFunction: validArgs(cfg, func(l *completionLister, toComplete string) (completions []string, directive cobra.ShellCompDirective) {
 			directive |= cobra.ShellCompDirectiveNoFileComp
-			l.forEachExperiment(func(item *experiments.ExperimentItem) {
+			l.forAllExperiments(func(item *experiments.ExperimentItem) {
 				if strings.HasPrefix(item.Name.String(), toComplete) {
 					completions = append(completions, item.Name.String())
 				}
