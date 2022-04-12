@@ -17,7 +17,6 @@ limitations under the License.
 package command
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -34,7 +33,7 @@ func newTrialsCommand(cfg Config) *cobra.Command {
 		// Trial names start with experiment names, so we can reuse the completion code
 		ValidArgsFunction: validArgs(cfg, func(l *completionLister, toComplete string) (completions []string, directive cobra.ShellCompDirective) {
 			directive |= cobra.ShellCompDirectiveNoFileComp
-			l.forEachExperiment(func(item *experiments.ExperimentItem) {
+			l.forAllExperiments(func(item *experiments.ExperimentItem) {
 				if strings.HasPrefix(item.Name.String(), toComplete) {
 					completions = append(completions, item.Name.String())
 				}
@@ -78,7 +77,7 @@ func NewGetTrialsCommand(cfg Config, p Printer) *cobra.Command {
 			q.AddStatus(experiments.TrialStaged)
 		}
 
-		if err := forExperimentTrials(ctx, &l, q, parseTrialArgs(args), result.Add); err != nil {
+		if err := l.ForEachNamedTrial(ctx, args, q, false, result.Add); err != nil {
 			return err
 		}
 
@@ -93,6 +92,10 @@ func NewGetTrialsCommand(cfg Config, p Printer) *cobra.Command {
 
 // NewDeleteTrialsCommand returns a command for deleting ("abandoning") trials.
 func NewDeleteTrialsCommand(cfg Config, p Printer) *cobra.Command {
+	var (
+		ignoreNotFound bool
+	)
+
 	cmd := newTrialsCommand(cfg)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
@@ -107,7 +110,7 @@ func NewDeleteTrialsCommand(cfg Config, p Printer) *cobra.Command {
 
 		q := experiments.TrialListQuery{}
 		q.SetStatus(experiments.TrialActive)
-		return forExperimentTrials(ctx, &l, q, parseTrialArgs(args), func(item *experiments.TrialItem) error {
+		return l.ForEachNamedTrial(ctx, args, q, ignoreNotFound, func(item *experiments.TrialItem) error {
 			selfURL := item.Link(api.RelationSelf)
 			if selfURL == "" {
 				return fmt.Errorf("malformed response, missing self link")
@@ -143,7 +146,7 @@ func NewLabelTrialsCommand(cfg Config, p Printer) *cobra.Command {
 		q := experiments.TrialListQuery{}
 		q.SetStatus(experiments.TrialCompleted)
 		names, labels := argsToNamesAndLabels(args)
-		return forExperimentTrials(ctx, &l, q, parseTrialArgs(names), func(item *experiments.TrialItem) error {
+		return l.ForEachNamedTrial(ctx, names, q, false, func(item *experiments.TrialItem) error {
 			labelsURL := item.Link(api.RelationLabels)
 			if labelsURL == "" {
 				return fmt.Errorf("malformed response, missing labels link")
@@ -159,69 +162,4 @@ func NewLabelTrialsCommand(cfg Config, p Printer) *cobra.Command {
 	}
 
 	return cmd
-}
-
-// experimentTrials is an experiment name and a list of trial numbers. Because trials cannot
-// currently be fetched individually, we only want to fetch the full trial list once and then
-// iterate over that for all the trials that were selected.
-type experimentTrials struct {
-	name    experiments.ExperimentName
-	numbers []int64
-}
-
-// filter decorates the supplied function to ensure it is only invoked on trials
-// whose number is included. The function is unchanged if the current number list is empty.
-func (et *experimentTrials) filter(f func(item *experiments.TrialItem) error) func(item *experiments.TrialItem) error {
-	if len(et.numbers) == 0 {
-		return f
-	}
-
-	return func(item *experiments.TrialItem) error {
-		for _, num := range et.numbers {
-			if item.Number == num {
-				return f(item)
-			}
-		}
-		return nil
-	}
-}
-
-// parseTrialArgs aggregates the trial numbers for each experiment to prevent us
-// from fetching the trial lists multiple times.
-func parseTrialArgs(args []string) []experimentTrials {
-	trials := make([]experimentTrials, 0, len(args))
-	for _, arg := range args {
-		name, number := experiments.SplitTrialName(arg)
-
-		var inv *experimentTrials
-		for i := range trials {
-			if trials[i].name == name {
-				inv = &trials[i]
-			}
-		}
-		if inv == nil {
-			trials = append(trials, experimentTrials{name: name})
-			inv = &trials[len(trials)-1]
-		}
-
-		if number >= 0 {
-			inv.numbers = append(inv.numbers, number)
-		}
-	}
-	return trials
-}
-
-// forExperimentTrials iterates over the experiment trials, fetching the distinct experiments and trial lists once.
-func forExperimentTrials(ctx context.Context, l *experiments.Lister, q experiments.TrialListQuery, trials []experimentTrials, f func(item *experiments.TrialItem) error) error {
-	for _, et := range trials {
-		exp, err := l.API.GetExperimentByName(ctx, et.name)
-		if err != nil {
-			return err
-		}
-
-		if err := l.ForEachTrial(ctx, &exp, q, et.filter(f)); err != nil {
-			return err
-		}
-	}
-	return nil
 }
