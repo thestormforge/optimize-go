@@ -153,19 +153,19 @@ func (l *Lister) ForEachRecommendation(ctx context.Context, app *Application, f 
 
 // ForEachNamedRecommendation iterates over all the named recommendations, optionally ignoring those that do not exist.
 func (l *Lister) ForEachNamedRecommendation(ctx context.Context, names []string, ignoreNotFound bool, f func(item *RecommendationItem) error) error {
-	recommendationCache := make(map[ApplicationName]map[string]*RecommendationItem)
+	cache := make(map[ApplicationName]map[string]*RecommendationItem)
 	for _, name := range names {
 		appName, recName := SplitRecommendationName(name)
 
-		if _, ok := recommendationCache[appName]; !ok {
+		if _, ok := cache[appName]; !ok {
 			app, err := l.API.GetApplicationByName(ctx, appName)
 			if err != nil {
 				return err
 			}
 
-			recommendationCache[appName] = make(map[string]*RecommendationItem)
+			cache[appName] = make(map[string]*RecommendationItem)
 			if err := l.ForEachRecommendation(ctx, &app, func(item *RecommendationItem) error {
-				recommendationCache[appName][item.Name] = item
+				cache[appName][item.Name] = item
 				return nil
 			}); err != nil {
 				return err
@@ -174,12 +174,12 @@ func (l *Lister) ForEachNamedRecommendation(ctx context.Context, names []string,
 
 		// If there is no recommendation name, emit all recommendations in descending order
 		if recName == "" {
-			recommendations := make([]*RecommendationItem, 0, len(recommendationCache[appName]))
-			for _, t := range recommendationCache[appName] {
-				recommendations = append(recommendations, t)
+			result := make([]*RecommendationItem, 0, len(cache[appName]))
+			for _, t := range cache[appName] {
+				result = append(result, t)
 			}
-			sort.Slice(recommendations, func(i, j int) bool { return recommendations[i].LastModified().After(recommendations[j].LastModified()) })
-			for _, r := range recommendations {
+			sort.Slice(result, func(i, j int) bool { return result[i].LastModified().After(result[j].LastModified()) })
+			for _, r := range result {
 				if err := f(r); err != nil {
 					return err
 				}
@@ -188,7 +188,7 @@ func (l *Lister) ForEachNamedRecommendation(ctx context.Context, names []string,
 		}
 
 		// Get the recommendation out of the recommendation cache
-		if t, ok := recommendationCache[appName][recName]; ok {
+		if t, ok := cache[appName][recName]; ok {
 			if err := f(t); err != nil {
 				return err
 			}

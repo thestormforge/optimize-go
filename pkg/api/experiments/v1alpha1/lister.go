@@ -129,21 +129,21 @@ func (l *Lister) ForEachNamedTrial(ctx context.Context, names []string, q TrialL
 		q.SetLimit(l.BatchSize)
 	}
 
-	trialCache := make(map[ExperimentName]map[int64]*TrialItem)
+	cache := make(map[ExperimentName]map[int64]*TrialItem)
 	for _, n := range names {
-		name, number := SplitTrialName(n)
+		expName, trialNum := SplitTrialName(n)
 
 		// There is no reliable way to get the per-trial addresses, just load
 		// all the trials into memory the first time we see the experiment
-		if _, ok := trialCache[name]; !ok {
-			exp, err := l.API.GetExperimentByName(ctx, name)
+		if _, ok := cache[expName]; !ok {
+			exp, err := l.API.GetExperimentByName(ctx, expName)
 			if err != nil {
 				return err
 			}
 
-			trialCache[name] = make(map[int64]*TrialItem)
+			cache[expName] = make(map[int64]*TrialItem)
 			if err := l.ForEachTrial(ctx, &exp, q, func(item *TrialItem) error {
-				trialCache[name][item.Number] = item
+				cache[expName][item.Number] = item
 				return nil
 			}); err != nil {
 				return err
@@ -151,14 +151,14 @@ func (l *Lister) ForEachNamedTrial(ctx context.Context, names []string, q TrialL
 		}
 
 		// If there was no trial number, emit all trials in descending order
-		if number < 0 {
-			trials := make([]*TrialItem, 0, len(trialCache[name]))
-			for _, t := range trialCache[name] {
-				trials = append(trials, t)
+		if trialNum < 0 {
+			result := make([]*TrialItem, 0, len(cache[expName]))
+			for _, t := range cache[expName] {
+				result = append(result, t)
 			}
-			sort.Slice(trials, func(i, j int) bool { return trials[i].Number > trials[j].Number })
-			for _, t := range trials {
-				if err := f(t); err != nil {
+			sort.Slice(result, func(i, j int) bool { return result[i].Number > result[j].Number })
+			for _, r := range result {
+				if err := f(r); err != nil {
 					return err
 				}
 			}
@@ -166,7 +166,7 @@ func (l *Lister) ForEachNamedTrial(ctx context.Context, names []string, q TrialL
 		}
 
 		// Get the trial out of the trial cache
-		if t, ok := trialCache[name][number]; ok {
+		if t, ok := cache[expName][trialNum]; ok {
 			if err := f(t); err != nil {
 				return err
 			}
