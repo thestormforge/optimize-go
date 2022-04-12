@@ -622,6 +622,97 @@ func (h *httpAPI) PatchRecommendations(ctx context.Context, u string, details Re
 	}
 }
 
+func (h *httpAPI) GetCluster(ctx context.Context, u string) (Cluster, error) {
+	result := Cluster{}
+
+	req, err := http.NewRequest(http.MethodGet, u, nil)
+	if err != nil {
+		return result, err
+	}
+
+	resp, body, err := h.client.Do(ctx, req)
+	if err != nil {
+		return result, err
+	}
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		api.UnmarshalMetadata(resp, &result.Metadata)
+		err = json.Unmarshal(body, &result)
+		return result, err
+	case http.StatusNotFound:
+		return result, api.NewError(ErrClusterNotFound, resp, body)
+	default:
+		return result, api.NewUnexpectedError(resp, body)
+	}
+}
+
+func (h *httpAPI) ListClusters(ctx context.Context) (ClusterList, error) {
+	// TODO This is less then ideal
+	u := h.client.URL(h.endpoint + "../clusters")
+
+	result := ClusterList{}
+
+	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	if err != nil {
+		return result, err
+	}
+
+	resp, body, err := h.client.Do(ctx, req)
+	if err != nil {
+		return result, err
+	}
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		api.UnmarshalMetadata(resp, &result.Metadata)
+		err = json.Unmarshal(body, &result)
+		return result, err
+	default:
+		return result, api.NewUnexpectedError(resp, body)
+	}
+}
+
+func (h *httpAPI) PatchCluster(ctx context.Context, u string, c ClusterTitle) error {
+	req, err := httpNewJSONRequest(http.MethodPatch, u, c)
+	if err != nil {
+		return err
+	}
+
+	resp, body, err := h.client.Do(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+	default:
+		return api.NewUnexpectedError(resp, body)
+	}
+}
+
+func (h *httpAPI) DeleteCluster(ctx context.Context, u string) error {
+	req, err := http.NewRequest(http.MethodDelete, u, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, body, err := h.client.Do(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	switch resp.StatusCode {
+	case http.StatusNoContent:
+		return nil
+	case http.StatusNotFound:
+		return api.NewError(ErrClusterNotFound, resp, body)
+	default:
+		return api.NewUnexpectedError(resp, body)
+	}
+}
+
 // httpNewJSONRequest returns a new HTTP request with a JSON payload.
 func httpNewJSONRequest(method, u string, body interface{}) (*http.Request, error) {
 	b, err := json.Marshal(body)

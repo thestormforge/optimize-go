@@ -20,3 +20,8 @@ package v2
 type ApplicationName string
 
 func (n ApplicationName) String() string { return string(n) }
+
+// ClusterName represents a name token used to identify a cluster.
+type ClusterName string
+
+func (n ClusterName) String() string { return string(n) }

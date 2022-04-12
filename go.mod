@@ -3,6 +3,7 @@ module github.com/thestormforge/optimize-go
 go 1.18
 
 require (
+	github.com/dustin/go-humanize v1.0.0
 	github.com/lestrrat-go/jwx v1.0.6
 	github.com/spf13/cobra v1.4.0
 	github.com/stretchr/testify v1.7.1

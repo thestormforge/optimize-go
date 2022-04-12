@@ -192,3 +192,32 @@ func (l *Lister) GetScenarioByNameOrTitle(ctx context.Context, app *Application,
 	}
 	return scnByTitle, nil
 }
+
+// ForEachCluster iterates over all the clusters.
+func (l *Lister) ForEachCluster(ctx context.Context, f func(item *ClusterItem) error) error {
+	// Define a helper to iteratively (NOT recursively) visit clusters
+	forEach := func(lst ClusterList, err error) (string, error) {
+		if err != nil {
+			return "", err
+		}
+
+		for i := range lst.Items {
+			if err := f(&lst.Items[i]); err != nil {
+				return "", err
+			}
+			if err := ctx.Err(); err != nil {
+				return "", err
+			}
+		}
+
+		return lst.Link(api.RelationNext), nil
+	}
+
+	// Iterate over all clusters, starting with first page
+	u, err := forEach(l.API.ListClusters(ctx))
+	for u != "" && err == nil {
+		// At the time of writing, the clusters list API did not support paging
+		panic("not implemented")
+	}
+	return err
+}
