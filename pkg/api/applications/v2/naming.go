@@ -16,6 +16,8 @@ limitations under the License.
 
 package v2
 
+import "strings"
+
 // ApplicationName represents a name token used to identify an application.
 type ApplicationName string
 
@@ -25,3 +27,12 @@ func (n ApplicationName) String() string { return string(n) }
 type ClusterName string
 
 func (n ClusterName) String() string { return string(n) }
+
+func SplitRecommendationName(name string) (ApplicationName, string) {
+	parts := strings.SplitN(name, "/", 2)
+	var recommendationName string
+	if len(parts) > 1 {
+		recommendationName = parts[1]
+	}
+	return ApplicationName(parts[0]), recommendationName
+}

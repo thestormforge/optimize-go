@@ -24,6 +24,7 @@ import (
 
 type Recommendation struct {
 	api.Metadata `json:"-"`
+	Name         string      `json:"name"`
 	DeployedAt   time.Time   `json:"deployedAt,omitempty"`
 	Parameters   []Parameter `json:"parameters,omitempty"`
 }

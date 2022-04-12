@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/thestormforge/optimize-go/pkg/api"
 )
@@ -119,6 +120,83 @@ func (l *Lister) ForEachScenario(ctx context.Context, app *Application, q Scenar
 		q = ScenarioListQuery{}
 	}
 	return
+}
+
+// ForEachRecommendation iterates over all the recommendations for an application.
+func (l *Lister) ForEachRecommendation(ctx context.Context, app *Application, f func(item *RecommendationItem) error) (err error) {
+	// Define a helper to iteratively (NOT recursively) list and visit recommendations
+	forEach := func(u string) (string, error) {
+		lst, err := l.API.ListRecommendations(ctx, u)
+		if err != nil {
+			return "", err
+		}
+
+		for i := range lst.Recommendations {
+			if err := f(&lst.Recommendations[i]); err != nil {
+				return "", err
+			}
+			if err := ctx.Err(); err != nil {
+				return "", err
+			}
+		}
+
+		return lst.Link(api.RelationNext), nil
+	}
+
+	// Iterate over all scenario pages, starting with the application's "rel=scenarios"
+	u := app.Link(api.RelationRecommendations)
+	for u != "" && err == nil {
+		u, err = forEach(u)
+	}
+	return
+}
+
+// ForEachNamedRecommendation iterates over all the named recommendations, optionally ignoring those that do not exist.
+func (l *Lister) ForEachNamedRecommendation(ctx context.Context, names []string, ignoreNotFound bool, f func(item *RecommendationItem) error) error {
+	recommendationCache := make(map[ApplicationName]map[string]*RecommendationItem)
+	for _, name := range names {
+		appName, recName := SplitRecommendationName(name)
+
+		if _, ok := recommendationCache[appName]; !ok {
+			app, err := l.API.GetApplicationByName(ctx, appName)
+			if err != nil {
+				return err
+			}
+
+			recommendationCache[appName] = make(map[string]*RecommendationItem)
+			if err := l.ForEachRecommendation(ctx, &app, func(item *RecommendationItem) error {
+				recommendationCache[appName][item.Name] = item
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+
+		// If there is no recommendation name, emit all recommendations in descending order
+		if recName == "" {
+			recommendations := make([]*RecommendationItem, 0, len(recommendationCache[appName]))
+			for _, t := range recommendationCache[appName] {
+				recommendations = append(recommendations, t)
+			}
+			sort.Slice(recommendations, func(i, j int) bool { return recommendations[i].LastModified().After(recommendations[j].LastModified()) })
+			for _, r := range recommendations {
+				if err := f(r); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+
+		// Get the recommendation out of the recommendation cache
+		if t, ok := recommendationCache[appName][recName]; ok {
+			if err := f(t); err != nil {
+				return err
+			}
+		} else if !ignoreNotFound {
+			return &api.Error{Type: ErrRecommendationNotFound, Message: fmt.Sprintf("recommendation not found: %q", recName)}
+		}
+	}
+	return nil
 }
 
 // GetApplicationByNameOrTitle tries to get an application by name and falls back to a

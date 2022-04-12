@@ -150,22 +150,23 @@ func (l *Lister) ForEachNamedTrial(ctx context.Context, names []string, q TrialL
 			}
 		}
 
-		// Handle the request based on the trial number (negative means "all trials")
+		// If there was no trial number, emit all trials in descending order
 		if number < 0 {
-			// Sort the trials descending by number
 			trials := make([]*TrialItem, 0, len(trialCache[name]))
 			for _, t := range trialCache[name] {
 				trials = append(trials, t)
 			}
-			sort.Slice(trials, func(i, j int) bool {
-				return trials[i].Number > trials[j].Number
-			})
+			sort.Slice(trials, func(i, j int) bool { return trials[i].Number > trials[j].Number })
 			for _, t := range trials {
 				if err := f(t); err != nil {
 					return err
 				}
 			}
-		} else if t, ok := trialCache[name][number]; ok {
+			return nil
+		}
+
+		// Get the trial out of the trial cache
+		if t, ok := trialCache[name][number]; ok {
 			if err := f(t); err != nil {
 				return err
 			}
