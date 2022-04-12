@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/thestormforge/optimize-go/pkg/api"
 )
@@ -153,30 +154,52 @@ func (l *Lister) ForEachRecommendation(ctx context.Context, app *Application, f 
 
 // ForEachNamedRecommendation iterates over all the named recommendations, optionally ignoring those that do not exist.
 func (l *Lister) ForEachNamedRecommendation(ctx context.Context, names []string, ignoreNotFound bool, f func(item *RecommendationItem) error) error {
-	cache := make(map[ApplicationName]map[string]*RecommendationItem)
+	cache := make(map[ApplicationName]map[string]string)
 	for _, name := range names {
 		appName, recName := SplitRecommendationName(name)
 
+		// Unlike trials, the recommendation index is incomplete: there is more
+		// information available on the individual resources. However: the only
+		// way to safely traverse to the recommendation is via the index. Here
+		// we are just building up the list of URLs to the recommendations.
 		if _, ok := cache[appName]; !ok {
 			app, err := l.API.GetApplicationByName(ctx, appName)
 			if err != nil {
 				return err
 			}
 
-			cache[appName] = make(map[string]*RecommendationItem)
+			cache[appName] = make(map[string]string)
 			if err := l.ForEachRecommendation(ctx, &app, func(item *RecommendationItem) error {
-				cache[appName][item.Name] = item
+				cache[appName][item.Name] = item.Link(api.RelationSelf)
 				return nil
 			}); err != nil {
 				return err
 			}
+
+			// HACK: Because the index contains so few entries, if we have a
+			// recommendation name, we are going to take a guess at the URL
+			// while we have the application in scope. Typically, this is strictly verboten.
+			if _, ok := cache[appName][recName]; !ok && recName != "" {
+				cache[appName][recName] = strings.TrimRight(app.Link(api.RelationRecommendations), "/") + "/" + recName
+			}
 		}
 
-		// If there is no recommendation name, emit all recommendations in descending order
+		// If there is no recommendation name, emit all recommendations in
+		// descending order. Note that "all" here mean "everything from the
+		// index"; as of writing, that is a partial "most recent" list with no
+		// query support for full inclusion.
 		if recName == "" {
 			result := make([]*RecommendationItem, 0, len(cache[appName]))
-			for _, t := range cache[appName] {
-				result = append(result, t)
+			for _, u := range cache[appName] {
+				rec, err := l.API.GetRecommendation(ctx, u)
+				if err != nil {
+					var notFoundErr *api.Error
+					if errors.As(err, &notFoundErr) && notFoundErr.Type == ErrRecommendationNotFound && ignoreNotFound {
+						continue
+					}
+					return err
+				}
+				result = append(result, &RecommendationItem{Recommendation: rec})
 			}
 			sort.Slice(result, func(i, j int) bool { return result[i].LastModified().After(result[j].LastModified()) })
 			for _, r := range result {
@@ -188,8 +211,16 @@ func (l *Lister) ForEachNamedRecommendation(ctx context.Context, names []string,
 		}
 
 		// Get the recommendation out of the recommendation cache
-		if t, ok := cache[appName][recName]; ok {
-			if err := f(t); err != nil {
+		if u, ok := cache[appName][recName]; ok {
+			rec, err := l.API.GetRecommendation(ctx, u)
+			if err != nil {
+				return err
+			}
+			if err := f(&RecommendationItem{Recommendation: rec}); err != nil {
+				var notFoundErr *api.Error
+				if errors.As(err, &notFoundErr) && notFoundErr.Type == ErrRecommendationNotFound && ignoreNotFound {
+					continue
+				}
 				return err
 			}
 		} else if !ignoreNotFound {
