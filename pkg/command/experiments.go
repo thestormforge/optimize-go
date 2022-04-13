@@ -25,23 +25,6 @@ import (
 	experiments "github.com/thestormforge/optimize-go/pkg/api/experiments/v1alpha1"
 )
 
-func newExperimentsCommand(cfg Config) *cobra.Command {
-	return &cobra.Command{
-		Use:     "experiments [NAME ...]",
-		Aliases: []string{"experiment", "exps", "exp"},
-
-		ValidArgsFunction: validArgs(cfg, func(l *completionLister, toComplete string) (completions []string, directive cobra.ShellCompDirective) {
-			directive |= cobra.ShellCompDirectiveNoFileComp
-			l.forAllExperiments(func(item *experiments.ExperimentItem) {
-				if strings.HasPrefix(item.Name.String(), toComplete) {
-					completions = append(completions, item.Name.String())
-				}
-			})
-			return
-		}),
-	}
-}
-
 // NewGetExperimentsCommand returns a command for getting experiments.
 func NewGetExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 	var (
@@ -49,7 +32,12 @@ func NewGetExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 		selector  string
 	)
 
-	cmd := newExperimentsCommand(cfg)
+	cmd := &cobra.Command{
+		Use:               "experiments [NAME ...]",
+		Aliases:           []string{"experiment", "exps", "exp"},
+		ValidArgsFunction: validExperimentArgs(cfg),
+	}
+
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
 		client, err := api.NewClient(cfg.Address(), nil)
@@ -90,7 +78,12 @@ func NewDeleteExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 		ignoreNotFound bool
 	)
 
-	cmd := newExperimentsCommand(cfg)
+	cmd := &cobra.Command{
+		Use:               "experiments [NAME ...]",
+		Aliases:           []string{"experiment", "exps", "exp"},
+		ValidArgsFunction: validExperimentArgs(cfg),
+	}
+
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
 		client, err := api.NewClient(cfg.Address(), nil)
@@ -123,8 +116,13 @@ func NewDeleteExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 
 // NewLabelExperimentsCommand returns a command for labeling experiments.
 func NewLabelExperimentsCommand(cfg Config, p Printer) *cobra.Command {
-	cmd := newExperimentsCommand(cfg)
-	cmd.Use += " KEY=VAL ..."
+	cmd := &cobra.Command{
+		Use:               "experiments [NAME ...] KEY=VAL ...",
+		Aliases:           []string{"experiment", "exps", "exp"},
+		ValidArgsFunction: validExperimentArgs(cfg),
+		Deprecated:        "use edit experiment --set-label instead.",
+	}
+
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
 		client, err := api.NewClient(cfg.Address(), nil)
@@ -152,4 +150,16 @@ func NewLabelExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 	}
 
 	return cmd
+}
+
+func validExperimentArgs(cfg Config) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+	return validArgs(cfg, func(l *completionLister, toComplete string) (completions []string, directive cobra.ShellCompDirective) {
+		directive |= cobra.ShellCompDirectiveNoFileComp
+		l.forAllExperiments(func(item *experiments.ExperimentItem) {
+			if strings.HasPrefix(item.Name.String(), toComplete) {
+				completions = append(completions, item.Name.String())
+			}
+		})
+		return
+	})
 }

@@ -25,30 +25,18 @@ import (
 	applications "github.com/thestormforge/optimize-go/pkg/api/applications/v2"
 )
 
-func newApplicationsCommand(cfg Config) *cobra.Command {
-	return &cobra.Command{
-		Use:     "applications [NAME ...]",
-		Aliases: []string{"application", "apps", "app"},
-
-		ValidArgsFunction: validArgs(cfg, func(l *completionLister, toComplete string) (completions []string, directive cobra.ShellCompDirective) {
-			directive |= cobra.ShellCompDirectiveNoFileComp
-			l.forAllApplications(func(item *applications.ApplicationItem) {
-				if strings.HasPrefix(item.Name.String(), toComplete) {
-					completions = append(completions, item.Name.String())
-				}
-			})
-			return
-		}),
-	}
-}
-
 // NewGetApplicationsCommand returns a command for getting applications.
 func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 	var (
 		batchSize int
 	)
 
-	cmd := newApplicationsCommand(cfg)
+	cmd := &cobra.Command{
+		Use:               "applications [NAME ...]",
+		Aliases:           []string{"application", "apps", "app"},
+		ValidArgsFunction: validApplicationArgs(cfg),
+	}
+
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
 		client, err := api.NewClient(cfg.Address(), nil)
@@ -104,7 +92,12 @@ func NewDeleteApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 		ignoreNotFound bool
 	)
 
-	cmd := newApplicationsCommand(cfg)
+	cmd := &cobra.Command{
+		Use:               "applications [NAME ...]",
+		Aliases:           []string{"application", "apps", "app"},
+		ValidArgsFunction: validApplicationArgs(cfg),
+	}
+
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
 		client, err := api.NewClient(cfg.Address(), nil)
@@ -133,4 +126,16 @@ func NewDeleteApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 	cmd.Flags().BoolVar(&ignoreNotFound, "ignore-not-found", ignoreNotFound, "treat not found errors as successful deletes")
 
 	return cmd
+}
+
+func validApplicationArgs(cfg Config) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+	return validArgs(cfg, func(l *completionLister, toComplete string) (completions []string, directive cobra.ShellCompDirective) {
+		directive |= cobra.ShellCompDirectiveNoFileComp
+		l.forAllApplications(func(item *applications.ApplicationItem) {
+			if strings.HasPrefix(item.Name.String(), toComplete) {
+				completions = append(completions, item.Name.String())
+			}
+		})
+		return
+	})
 }

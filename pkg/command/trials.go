@@ -25,30 +25,6 @@ import (
 	experiments "github.com/thestormforge/optimize-go/pkg/api/experiments/v1alpha1"
 )
 
-func newTrialsCommand(cfg Config) *cobra.Command {
-	return &cobra.Command{
-		Use:     "trials [NAME ...]",
-		Aliases: []string{"trial"},
-
-		// Trial names start with experiment names, so we can reuse the completion code
-		ValidArgsFunction: validArgs(cfg, func(l *completionLister, toComplete string) (completions []string, directive cobra.ShellCompDirective) {
-			directive |= cobra.ShellCompDirectiveNoFileComp
-			l.forAllExperiments(func(item *experiments.ExperimentItem) {
-				if strings.HasPrefix(item.Name.String(), toComplete) {
-					completions = append(completions, item.Name.String())
-				}
-			})
-
-			if len(completions) == 1 && completions[0] == toComplete {
-				completions[0] += "-"
-				directive |= cobra.ShellCompDirectiveNoSpace
-			}
-
-			return
-		}),
-	}
-}
-
 // NewGetTrialsCommand returns a command for getting trials.
 func NewGetTrialsCommand(cfg Config, p Printer) *cobra.Command {
 	var (
@@ -56,7 +32,12 @@ func NewGetTrialsCommand(cfg Config, p Printer) *cobra.Command {
 		all      bool
 	)
 
-	cmd := newTrialsCommand(cfg)
+	cmd := &cobra.Command{
+		Use:               "trials [NAME ...]",
+		Aliases:           []string{"trial"},
+		ValidArgsFunction: validTrialArgs(cfg),
+	}
+
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
 		client, err := api.NewClient(cfg.Address(), nil)
@@ -96,7 +77,12 @@ func NewDeleteTrialsCommand(cfg Config, p Printer) *cobra.Command {
 		ignoreNotFound bool
 	)
 
-	cmd := newTrialsCommand(cfg)
+	cmd := &cobra.Command{
+		Use:               "trials [NAME ...]",
+		Aliases:           []string{"trial"},
+		ValidArgsFunction: validTrialArgs(cfg),
+	}
+
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
 		client, err := api.NewClient(cfg.Address(), nil)
@@ -130,8 +116,14 @@ func NewDeleteTrialsCommand(cfg Config, p Printer) *cobra.Command {
 
 // NewLabelTrialsCommand returns a command for labeling trials.
 func NewLabelTrialsCommand(cfg Config, p Printer) *cobra.Command {
-	cmd := newTrialsCommand(cfg)
-	// TODO Should we extend validargsfn with suggestions like `baseline=true` ?
+	cmd := &cobra.Command{
+		Use:     "trials [NAME ...] KEY=VAL ...",
+		Aliases: []string{"trial"},
+		// TODO Should we extend validargsfn with suggestions like `baseline=true` ?
+		ValidArgsFunction: validTrialArgs(cfg),
+		Deprecated:        "use edit trial --set-label KEY=VAL instead.",
+	}
+
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
 		client, err := api.NewClient(cfg.Address(), nil)
@@ -162,4 +154,22 @@ func NewLabelTrialsCommand(cfg Config, p Printer) *cobra.Command {
 	}
 
 	return cmd
+}
+
+func validTrialArgs(cfg Config) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+	return validArgs(cfg, func(l *completionLister, toComplete string) (completions []string, directive cobra.ShellCompDirective) {
+		directive |= cobra.ShellCompDirectiveNoFileComp
+		l.forAllExperiments(func(item *experiments.ExperimentItem) {
+			if strings.HasPrefix(item.Name.String(), toComplete) {
+				completions = append(completions, item.Name.String())
+			}
+		})
+
+		if len(completions) == 1 && completions[0] == toComplete {
+			completions[0] += "-"
+			directive |= cobra.ShellCompDirectiveNoSpace
+		}
+
+		return
+	})
 }

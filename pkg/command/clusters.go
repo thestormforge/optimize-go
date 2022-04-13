@@ -9,26 +9,14 @@ import (
 	applications "github.com/thestormforge/optimize-go/pkg/api/applications/v2"
 )
 
-func newClustersCommand(cfg Config) *cobra.Command {
-	return &cobra.Command{
-		Use:     "clusters [NAME ...]",
-		Aliases: []string{"cluster"},
-
-		ValidArgsFunction: validArgs(cfg, func(l *completionLister, toComplete string) (completions []string, directive cobra.ShellCompDirective) {
-			directive |= cobra.ShellCompDirectiveNoFileComp
-			l.forAllClusters(func(item *applications.ClusterItem) {
-				if strings.HasPrefix(item.Name.String(), toComplete) {
-					completions = append(completions, item.Name.String())
-				}
-			})
-			return
-		}),
-	}
-}
-
 // NewGetClustersCommand returns a command for getting clusters.
 func NewGetClustersCommand(cfg Config, p Printer) *cobra.Command {
-	cmd := newClustersCommand(cfg)
+	cmd := &cobra.Command{
+		Use:               "clusters [NAME ...]",
+		Aliases:           []string{"cluster"},
+		ValidArgsFunction: validClusterArgs(cfg),
+	}
+
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
 		client, err := api.NewClient(cfg.Address(), nil)
@@ -53,4 +41,16 @@ func NewGetClustersCommand(cfg Config, p Printer) *cobra.Command {
 	}
 
 	return cmd
+}
+
+func validClusterArgs(cfg Config) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+	return validArgs(cfg, func(l *completionLister, toComplete string) (completions []string, directive cobra.ShellCompDirective) {
+		directive |= cobra.ShellCompDirectiveNoFileComp
+		l.forAllClusters(func(item *applications.ClusterItem) {
+			if strings.HasPrefix(item.Name.String(), toComplete) {
+				completions = append(completions, item.Name.String())
+			}
+		})
+		return
+	})
 }
