@@ -105,6 +105,8 @@ type API interface {
 
 	// GetCluster retrieves a cluster.
 	GetCluster(ctx context.Context, u string) (Cluster, error)
+	// GetClusterByName retrieves a cluster.
+	GetClusterByName(ctx context.Context, n ClusterName) (Cluster, error)
 	// ListClusters lists clusters.
 	ListClusters(ctx context.Context) (ClusterList, error)
 	// PatchCluster updates a cluster title.

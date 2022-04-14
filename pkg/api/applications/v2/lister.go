@@ -330,3 +330,22 @@ func (l *Lister) ForEachCluster(ctx context.Context, f func(item *ClusterItem) e
 	}
 	return err
 }
+
+// ForEachNamedCluster iterates over all the named clusters, optionally ignoring those that do not exist.
+func (l *Lister) ForEachNamedCluster(ctx context.Context, names []string, ignoreNotFound bool, f func(item *ClusterItem) error) error {
+	for _, name := range names {
+		c, err := l.API.GetClusterByName(ctx, ClusterName(name))
+		if err != nil {
+			var notFoundErr *api.Error
+			if errors.As(err, &notFoundErr) && notFoundErr.Type == ErrClusterNotFound && ignoreNotFound {
+				continue
+			}
+			return err
+		}
+
+		if err := f(&ClusterItem{Cluster: c}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
