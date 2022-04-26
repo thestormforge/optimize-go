@@ -25,6 +25,51 @@ import (
 	applications "github.com/thestormforge/optimize-go/pkg/api/applications/v2"
 )
 
+// NewEditClusterCommand returns a command for editing a cluster.
+func NewEditClusterCommand(cfg Config, p Printer) *cobra.Command {
+	var (
+		title string
+	)
+
+	cmd := &cobra.Command{
+		Use:               "cluster NAME",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: validClusterArgs(cfg),
+	}
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		ctx, out := cmd.Context(), cmd.OutOrStdout()
+		client, err := api.NewClient(cfg.Address(), nil)
+		if err != nil {
+			return err
+		}
+
+		l := applications.Lister{
+			API: applications.NewAPI(client),
+		}
+
+		return l.ForEachNamedCluster(ctx, args, false, func(item *applications.ClusterItem) error {
+			selfURL := item.Link(api.RelationSelf)
+			if selfURL == "" {
+				return fmt.Errorf("malformed response, missing self link")
+			}
+
+			// Update the title
+			if title != "" {
+				if err := l.API.PatchCluster(ctx, selfURL, applications.ClusterTitle{Title: title}); err != nil {
+					return err
+				}
+			}
+
+			return p.Fprint(out, item)
+		})
+	}
+
+	cmd.Flags().StringVar(&title, "set-title", "", "update the `title` value")
+
+	return cmd
+}
+
 // NewGetClustersCommand returns a command for getting clusters.
 func NewGetClustersCommand(cfg Config, p Printer) *cobra.Command {
 	cmd := &cobra.Command{
@@ -46,7 +91,9 @@ func NewGetClustersCommand(cfg Config, p Printer) *cobra.Command {
 
 		result := &ClusterOutput{Items: make([]ClusterRow, 0, len(args))}
 		if len(args) > 0 {
-			return fmt.Errorf("get cluster by name is not supported")
+			if err := l.ForEachNamedCluster(ctx, args, false, result.Add); err != nil {
+				return err
+			}
 		} else {
 			if err := l.ForEachCluster(ctx, result.Add); err != nil {
 				return err
@@ -55,6 +102,48 @@ func NewGetClustersCommand(cfg Config, p Printer) *cobra.Command {
 
 		return p.Fprint(out, result)
 	}
+
+	return cmd
+}
+
+// NewDeleteClustersCommand returns a command for deleting clusters.
+func NewDeleteClustersCommand(cfg Config, p Printer) *cobra.Command {
+	var (
+		ignoreNotFound bool
+	)
+
+	cmd := &cobra.Command{
+		Use:               "clusters [NAME ...]",
+		Aliases:           []string{"cluster"},
+		ValidArgsFunction: validClusterArgs(cfg),
+	}
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		ctx, out := cmd.Context(), cmd.OutOrStdout()
+		client, err := api.NewClient(cfg.Address(), nil)
+		if err != nil {
+			return err
+		}
+
+		l := applications.Lister{
+			API: applications.NewAPI(client),
+		}
+
+		return l.ForEachNamedCluster(ctx, args, ignoreNotFound, func(item *applications.ClusterItem) error {
+			selfURL := item.Link(api.RelationSelf)
+			if selfURL == "" {
+				return fmt.Errorf("malformed response, missing self link")
+			}
+
+			if err := l.API.DeleteCluster(ctx, selfURL); err != nil {
+				return err
+			}
+
+			return p.Fprint(out, item)
+		})
+	}
+
+	cmd.Flags().BoolVar(&ignoreNotFound, "ignore-not-found", ignoreNotFound, "treat not found errors as successful deletes")
 
 	return cmd
 }
