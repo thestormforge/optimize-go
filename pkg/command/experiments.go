@@ -114,13 +114,17 @@ func NewDeleteExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 	return cmd
 }
 
-// NewLabelExperimentsCommand returns a command for labeling experiments.
-func NewLabelExperimentsCommand(cfg Config, p Printer) *cobra.Command {
+// NewEditExperimentCommand returns a command for editing an experiment.
+func NewEditExperimentCommand(cfg Config, p Printer) *cobra.Command {
+	var (
+		labels map[string]string
+	)
+
 	cmd := &cobra.Command{
-		Use:               "experiments [NAME ...] KEY=VAL ...",
-		Aliases:           []string{"experiment", "exps", "exp"},
+		Use:               "experiment NAME",
+		Aliases:           []string{"exp"},
+		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: validExperimentArgs(cfg),
-		Deprecated:        "use edit experiment --set-label instead.",
 	}
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
@@ -134,20 +138,24 @@ func NewLabelExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 			API: experiments.NewAPI(client),
 		}
 
-		names, labels := argsToNamesAndLabels(args)
-		return l.ForEachNamedExperiment(ctx, names, false, func(item *experiments.ExperimentItem) error {
-			labelsURL := item.Link(api.RelationLabels)
-			if labelsURL == "" {
-				return fmt.Errorf("malformed response, missing labels link")
-			}
+		return l.ForEachNamedExperiment(ctx, args, false, func(item *experiments.ExperimentItem) error {
+			// Apply label changes
+			if len(labels) > 0 {
+				labelsURL := item.Link(api.RelationLabels)
+				if labelsURL == "" {
+					return fmt.Errorf("malformed response, missing labels link")
+				}
 
-			if err := l.API.LabelExperiment(ctx, labelsURL, experiments.ExperimentLabels{Labels: labels}); err != nil {
-				return err
+				if err := l.API.LabelExperiment(ctx, labelsURL, experiments.ExperimentLabels{Labels: labels}); err != nil {
+					return err
+				}
 			}
 
 			return p.Fprint(out, item)
 		})
 	}
+
+	cmd.Flags().StringToStringVar(&labels, "set-label", nil, "label `key=value` pairs to assign")
 
 	return cmd
 }

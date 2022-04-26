@@ -84,21 +84,10 @@ func main() {
 		command.NewDeleteTrialsCommand(cfg, &printer{format: `deleted trial %q.`}),
 	)
 
-	// Aggregate the LABEL commands
-	labelCmd := &cobra.Command{
-		Use: "label",
-	}
-
-	labelCmd.AddCommand(
-		command.NewLabelExperimentsCommand(cfg, &printer{format: `labeled experiment %q.`}),
-		command.NewLabelTrialsCommand(cfg, &printer{format: `labeled trial %q.`}),
-	)
-
 	// Add the aggregate commends to the root
 	cmd.AddCommand(
 		getCmd,
 		deleteCmd,
-		labelCmd,
 	)
 
 	// Create a context for the command

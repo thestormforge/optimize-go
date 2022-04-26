@@ -114,14 +114,16 @@ func NewDeleteTrialsCommand(cfg Config, p Printer) *cobra.Command {
 	return cmd
 }
 
-// NewLabelTrialsCommand returns a command for labeling trials.
-func NewLabelTrialsCommand(cfg Config, p Printer) *cobra.Command {
+// NewEditTrialCommand returns a command for editing a trial.
+func NewEditTrialCommand(cfg Config, p Printer) *cobra.Command {
+	var (
+		labels map[string]string
+	)
+
 	cmd := &cobra.Command{
-		Use:     "trials [NAME ...] KEY=VAL ...",
-		Aliases: []string{"trial"},
-		// TODO Should we extend validargsfn with suggestions like `baseline=true` ?
+		Use:               "trial NAME",
+		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: validTrialArgs(cfg),
-		Deprecated:        "use edit trial --set-label KEY=VAL instead.",
 	}
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
@@ -137,21 +139,25 @@ func NewLabelTrialsCommand(cfg Config, p Printer) *cobra.Command {
 
 		q := experiments.TrialListQuery{}
 		q.SetStatus(experiments.TrialCompleted)
-		names, labels := argsToNamesAndLabels(args)
-		return l.ForEachNamedTrial(ctx, names, q, false, func(item *experiments.TrialItem) error {
-			labelsURL := item.Link(api.RelationLabels)
-			if labelsURL == "" {
-				return fmt.Errorf("malformed response, missing labels link")
-			}
+		return l.ForEachNamedTrial(ctx, args, q, false, func(item *experiments.TrialItem) error {
+			// Apply label changes
+			if len(labels) > 0 {
+				labelsURL := item.Link(api.RelationLabels)
+				if labelsURL == "" {
+					return fmt.Errorf("malformed response, missing labels link")
+				}
 
-			err = l.API.LabelTrial(ctx, labelsURL, experiments.TrialLabels{Labels: labels})
-			if err != nil {
-				return err
+				err = l.API.LabelTrial(ctx, labelsURL, experiments.TrialLabels{Labels: labels})
+				if err != nil {
+					return err
+				}
 			}
 
 			return p.Fprint(out, item)
 		})
 	}
+
+	cmd.Flags().StringToStringVar(&labels, "set-label", nil, "label `key=value` pairs to assign")
 
 	return cmd
 }
