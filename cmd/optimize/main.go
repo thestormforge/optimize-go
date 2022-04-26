@@ -23,6 +23,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/signal"
+	"time"
 
 	"github.com/spf13/cobra"
 	applications "github.com/thestormforge/optimize-go/pkg/api/applications/v2"
@@ -99,7 +101,17 @@ func main() {
 		labelCmd,
 	)
 
-	if err := cmd.ExecuteContext(context.Background()); err != nil {
+	// Create a context for the command
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{
+		Transport: http.DefaultTransport,
+		Timeout:   10 * time.Second,
+	})
+
+	// Run the command
+	err := cmd.ExecuteContext(ctx)
+	cancel()
+	if err != nil {
 		os.Exit(1)
 	}
 }
