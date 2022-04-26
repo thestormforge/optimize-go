@@ -53,24 +53,6 @@ func parseLabelSelector(s string) map[string]string {
 	return selector
 }
 
-// argsToNamesAndLabels returns a list of names and label mappings from an argument stream.
-func argsToNamesAndLabels(args []string) ([]string, map[string]string) {
-	names := make([]string, 0, len(args))
-	labels := make(map[string]string, len(args))
-
-	for _, arg := range args {
-		if p := strings.SplitN(arg, "=", 2); len(p) == 2 {
-			labels[p[0]] = p[1]
-		} else if p := strings.TrimSuffix(arg, "-"); p != arg {
-			labels[p] = ""
-		} else {
-			names = append(names, arg)
-		}
-	}
-
-	return names, labels
-}
-
 func validArgs(cfg Config, f func(*completionLister, string) ([]string, cobra.ShellCompDirective)) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		client, err := api.NewClient(cfg.Address(), nil)
