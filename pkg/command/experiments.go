@@ -25,6 +25,52 @@ import (
 	experiments "github.com/thestormforge/optimize-go/pkg/api/experiments/v1alpha1"
 )
 
+// NewEditExperimentCommand returns a command for editing an experiment.
+func NewEditExperimentCommand(cfg Config, p Printer) *cobra.Command {
+	var (
+		labels map[string]string
+	)
+
+	cmd := &cobra.Command{
+		Use:               "experiment NAME",
+		Aliases:           []string{"exp"},
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: validExperimentArgs(cfg),
+	}
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		ctx, out := cmd.Context(), cmd.OutOrStdout()
+		client, err := api.NewClient(cfg.Address(), nil)
+		if err != nil {
+			return err
+		}
+
+		l := experiments.Lister{
+			API: experiments.NewAPI(client),
+		}
+
+		return l.ForEachNamedExperiment(ctx, args, false, func(item *experiments.ExperimentItem) error {
+			// Apply label changes
+			if len(labels) > 0 {
+				labelsURL := item.Link(api.RelationLabels)
+				if labelsURL == "" {
+					return fmt.Errorf("malformed response, missing labels link")
+				}
+
+				if err := l.API.LabelExperiment(ctx, labelsURL, experiments.ExperimentLabels{Labels: labels}); err != nil {
+					return err
+				}
+			}
+
+			return p.Fprint(out, item)
+		})
+	}
+
+	cmd.Flags().StringToStringVar(&labels, "set-label", nil, "label `key=value` pairs to assign")
+
+	return cmd
+}
+
 // NewGetExperimentsCommand returns a command for getting experiments.
 func NewGetExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 	var (
@@ -110,52 +156,6 @@ func NewDeleteExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&ignoreNotFound, "ignore-not-found", ignoreNotFound, "treat not found errors as successful deletes")
-
-	return cmd
-}
-
-// NewEditExperimentCommand returns a command for editing an experiment.
-func NewEditExperimentCommand(cfg Config, p Printer) *cobra.Command {
-	var (
-		labels map[string]string
-	)
-
-	cmd := &cobra.Command{
-		Use:               "experiment NAME",
-		Aliases:           []string{"exp"},
-		Args:              cobra.ExactArgs(1),
-		ValidArgsFunction: validExperimentArgs(cfg),
-	}
-
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		ctx, out := cmd.Context(), cmd.OutOrStdout()
-		client, err := api.NewClient(cfg.Address(), nil)
-		if err != nil {
-			return err
-		}
-
-		l := experiments.Lister{
-			API: experiments.NewAPI(client),
-		}
-
-		return l.ForEachNamedExperiment(ctx, args, false, func(item *experiments.ExperimentItem) error {
-			// Apply label changes
-			if len(labels) > 0 {
-				labelsURL := item.Link(api.RelationLabels)
-				if labelsURL == "" {
-					return fmt.Errorf("malformed response, missing labels link")
-				}
-
-				if err := l.API.LabelExperiment(ctx, labelsURL, experiments.ExperimentLabels{Labels: labels}); err != nil {
-					return err
-				}
-			}
-
-			return p.Fprint(out, item)
-		})
-	}
-
-	cmd.Flags().StringToStringVar(&labels, "set-label", nil, "label `key=value` pairs to assign")
 
 	return cmd
 }
