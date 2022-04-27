@@ -54,7 +54,7 @@ func formatTime(t time.Time, layout string) string {
 // ApplicationRow is a table row representation of an application.
 type ApplicationRow struct {
 	Name                string `table:"name" csv:"name" json:"-"`
-	DisplayName         string `table:"Name,custom" json:"-"`
+	Title               string `table:"title" csv:"title" json:"-"`
 	ScenarioCount       int    `table:"scenarios,wide" csv:"scenario_count" json:"-"`
 	RecommendationMode  string `table:"recommendations" csv:"recommendations" json:"-"`
 	DeployInterval      string `table:"deploy_interval" csv:"deploy_interval" json:"-"`
@@ -74,7 +74,7 @@ type ApplicationOutput struct {
 func (o *ApplicationOutput) Add(item *applications.ApplicationItem) error {
 	o.Items = append(o.Items, ApplicationRow{
 		Name:                item.Name.String(),
-		DisplayName:         item.Title(),
+		Title:               item.Title(),
 		ScenarioCount:       item.ScenarioCount,
 		RecommendationMode:  cases.Title(language.AmericanEnglish).String(string(item.Recommendations)),
 		LastDeployedMachine: formatTime(item.LastDeployedAt, time.RFC3339),
