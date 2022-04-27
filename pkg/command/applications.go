@@ -79,9 +79,9 @@ func NewCreateApplicationCommand(cfg Config, p Printer) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&title, "title", "", "human readable `name` for the application")
-	cmd.Flags().StringArrayVar(&resource.Kubernetes.Namespaces, "namespace", nil, "select resources from a specific `namespace`")
-	cmd.Flags().StringVar(&resource.Kubernetes.NamespaceSelector, "ns-selector", "", "`sel`ect resources from labeled namespaces")
-	cmd.Flags().StringVarP(&resource.Kubernetes.Selector, "selector", "l", "", "`sel`ect only labeled resources")
+	cmd.Flags().StringArrayVar(&resource.Kubernetes.Namespaces, "namespace", nil, "select application resources from a specific `namespace`")
+	cmd.Flags().StringVar(&resource.Kubernetes.NamespaceSelector, "ns-selector", "", "`sel`ect application resources from labeled namespaces")
+	cmd.Flags().StringVarP(&resource.Kubernetes.Selector, "selector", "l", "", "`sel`ect only labeled application resources")
 
 	return cmd
 }
@@ -146,10 +146,10 @@ func NewEditApplicationCommand(cfg Config, p Printer) *cobra.Command {
 		})
 	}
 
-	cmd.Flags().StringVar(&title, "title", "", "update the `title` value")
-	cmd.Flags().StringArrayVar(&resource.Kubernetes.Namespaces, "namespace", nil, "select resources from a specific `namespace`")
-	cmd.Flags().StringVar(&resource.Kubernetes.NamespaceSelector, "ns-selector", "", "`sel`ect resources from labeled namespaces")
-	cmd.Flags().StringVarP(&resource.Kubernetes.Selector, "selector", "l", "", "`sel`ect only labeled resources")
+	cmd.Flags().StringVar(&title, "title", "", "human readable `name` for the application")
+	cmd.Flags().StringArrayVar(&resource.Kubernetes.Namespaces, "namespace", nil, "select application resources from a specific `namespace`")
+	cmd.Flags().StringVar(&resource.Kubernetes.NamespaceSelector, "ns-selector", "", "`sel`ect application resources from labeled namespaces")
+	cmd.Flags().StringVarP(&resource.Kubernetes.Selector, "selector", "l", "", "`sel`ect only labeled application resources")
 
 	return cmd
 }
