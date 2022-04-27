@@ -26,8 +26,7 @@ type Application struct {
 	api.Metadata `json:"-"`
 	Name         ApplicationName `json:"name"`
 	DisplayName  string          `json:"title,omitempty"` // TODO This doesn't seem to get set
-	Resources    []interface{}   `json:"resources,omitempty"`
-	Cluster      string          `json:"cluster,omitempty"` // TODO This is write only?
+	Resources    []Resource      `json:"resources,omitempty"`
 	CreatedAt    time.Time       `json:"createdAt"`
 }
 
@@ -64,4 +63,16 @@ type ApplicationList struct {
 	TotalCount int `json:"totalCount,omitempty"`
 	// The list of applications.
 	Applications []ApplicationItem `json:"applications"`
+}
+
+// TODO This "Resource" type should be replaced by the Konjure Resource
+
+type Resource struct {
+	Kubernetes struct {
+		Namespace         string   `json:"namespace,omitempty"`
+		Namespaces        []string `json:"namespaces,omitempty"`
+		NamespaceSelector string   `json:"namespaceSelector,omitempty"`
+		Types             []string `json:"types,omitempty" yaml:"types,omitempty"`
+		Selector          string   `json:"selector,omitempty" yaml:"selector,omitempty"`
+	} `json:"kubernetes" yaml:"kubernetes"`
 }

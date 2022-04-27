@@ -25,6 +25,135 @@ import (
 	applications "github.com/thestormforge/optimize-go/pkg/api/applications/v2"
 )
 
+// NewCreateApplicationCommand returns a command for creating applications.
+func NewCreateApplicationCommand(cfg Config, p Printer) *cobra.Command {
+	var (
+		title    string
+		resource applications.Resource
+	)
+
+	cmd := &cobra.Command{
+		Use:     "application [NAME]",
+		Aliases: []string{"app"},
+		Args:    cobra.MaximumNArgs(1),
+	}
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		ctx, out := cmd.Context(), cmd.OutOrStdout()
+		client, err := api.NewClient(cfg.Address(), nil)
+		if err != nil {
+			return err
+		}
+
+		appAPI := applications.NewAPI(client)
+
+		// Construct the application we want to create
+		app := applications.Application{
+			DisplayName: title,
+		}
+
+		if r, ok := normalizeResource(resource); ok {
+			app.Resources = append(app.Resources, r)
+		}
+
+		// Upsert the application if we have a name, otherwise create it with a generated name
+		var md api.Metadata
+		if len(args) > 0 && args[0] != "" {
+			name := applications.ApplicationName(args[0])
+			md, err = appAPI.UpsertApplicationByName(ctx, name, app)
+		} else {
+			md, err = appAPI.CreateApplication(ctx, app)
+		}
+		if err != nil {
+			return err
+		}
+
+		// Fetch the application back for display
+		if md.Location() != "" {
+			if a, err := appAPI.GetApplication(ctx, md.Location()); err == nil {
+				app = a
+			}
+		}
+
+		return p.Fprint(out, &app)
+	}
+
+	cmd.Flags().StringVar(&title, "title", "", "human readable `name` for the application")
+	cmd.Flags().StringArrayVar(&resource.Kubernetes.Namespaces, "namespace", nil, "select resources from a specific `namespace`")
+	cmd.Flags().StringVar(&resource.Kubernetes.NamespaceSelector, "ns-selector", "", "`sel`ect resources from labeled namespaces")
+	cmd.Flags().StringVarP(&resource.Kubernetes.Selector, "selector", "l", "", "`sel`ect only labeled resources")
+
+	return cmd
+}
+
+// NewEditApplicationCommand returns a command for editing an applications.
+func NewEditApplicationCommand(cfg Config, p Printer) *cobra.Command {
+	var (
+		title    string
+		resource applications.Resource
+	)
+
+	cmd := &cobra.Command{
+		Use:               "application NAME",
+		Aliases:           []string{"app"},
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: validApplicationArgs(cfg),
+	}
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		ctx, out := cmd.Context(), cmd.OutOrStdout()
+		client, err := api.NewClient(cfg.Address(), nil)
+		if err != nil {
+			return err
+		}
+
+		l := applications.Lister{
+			API: applications.NewAPI(client),
+		}
+
+		return l.ForEachNamedApplication(ctx, args, false, func(item *applications.ApplicationItem) error {
+			selfURL := item.Link(api.RelationSelf)
+			if selfURL == "" {
+				return fmt.Errorf("malformed response, missing self link")
+			}
+
+			var needsUpdate bool
+
+			// Update the title
+			if title != "" {
+				item.Application.DisplayName = title
+				needsUpdate = true
+			}
+
+			// Update the resource
+			if r, ok := normalizeResource(resource); ok {
+				if len(item.Application.Resources) > 0 {
+					item.Application.Resources[0] = r
+				} else {
+					item.Application.Resources = append(item.Application.Resources, r)
+				}
+				needsUpdate = true
+			}
+
+			if !needsUpdate {
+				return nil
+			}
+
+			if _, err := l.API.UpsertApplication(ctx, selfURL, item.Application); err != nil {
+				return err
+			}
+			return p.Fprint(out, item)
+		})
+	}
+
+	cmd.Flags().StringVar(&title, "title", "", "update the `title` value")
+	cmd.Flags().StringArrayVar(&resource.Kubernetes.Namespaces, "namespace", nil, "select resources from a specific `namespace`")
+	cmd.Flags().StringVar(&resource.Kubernetes.NamespaceSelector, "ns-selector", "", "`sel`ect resources from labeled namespaces")
+	cmd.Flags().StringVarP(&resource.Kubernetes.Selector, "selector", "l", "", "`sel`ect only labeled resources")
+
+	return cmd
+}
+
 // NewGetApplicationsCommand returns a command for getting applications.
 func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 	var (
@@ -138,4 +267,22 @@ func validApplicationArgs(cfg Config) func(*cobra.Command, []string, string) ([]
 		})
 		return
 	})
+}
+
+func normalizeResource(r applications.Resource) (applications.Resource, bool) {
+	if r.Kubernetes.Namespace == "" && len(r.Kubernetes.Namespaces) == 0 && r.Kubernetes.NamespaceSelector == "" {
+		return r, false
+	}
+
+	if r.Kubernetes.Namespace == "" && len(r.Kubernetes.Namespaces) == 1 {
+		r.Kubernetes.Namespace = r.Kubernetes.Namespaces[0]
+		r.Kubernetes.Namespaces = nil
+	}
+
+	if r.Kubernetes.Namespace != "" && len(r.Kubernetes.Namespaces) > 0 {
+		r.Kubernetes.Namespaces = append(r.Kubernetes.Namespaces, r.Kubernetes.Namespace)
+		r.Kubernetes.Namespace = ""
+	}
+
+	return r, true
 }
