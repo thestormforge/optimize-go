@@ -54,7 +54,7 @@ func formatTime(t time.Time, layout string) string {
 // ApplicationRow is a table row representation of an application.
 type ApplicationRow struct {
 	Name                string `table:"name" csv:"name" json:"-"`
-	DisplayName         string `table:"Name,custom" json:"-"`
+	Title               string `table:"title" csv:"title" json:"-"`
 	ScenarioCount       int    `table:"scenarios,wide" csv:"scenario_count" json:"-"`
 	RecommendationMode  string `table:"recommendations" csv:"recommendations" json:"-"`
 	DeployInterval      string `table:"deploy_interval" csv:"deploy_interval" json:"-"`
@@ -70,11 +70,11 @@ type ApplicationOutput struct {
 	Items []ApplicationRow `json:"items"`
 }
 
-// Add an experiment item to the output.
+// Add an application item to the output.
 func (o *ApplicationOutput) Add(item *applications.ApplicationItem) error {
 	o.Items = append(o.Items, ApplicationRow{
 		Name:                item.Name.String(),
-		DisplayName:         item.Title(),
+		Title:               item.Title(),
 		ScenarioCount:       item.ScenarioCount,
 		RecommendationMode:  cases.Title(language.AmericanEnglish).String(string(item.Recommendations)),
 		LastDeployedMachine: formatTime(item.LastDeployedAt, time.RFC3339),
@@ -82,6 +82,24 @@ func (o *ApplicationOutput) Add(item *applications.ApplicationItem) error {
 		Age:                 formatTime(item.CreatedAt, ""),
 
 		ApplicationItem: *item,
+	})
+	return nil
+}
+
+// RecommendationRow is a table row representation of a recommendation.
+type RecommendationRow struct {
+	applications.RecommendationItem `table:"-" csv:"-"`
+}
+
+// RecommendationOutput wraps a recommendation list for output.
+type RecommendationOutput struct {
+	Items []RecommendationRow `json:"items"`
+}
+
+// Add a recommendation item to the output.
+func (o *RecommendationOutput) Add(item *applications.RecommendationItem) error {
+	o.Items = append(o.Items, RecommendationRow{
+		RecommendationItem: *item,
 	})
 	return nil
 }

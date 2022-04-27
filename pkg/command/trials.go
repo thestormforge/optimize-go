@@ -17,22 +17,127 @@ limitations under the License.
 package command
 
 import (
-	"context"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/thestormforge/optimize-go/pkg/api"
 	experiments "github.com/thestormforge/optimize-go/pkg/api/experiments/v1alpha1"
 )
 
-func newTrialsCommand(cfg Config) *cobra.Command {
-	return &cobra.Command{
-		Use:     "trials [NAME ...]",
-		Aliases: []string{"trial"},
+// NewCreateTrialCommand returns a command for creating a trial.
+func NewCreateTrialCommand(cfg Config, p Printer) *cobra.Command {
+	var (
+		assignments     map[string]string
+		defaultBehavior string
+	)
 
-		// Trial names start with experiment names, so we can reuse the completion code
-		ValidArgsFunction: validExperimentArgs(cfg, "-"),
+	cmd := &cobra.Command{
+		Use:  "trial NAME",
+		Args: cobra.ExactArgs(1),
 	}
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		ctx, out := cmd.Context(), cmd.OutOrStdout()
+		client, err := api.NewClient(cfg.Address(), nil)
+		if err != nil {
+			return err
+		}
+
+		expAPI := experiments.NewAPI(client)
+
+		exp, err := expAPI.GetExperimentByName(ctx, experiments.ExperimentName(args[0]))
+		if err != nil {
+			return err
+		}
+
+		trialsURL := exp.Link(api.RelationTrials)
+		if trialsURL == "" {
+			return fmt.Errorf("malformed response, missing trials link")
+		}
+
+		t := experiments.TrialItem{}
+		for _, p := range exp.Parameters {
+			v, err := parameterValue(&p, assignments, defaultBehavior)
+			if err != nil {
+				return err
+			}
+			if v == nil {
+				return fmt.Errorf("no assignment for parameter %q", p.Name)
+			}
+			if err := experiments.CheckParameterValue(&p, v); err != nil {
+				return err
+			}
+			t.Assignments = append(t.Assignments, experiments.Assignment{ParameterName: p.Name, Value: *v})
+		}
+
+		if err := experiments.CheckParameterConstraints(t.Assignments, exp.Constraints); err != nil {
+			return err
+		}
+
+		if _, err := expAPI.CreateTrial(ctx, trialsURL, t.TrialAssignments); err != nil {
+			return err
+		}
+
+		// Abuse TrialOutput to help with formatting
+		// NOTE: The trial number will not exist until the assignments have been pull from the queue
+		o := TrialOutput{}
+		_ = o.Add(&t)
+		return p.Fprint(out, o.Items[0])
+	}
+
+	cmd.Flags().StringToStringVarP(&assignments, "assign", "A", nil, "assign an explicit `key=value` to a parameter")
+	cmd.Flags().StringVar(&defaultBehavior, "default", "", "select the `behavior` for default values; one of: none|min|max|rand")
+
+	return cmd
+}
+
+// NewEditTrialCommand returns a command for editing a trial.
+func NewEditTrialCommand(cfg Config, p Printer) *cobra.Command {
+	var (
+		labels map[string]string
+	)
+
+	cmd := &cobra.Command{
+		Use:               "trial NAME",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: validTrialArgs(cfg),
+	}
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		ctx, out := cmd.Context(), cmd.OutOrStdout()
+		client, err := api.NewClient(cfg.Address(), nil)
+		if err != nil {
+			return err
+		}
+
+		l := experiments.Lister{
+			API: experiments.NewAPI(client),
+		}
+
+		q := experiments.TrialListQuery{}
+		q.SetStatus(experiments.TrialCompleted)
+		return l.ForEachNamedTrial(ctx, args, q, false, func(item *experiments.TrialItem) error {
+			// Apply label changes
+			if len(labels) > 0 {
+				labelsURL := item.Link(api.RelationLabels)
+				if labelsURL == "" {
+					return fmt.Errorf("malformed response, missing labels link")
+				}
+
+				err = l.API.LabelTrial(ctx, labelsURL, experiments.TrialLabels{Labels: labels})
+				if err != nil {
+					return err
+				}
+			}
+
+			return p.Fprint(out, item)
+		})
+	}
+
+	cmd.Flags().StringToStringVar(&labels, "set-label", nil, "label `key=value` pairs to assign")
+
+	return cmd
 }
 
 // NewGetTrialsCommand returns a command for getting trials.
@@ -42,7 +147,12 @@ func NewGetTrialsCommand(cfg Config, p Printer) *cobra.Command {
 		all      bool
 	)
 
-	cmd := newTrialsCommand(cfg)
+	cmd := &cobra.Command{
+		Use:               "trials [NAME ...]",
+		Aliases:           []string{"trial"},
+		ValidArgsFunction: validTrialArgs(cfg),
+	}
+
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
 		client, err := api.NewClient(cfg.Address(), nil)
@@ -63,7 +173,7 @@ func NewGetTrialsCommand(cfg Config, p Printer) *cobra.Command {
 			q.AddStatus(experiments.TrialStaged)
 		}
 
-		if err := forExperimentTrials(ctx, &l, q, parseTrialArgs(args), result.Add); err != nil {
+		if err := l.ForEachNamedTrial(ctx, args, q, false, result.Add); err != nil {
 			return err
 		}
 
@@ -78,7 +188,16 @@ func NewGetTrialsCommand(cfg Config, p Printer) *cobra.Command {
 
 // NewDeleteTrialsCommand returns a command for deleting ("abandoning") trials.
 func NewDeleteTrialsCommand(cfg Config, p Printer) *cobra.Command {
-	cmd := newTrialsCommand(cfg)
+	var (
+		ignoreNotFound bool
+	)
+
+	cmd := &cobra.Command{
+		Use:               "trials [NAME ...]",
+		Aliases:           []string{"trial"},
+		ValidArgsFunction: validTrialArgs(cfg),
+	}
+
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
 		client, err := api.NewClient(cfg.Address(), nil)
@@ -92,7 +211,7 @@ func NewDeleteTrialsCommand(cfg Config, p Printer) *cobra.Command {
 
 		q := experiments.TrialListQuery{}
 		q.SetStatus(experiments.TrialActive)
-		return forExperimentTrials(ctx, &l, q, parseTrialArgs(args), func(item *experiments.TrialItem) error {
+		return l.ForEachNamedTrial(ctx, args, q, ignoreNotFound, func(item *experiments.TrialItem) error {
 			selfURL := item.Link(api.RelationSelf)
 			if selfURL == "" {
 				return fmt.Errorf("malformed response, missing self link")
@@ -110,103 +229,39 @@ func NewDeleteTrialsCommand(cfg Config, p Printer) *cobra.Command {
 	return cmd
 }
 
-// NewLabelTrialsCommand returns a command for labeling trials.
-func NewLabelTrialsCommand(cfg Config, p Printer) *cobra.Command {
-	cmd := newTrialsCommand(cfg)
-	// TODO Should we extend validargsfn with suggestions like `baseline=true` ?
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		ctx, out := cmd.Context(), cmd.OutOrStdout()
-		client, err := api.NewClient(cfg.Address(), nil)
-		if err != nil {
-			return err
-		}
-
-		l := experiments.Lister{
-			API: experiments.NewAPI(client),
-		}
-
-		q := experiments.TrialListQuery{}
-		q.SetStatus(experiments.TrialCompleted)
-		names, labels := argsToNamesAndLabels(args)
-		return forExperimentTrials(ctx, &l, q, parseTrialArgs(names), func(item *experiments.TrialItem) error {
-			labelsURL := item.Link(api.RelationLabels)
-			if labelsURL == "" {
-				return fmt.Errorf("malformed response, missing labels link")
+func validTrialArgs(cfg Config) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+	return validArgs(cfg, func(l *completionLister, toComplete string) (completions []string, directive cobra.ShellCompDirective) {
+		directive |= cobra.ShellCompDirectiveNoFileComp
+		l.forAllExperiments(func(item *experiments.ExperimentItem) {
+			if strings.HasPrefix(item.Name.String(), toComplete) {
+				completions = append(completions, item.Name.String())
 			}
-
-			err = l.API.LabelTrial(ctx, labelsURL, experiments.TrialLabels{Labels: labels})
-			if err != nil {
-				return err
-			}
-
-			return p.Fprint(out, item)
 		})
-	}
 
-	return cmd
+		if len(completions) == 1 && completions[0] == toComplete {
+			completions[0] += "-"
+			directive |= cobra.ShellCompDirectiveNoSpace
+		}
+
+		return
+	})
 }
 
-// experimentTrials is an experiment name and a list of trial numbers. Because trials cannot
-// currently be fetched individually, we only want to fetch the full trial list once and then
-// iterate over that for all the trials that were selected.
-type experimentTrials struct {
-	name    experiments.ExperimentName
-	numbers []int64
-}
-
-// filter decorates the supplied function to ensure it is only invoked on trials
-// whose number is included. The function is unchanged if the current number list is empty.
-func (et *experimentTrials) filter(f func(item *experiments.TrialItem) error) func(item *experiments.TrialItem) error {
-	if len(et.numbers) == 0 {
-		return f
+func parameterValue(p *experiments.Parameter, assignments map[string]string, defaultBehavior string) (*api.NumberOrString, error) {
+	if a, ok := assignments[p.Name]; ok {
+		return p.ParseValue(a)
 	}
 
-	return func(item *experiments.TrialItem) error {
-		for _, num := range et.numbers {
-			if item.Number == num {
-				return f(item)
-			}
-		}
-		return nil
+	switch defaultBehavior {
+	case "none", "":
+		return nil, nil
+	case "min", "minimum":
+		return p.LowerBound()
+	case "max", "maximum":
+		return p.UpperBound()
+	case "rand", "random":
+		return p.RandomValue()
+	default:
+		return nil, fmt.Errorf("unknown default behavior %q", defaultBehavior)
 	}
-}
-
-// parseTrialArgs aggregates the trial numbers for each experiment to prevent us
-// from fetching the trial lists multiple times.
-func parseTrialArgs(args []string) []experimentTrials {
-	trials := make([]experimentTrials, 0, len(args))
-	for _, arg := range args {
-		name, number := experiments.SplitTrialName(arg)
-
-		var inv *experimentTrials
-		for i := range trials {
-			if trials[i].name == name {
-				inv = &trials[i]
-			}
-		}
-		if inv == nil {
-			trials = append(trials, experimentTrials{name: name})
-			inv = &trials[len(trials)-1]
-		}
-
-		if number >= 0 {
-			inv.numbers = append(inv.numbers, number)
-		}
-	}
-	return trials
-}
-
-// forExperimentTrials iterates over the experiment trials, fetching the distinct experiments and trial lists once.
-func forExperimentTrials(ctx context.Context, l *experiments.Lister, q experiments.TrialListQuery, trials []experimentTrials, f func(item *experiments.TrialItem) error) error {
-	for _, et := range trials {
-		exp, err := l.API.GetExperimentByName(ctx, et.name)
-		if err != nil {
-			return err
-		}
-
-		if err := l.ForEachTrial(ctx, &exp, q, et.filter(f)); err != nil {
-			return err
-		}
-	}
-	return nil
 }

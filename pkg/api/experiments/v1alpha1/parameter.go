@@ -19,6 +19,8 @@ package v1alpha1
 import (
 	"encoding/json"
 	"fmt"
+	"math"
+	"math/rand"
 	"strconv"
 	"strings"
 
@@ -77,6 +79,36 @@ func (p *Parameter) ParseValue(s string) (*api.NumberOrString, error) {
 	return &v, nil
 }
 
+// RandomValue returns a random value for a parameter.
+func (p *Parameter) RandomValue() (*api.NumberOrString, error) {
+	var v api.NumberOrString
+	switch p.Type {
+	case ParameterTypeInteger:
+		min, err := p.Bounds.Min.Int64()
+		if err != nil {
+			return nil, fmt.Errorf("unable to determine minimum integer bound: %w", err)
+		}
+		max, err := p.Bounds.Max.Int64()
+		if err != nil {
+			return nil, fmt.Errorf("unable to determine maximum integer bound: %w", err)
+		}
+		v = api.FromInt64(rand.Int63n(max-min) + min)
+	case ParameterTypeDouble:
+		min, err := p.Bounds.Min.Float64()
+		if err != nil {
+			return nil, fmt.Errorf("unable to determine minimum double bound: %w", err)
+		}
+		max, err := p.Bounds.Max.Float64()
+		if err != nil {
+			return nil, fmt.Errorf("unable to determine maximum double bound: %w", err)
+		}
+		v = api.FromFloat64(rand.Float64()*max + min)
+	case ParameterTypeCategorical:
+		v = api.FromString(p.Values[rand.Intn(len(p.Values))])
+	}
+	return &v, nil
+}
+
 // CheckParameterValue validates that the supplied value can be used for a parameter.
 func CheckParameterValue(p *Parameter, v *api.NumberOrString) error {
 	if p.Type == ParameterTypeCategorical {
@@ -120,5 +152,69 @@ func CheckParameterValue(p *Parameter, v *api.NumberOrString) error {
 	default:
 		return fmt.Errorf("unknown parameter type: %s", p.Type)
 	}
+	return nil
+}
+
+// CheckParameterConstraints validates that the supplied assignments do not validate the constraints.
+func CheckParameterConstraints(assignments []Assignment, constraints []Constraint) error {
+	if len(constraints) == 0 || len(assignments) == 0 {
+		return nil
+	}
+
+	// Index numeric assignments and expose a helper for validating them
+	values := make(map[string]float64, len(assignments))
+	for _, a := range assignments {
+		if a.Value.IsString {
+			values[a.ParameterName] = math.NaN()
+		} else {
+			values[a.ParameterName] = a.Value.Float64Value()
+		}
+	}
+	getValue := func(constraintName, parameterName string) (float64, error) {
+		value, ok := values[parameterName]
+		switch {
+		case !ok:
+			return 0, fmt.Errorf("constraint %q references missing parameter %q", constraintName, parameterName)
+		case math.IsNaN(value):
+			return 0, fmt.Errorf("non-numeric assignment for parameter %q cannot be used to satisfy constraint %q", parameterName, constraintName)
+		default:
+			return value, nil
+		}
+	}
+
+	for _, c := range constraints {
+		switch c.ConstraintType {
+		case ConstraintOrder:
+			lower, err := getValue(c.Name, c.OrderConstraint.LowerParameter)
+			if err != nil {
+				return err
+			}
+
+			upper, err := getValue(c.Name, c.OrderConstraint.UpperParameter)
+			if err != nil {
+				return err
+			}
+
+			if lower > upper {
+				return fmt.Errorf("assignment does not satisfy constraint %q", c.Name)
+			}
+
+		case ConstraintSum:
+			var sum float64
+			for _, p := range c.SumConstraint.Parameters {
+				value, err := getValue(c.Name, p.ParameterName)
+				if err != nil {
+					return err
+				}
+
+				sum += value * p.Weight
+			}
+
+			if (c.IsUpperBound && sum > c.Bound) || (!c.IsUpperBound && sum < c.Bound) {
+				return fmt.Errorf("assignment does not satisfy constraint %q", c.Name)
+			}
+		}
+	}
+
 	return nil
 }

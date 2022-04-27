@@ -25,12 +25,50 @@ import (
 	experiments "github.com/thestormforge/optimize-go/pkg/api/experiments/v1alpha1"
 )
 
-func newExperimentsCommand(cfg Config) *cobra.Command {
-	return &cobra.Command{
-		Use:               "experiments [NAME ...]",
-		Aliases:           []string{"experiment", "exps", "exp"},
-		ValidArgsFunction: validExperimentArgs(cfg, ""),
+// NewEditExperimentCommand returns a command for editing an experiment.
+func NewEditExperimentCommand(cfg Config, p Printer) *cobra.Command {
+	var (
+		labels map[string]string
+	)
+
+	cmd := &cobra.Command{
+		Use:               "experiment NAME",
+		Aliases:           []string{"exp"},
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: validExperimentArgs(cfg),
 	}
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		ctx, out := cmd.Context(), cmd.OutOrStdout()
+		client, err := api.NewClient(cfg.Address(), nil)
+		if err != nil {
+			return err
+		}
+
+		l := experiments.Lister{
+			API: experiments.NewAPI(client),
+		}
+
+		return l.ForEachNamedExperiment(ctx, args, false, func(item *experiments.ExperimentItem) error {
+			// Apply label changes
+			if len(labels) > 0 {
+				labelsURL := item.Link(api.RelationLabels)
+				if labelsURL == "" {
+					return fmt.Errorf("malformed response, missing labels link")
+				}
+
+				if err := l.API.LabelExperiment(ctx, labelsURL, experiments.ExperimentLabels{Labels: labels}); err != nil {
+					return err
+				}
+			}
+
+			return p.Fprint(out, item)
+		})
+	}
+
+	cmd.Flags().StringToStringVar(&labels, "set-label", nil, "label `key=value` pairs to assign")
+
+	return cmd
 }
 
 // NewGetExperimentsCommand returns a command for getting experiments.
@@ -40,7 +78,12 @@ func NewGetExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 		selector  string
 	)
 
-	cmd := newExperimentsCommand(cfg)
+	cmd := &cobra.Command{
+		Use:               "experiments [NAME ...]",
+		Aliases:           []string{"experiment", "exps", "exp"},
+		ValidArgsFunction: validExperimentArgs(cfg),
+	}
+
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
 		client, err := api.NewClient(cfg.Address(), nil)
@@ -81,7 +124,12 @@ func NewDeleteExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 		ignoreNotFound bool
 	)
 
-	cmd := newExperimentsCommand(cfg)
+	cmd := &cobra.Command{
+		Use:               "experiments [NAME ...]",
+		Aliases:           []string{"experiment", "exps", "exp"},
+		ValidArgsFunction: validExperimentArgs(cfg),
+	}
+
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
 		client, err := api.NewClient(cfg.Address(), nil)
@@ -112,70 +160,14 @@ func NewDeleteExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 	return cmd
 }
 
-// NewLabelExperimentsCommand returns a command for labeling experiments.
-func NewLabelExperimentsCommand(cfg Config, p Printer) *cobra.Command {
-	cmd := newExperimentsCommand(cfg)
-	cmd.Use += " KEY=VAL ..."
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		ctx, out := cmd.Context(), cmd.OutOrStdout()
-		client, err := api.NewClient(cfg.Address(), nil)
-		if err != nil {
-			return err
-		}
-
-		l := experiments.Lister{
-			API: experiments.NewAPI(client),
-		}
-
-		names, labels := argsToNamesAndLabels(args)
-		return l.ForEachNamedExperiment(ctx, names, false, func(item *experiments.ExperimentItem) error {
-			labelsURL := item.Link(api.RelationLabels)
-			if labelsURL == "" {
-				return fmt.Errorf("malformed response, missing labels link")
+func validExperimentArgs(cfg Config) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+	return validArgs(cfg, func(l *completionLister, toComplete string) (completions []string, directive cobra.ShellCompDirective) {
+		directive |= cobra.ShellCompDirectiveNoFileComp
+		l.forAllExperiments(func(item *experiments.ExperimentItem) {
+			if strings.HasPrefix(item.Name.String(), toComplete) {
+				completions = append(completions, item.Name.String())
 			}
-
-			if err := l.API.LabelExperiment(ctx, labelsURL, experiments.ExperimentLabels{Labels: labels}); err != nil {
-				return err
-			}
-
-			return p.Fprint(out, item)
 		})
-	}
-
-	return cmd
-}
-
-// validExperimentArgs returns shell completion logic for experiment/trial names.
-func validExperimentArgs(cfg Config, singleMatchSuffix string) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
-	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		ctx := cmd.Context()
-		client, err := api.NewClient(cfg.Address(), nil)
-		if err != nil {
-			return nil, cobra.ShellCompDirectiveNoFileComp
-		}
-
-		l := experiments.Lister{
-			API: experiments.NewAPI(client),
-		}
-
-		var names []string
-		_ = l.ForEachExperiment(ctx, experiments.ExperimentListQuery{}, func(item *experiments.ExperimentItem) error {
-			if name := item.Name.String(); strings.HasPrefix(name, toComplete) {
-				names = append(names, name)
-			}
-			return nil
-		})
-
-		// Add the suffix for single matches
-		if singleMatchSuffix != "" && len(names) == 1 && names[0] == toComplete {
-			names[0] += singleMatchSuffix
-		}
-
-		directive := cobra.ShellCompDirectiveNoFileComp
-		if singleMatchSuffix != "" {
-			directive |= cobra.ShellCompDirectiveNoSpace
-		}
-
-		return names, directive
-	}
+		return
+	})
 }

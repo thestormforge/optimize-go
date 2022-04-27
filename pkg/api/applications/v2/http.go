@@ -622,6 +622,20 @@ func (h *httpAPI) PatchRecommendations(ctx context.Context, u string, details Re
 	}
 }
 
+func (h *httpAPI) GetClusterByName(ctx context.Context, n ClusterName) (Cluster, error) {
+	u := h.client.URL(h.endpoint)
+	// TODO This is less then ideal
+	u.Path = path.Join(u.Path, "..", "clusters", n.String())
+	result, err := h.GetCluster(ctx, u.String())
+
+	// Improve the "not found" error message using the name
+	if eerr, ok := err.(*api.Error); ok && eerr.Type == ErrClusterNotFound {
+		eerr.Message = fmt.Sprintf(`cluster "%s" not found`, n)
+	}
+
+	return result, err
+}
+
 func (h *httpAPI) GetCluster(ctx context.Context, u string) (Cluster, error) {
 	result := Cluster{}
 

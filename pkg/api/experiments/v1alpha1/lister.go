@@ -19,6 +19,8 @@ package v1alpha1
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sort"
 
 	"github.com/thestormforge/optimize-go/pkg/api"
 )
@@ -65,7 +67,7 @@ func (l *Lister) ForEachExperiment(ctx context.Context, q ExperimentListQuery, f
 }
 
 // ForEachNamedExperiment iterates over all the named experiments, optionally ignoring those that do not exist.
-func (l *Lister) ForEachNamedExperiment(ctx context.Context, names []string, ignoreNotFound bool, f func(item *ExperimentItem) error) error {
+func (l *Lister) ForEachNamedExperiment(ctx context.Context, names []string, ignoreNotFound bool, f func(*ExperimentItem) error) error {
 	for _, name := range names {
 		exp, err := l.API.GetExperimentByName(ctx, ExperimentName(name))
 		if err != nil {
@@ -118,4 +120,59 @@ func (l *Lister) ForEachTrial(ctx context.Context, exp *Experiment, q TrialListQ
 		q = TrialListQuery{}
 	}
 	return
+}
+
+// ForEachNamedTrial iterates over all the named trials, optionally ignoring those that do not exist.
+func (l *Lister) ForEachNamedTrial(ctx context.Context, names []string, q TrialListQuery, ignoreNotFound bool, f func(*TrialItem) error) error {
+	// Overwrite the limit
+	if l.BatchSize > 0 {
+		q.SetLimit(l.BatchSize)
+	}
+
+	cache := make(map[ExperimentName]map[int64]*TrialItem)
+	for _, n := range names {
+		expName, trialNum := SplitTrialName(n)
+
+		// There is no reliable way to get the per-trial addresses, just load
+		// all the trials into memory the first time we see the experiment
+		if _, ok := cache[expName]; !ok {
+			exp, err := l.API.GetExperimentByName(ctx, expName)
+			if err != nil {
+				return err
+			}
+
+			cache[expName] = make(map[int64]*TrialItem)
+			if err := l.ForEachTrial(ctx, &exp, q, func(item *TrialItem) error {
+				cache[expName][item.Number] = item
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+
+		// If there was no trial number, emit all trials in descending order
+		if trialNum < 0 {
+			result := make([]*TrialItem, 0, len(cache[expName]))
+			for _, t := range cache[expName] {
+				result = append(result, t)
+			}
+			sort.Slice(result, func(i, j int) bool { return result[i].Number > result[j].Number })
+			for _, r := range result {
+				if err := f(r); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+
+		// Get the trial out of the trial cache
+		if t, ok := cache[expName][trialNum]; ok {
+			if err := f(t); err != nil {
+				return err
+			}
+		} else if !ignoreNotFound {
+			return &api.Error{Type: ErrTrialNotFound, Message: fmt.Sprintf("trial not found: %q", n)}
+		}
+	}
+	return nil
 }

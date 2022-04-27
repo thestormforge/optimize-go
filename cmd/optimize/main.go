@@ -23,6 +23,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/signal"
+	"time"
 
 	"github.com/spf13/cobra"
 	applications "github.com/thestormforge/optimize-go/pkg/api/applications/v2"
@@ -59,6 +61,28 @@ func main() {
 		},
 	}
 
+	// Aggregate the CREATE commands
+	createCmd := &cobra.Command{
+		Use: "create",
+	}
+
+	createCmd.AddCommand(
+		command.NewCreateApplicationCommand(cfg, &printer{format: `created application %q.`}),
+		command.NewCreateTrialCommand(cfg, &printer{format: `created trial %q.`}),
+	)
+
+	// Aggregate the EDIT commands
+	editCmd := &cobra.Command{
+		Use: "edit",
+	}
+
+	editCmd.AddCommand(
+		command.NewEditApplicationCommand(cfg, &printer{format: `updated application %q.`}),
+		command.NewEditExperimentCommand(cfg, &printer{format: `updated experiment %q.`}),
+		command.NewEditTrialCommand(cfg, &printer{format: `updated trial %q.`}),
+		command.NewEditClusterCommand(cfg, &printer{format: `updated cluster %q.`}),
+	)
+
 	// Aggregate the GET commands
 	getCmd := &cobra.Command{
 		Use: "get",
@@ -66,6 +90,7 @@ func main() {
 
 	getCmd.AddCommand(
 		command.NewGetApplicationsCommand(cfg, &printer{}),
+		command.NewGetRecommendationsCommand(cfg, &printer{}),
 		command.NewGetExperimentsCommand(cfg, &printer{}),
 		command.NewGetTrialsCommand(cfg, &printer{}),
 		command.NewGetClustersCommand(cfg, &printer{}),
@@ -80,26 +105,28 @@ func main() {
 		command.NewDeleteApplicationsCommand(cfg, &printer{format: `deleted application %q.`}),
 		command.NewDeleteExperimentsCommand(cfg, &printer{format: `deleted experiment %q.`}),
 		command.NewDeleteTrialsCommand(cfg, &printer{format: `deleted trial %q.`}),
-	)
-
-	// Aggregate the LABEL commands
-	labelCmd := &cobra.Command{
-		Use: "label",
-	}
-
-	labelCmd.AddCommand(
-		command.NewLabelExperimentsCommand(cfg, &printer{format: `labeled experiment %q.`}),
-		command.NewLabelTrialsCommand(cfg, &printer{format: `labeled trial %q.`}),
+		command.NewDeleteClustersCommand(cfg, &printer{format: `deleted cluster %q.`}),
 	)
 
 	// Add the aggregate commends to the root
 	cmd.AddCommand(
+		createCmd,
+		editCmd,
 		getCmd,
 		deleteCmd,
-		labelCmd,
 	)
 
-	if err := cmd.ExecuteContext(context.Background()); err != nil {
+	// Create a context for the command
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{
+		Transport: http.DefaultTransport,
+		Timeout:   10 * time.Second,
+	})
+
+	// Run the command
+	err := cmd.ExecuteContext(ctx)
+	cancel()
+	if err != nil {
 		os.Exit(1)
 	}
 }

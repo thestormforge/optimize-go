@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/thestormforge/optimize-go/pkg/api"
 )
@@ -121,6 +123,113 @@ func (l *Lister) ForEachScenario(ctx context.Context, app *Application, q Scenar
 	return
 }
 
+// ForEachRecommendation iterates over all the recommendations for an application.
+func (l *Lister) ForEachRecommendation(ctx context.Context, app *Application, f func(item *RecommendationItem) error) (err error) {
+	// Define a helper to iteratively (NOT recursively) list and visit recommendations
+	forEach := func(u string) (string, error) {
+		lst, err := l.API.ListRecommendations(ctx, u)
+		if err != nil {
+			return "", err
+		}
+
+		for i := range lst.Recommendations {
+			if err := f(&lst.Recommendations[i]); err != nil {
+				return "", err
+			}
+			if err := ctx.Err(); err != nil {
+				return "", err
+			}
+		}
+
+		return lst.Link(api.RelationNext), nil
+	}
+
+	// Iterate over all scenario pages, starting with the application's "rel=scenarios"
+	u := app.Link(api.RelationRecommendations)
+	for u != "" && err == nil {
+		u, err = forEach(u)
+	}
+	return
+}
+
+// ForEachNamedRecommendation iterates over all the named recommendations, optionally ignoring those that do not exist.
+func (l *Lister) ForEachNamedRecommendation(ctx context.Context, names []string, ignoreNotFound bool, f func(item *RecommendationItem) error) error {
+	cache := make(map[ApplicationName]map[string]string)
+	for _, name := range names {
+		appName, recName := SplitRecommendationName(name)
+
+		// Unlike trials, the recommendation index is incomplete: there is more
+		// information available on the individual resources. However: the only
+		// way to safely traverse to the recommendation is via the index. Here
+		// we are just building up the list of URLs to the recommendations.
+		if _, ok := cache[appName]; !ok {
+			app, err := l.API.GetApplicationByName(ctx, appName)
+			if err != nil {
+				return err
+			}
+
+			cache[appName] = make(map[string]string)
+			if err := l.ForEachRecommendation(ctx, &app, func(item *RecommendationItem) error {
+				cache[appName][item.Name] = item.Link(api.RelationSelf)
+				return nil
+			}); err != nil {
+				return err
+			}
+
+			// HACK: Because the index contains so few entries, if we have a
+			// recommendation name, we are going to take a guess at the URL
+			// while we have the application in scope. Typically, this is strictly verboten.
+			if _, ok := cache[appName][recName]; !ok && recName != "" {
+				cache[appName][recName] = strings.TrimRight(app.Link(api.RelationRecommendations), "/") + "/" + recName
+			}
+		}
+
+		// If there is no recommendation name, emit all recommendations in
+		// descending order. Note that "all" here mean "everything from the
+		// index"; as of writing, that is a partial "most recent" list with no
+		// query support for full inclusion.
+		if recName == "" {
+			result := make([]*RecommendationItem, 0, len(cache[appName]))
+			for _, u := range cache[appName] {
+				rec, err := l.API.GetRecommendation(ctx, u)
+				if err != nil {
+					var notFoundErr *api.Error
+					if errors.As(err, &notFoundErr) && notFoundErr.Type == ErrRecommendationNotFound && ignoreNotFound {
+						continue
+					}
+					return err
+				}
+				result = append(result, &RecommendationItem{Recommendation: rec})
+			}
+			sort.Slice(result, func(i, j int) bool { return result[i].LastModified().After(result[j].LastModified()) })
+			for _, r := range result {
+				if err := f(r); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+
+		// Get the recommendation out of the recommendation cache
+		if u, ok := cache[appName][recName]; ok {
+			rec, err := l.API.GetRecommendation(ctx, u)
+			if err != nil {
+				return err
+			}
+			if err := f(&RecommendationItem{Recommendation: rec}); err != nil {
+				var notFoundErr *api.Error
+				if errors.As(err, &notFoundErr) && notFoundErr.Type == ErrRecommendationNotFound && ignoreNotFound {
+					continue
+				}
+				return err
+			}
+		} else if !ignoreNotFound {
+			return &api.Error{Type: ErrRecommendationNotFound, Message: fmt.Sprintf("recommendation not found: %q", recName)}
+		}
+	}
+	return nil
+}
+
 // GetApplicationByNameOrTitle tries to get an application by name and falls back to a
 // linear search over all the applications by title.
 func (l *Lister) GetApplicationByNameOrTitle(ctx context.Context, name string) (*Application, error) {
@@ -220,4 +329,23 @@ func (l *Lister) ForEachCluster(ctx context.Context, f func(item *ClusterItem) e
 		panic("not implemented")
 	}
 	return err
+}
+
+// ForEachNamedCluster iterates over all the named clusters, optionally ignoring those that do not exist.
+func (l *Lister) ForEachNamedCluster(ctx context.Context, names []string, ignoreNotFound bool, f func(item *ClusterItem) error) error {
+	for _, name := range names {
+		c, err := l.API.GetClusterByName(ctx, ClusterName(name))
+		if err != nil {
+			var notFoundErr *api.Error
+			if errors.As(err, &notFoundErr) && notFoundErr.Type == ErrClusterNotFound && ignoreNotFound {
+				continue
+			}
+			return err
+		}
+
+		if err := f(&ClusterItem{Cluster: c}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
