@@ -25,6 +25,73 @@ import (
 	experiments "github.com/thestormforge/optimize-go/pkg/api/experiments/v1alpha1"
 )
 
+// NewCreateTrialCommand returns a command for creating a trial.
+func NewCreateTrialCommand(cfg Config, p Printer) *cobra.Command {
+	var (
+		assignments     map[string]string
+		defaultBehavior string
+	)
+
+	cmd := &cobra.Command{
+		Use:  "trial NAME",
+		Args: cobra.ExactArgs(1),
+	}
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		ctx, out := cmd.Context(), cmd.OutOrStdout()
+		client, err := api.NewClient(cfg.Address(), nil)
+		if err != nil {
+			return err
+		}
+
+		expAPI := experiments.NewAPI(client)
+
+		exp, err := expAPI.GetExperimentByName(ctx, experiments.ExperimentName(args[0]))
+		if err != nil {
+			return err
+		}
+
+		trialsURL := exp.Link(api.RelationTrials)
+		if trialsURL == "" {
+			return fmt.Errorf("malformed response, missing trials link")
+		}
+
+		t := experiments.TrialItem{}
+		for _, p := range exp.Parameters {
+			v, err := parameterValue(&p, assignments, defaultBehavior)
+			if err != nil {
+				return err
+			}
+			if v == nil {
+				return fmt.Errorf("no assignment for parameter %q", p.Name)
+			}
+			if err := experiments.CheckParameterValue(&p, v); err != nil {
+				return err
+			}
+			t.Assignments = append(t.Assignments, experiments.Assignment{ParameterName: p.Name, Value: *v})
+		}
+
+		if err := experiments.CheckParameterConstraints(t.Assignments, exp.Constraints); err != nil {
+			return err
+		}
+
+		if _, err := expAPI.CreateTrial(ctx, trialsURL, t.TrialAssignments); err != nil {
+			return err
+		}
+
+		// Abuse TrialOutput to help with formatting
+		// NOTE: The trial number will not exist until the assignments have been pull from the queue
+		o := TrialOutput{}
+		_ = o.Add(&t)
+		return p.Fprint(out, o.Items[0])
+	}
+
+	cmd.Flags().StringToStringVarP(&assignments, "assign", "A", nil, "assign an explicit `key=value` to a parameter")
+	cmd.Flags().StringVar(&defaultBehavior, "default", "", "select the `behavior` for default values; one of: none|min|max|rand")
+
+	return cmd
+}
+
 // NewGetTrialsCommand returns a command for getting trials.
 func NewGetTrialsCommand(cfg Config, p Printer) *cobra.Command {
 	var (
@@ -178,4 +245,23 @@ func validTrialArgs(cfg Config) func(*cobra.Command, []string, string) ([]string
 
 		return
 	})
+}
+
+func parameterValue(p *experiments.Parameter, assignments map[string]string, defaultBehavior string) (*api.NumberOrString, error) {
+	if a, ok := assignments[p.Name]; ok {
+		return p.ParseValue(a)
+	}
+
+	switch defaultBehavior {
+	case "none", "":
+		return nil, nil
+	case "min", "minimum":
+		return p.LowerBound()
+	case "max", "maximum":
+		return p.UpperBound()
+	case "rand", "random":
+		return p.RandomValue()
+	default:
+		return nil, fmt.Errorf("unknown default behavior %q", defaultBehavior)
+	}
 }
