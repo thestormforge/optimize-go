@@ -652,7 +652,8 @@ func (h *httpAPI) GetCluster(ctx context.Context, u string) (Cluster, error) {
 	switch resp.StatusCode {
 	case http.StatusOK:
 		api.UnmarshalMetadata(resp, &result.Metadata)
-		err = json.Unmarshal(body, &result)
+		// TODO This should be `err = json.Unmarshal(body, &result)` but the clusters API isn't setting headers...
+		err = api.UnmarshalJSON(body, &result)
 		return result, err
 	case http.StatusNotFound:
 		return result, api.NewError(ErrClusterNotFound, resp, body)
