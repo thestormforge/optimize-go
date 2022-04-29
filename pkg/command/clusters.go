@@ -65,7 +65,7 @@ func NewEditClusterCommand(cfg Config, p Printer) *cobra.Command {
 		})
 	}
 
-	cmd.Flags().StringVar(&title, "set-title", "", "update the `title` value")
+	cmd.Flags().StringVar(&title, "title", "", "update the `title` value")
 
 	return cmd
 }

@@ -19,6 +19,7 @@ package command
 import (
 	"io"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -40,8 +41,10 @@ func formatTime(t time.Time, layout string) string {
 	switch {
 	case t.IsZero():
 		return ""
-	case layout == "":
+	case layout == "ago":
 		return humanize.Time(t)
+	case layout == "":
+		return strings.TrimSpace(humanize.RelTime(t, time.Now(), "", ""))
 	default:
 		return t.Format(layout)
 	}
@@ -78,7 +81,7 @@ func (o *ApplicationOutput) Add(item *applications.ApplicationItem) error {
 		ScenarioCount:       item.ScenarioCount,
 		RecommendationMode:  cases.Title(language.AmericanEnglish).String(string(item.Recommendations)),
 		LastDeployedMachine: formatTime(item.LastDeployedAt, time.RFC3339),
-		LastDeployedHuman:   formatTime(item.LastDeployedAt, ""),
+		LastDeployedHuman:   formatTime(item.LastDeployedAt, "ago"),
 		Age:                 formatTime(item.CreatedAt, ""),
 
 		ApplicationItem: *item,
@@ -189,7 +192,7 @@ func (o *TrialOutput) Add(item *experiments.TrialItem) error {
 // ClusterRow is a table row representation of a cluster.
 type ClusterRow struct {
 	Name                   string `table:"name" csv:"name" json:"-"`
-	DisplayName            string `table:"Name,custom" json:"-"`
+	DisplayName            string `table:"title" json:"-"`
 	OptimizeProVersion     string `table:"optimize_pro" csv:"optimize_pro_version" json:"-"`
 	OptimizeLiveVersion    string `table:"optimize_live" csv:"optimize_live_version" json:"-"`
 	PerformanceTestVersion string `table:"performance_test,wide" csv:"performance_test_version" json:"-"`
@@ -216,7 +219,7 @@ func (o *ClusterOutput) Add(item *applications.ClusterItem) error {
 		PerformanceTestVersion: item.PerformanceTestVersion,
 		KubernetesVersion:      item.KubernetesVersion,
 		LastSeenMachine:        formatTime(item.LastSeen, time.RFC3339),
-		LastSeenHuman:          formatTime(item.LastSeen, ""),
+		LastSeenHuman:          formatTime(item.LastSeen, "ago"),
 		Age:                    formatTime(item.CreatedAt, ""),
 
 		ClusterItem: *item,
