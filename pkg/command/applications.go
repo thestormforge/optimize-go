@@ -57,20 +57,25 @@ func NewCreateApplicationCommand(cfg Config, p Printer) *cobra.Command {
 		}
 
 		// Upsert the application if we have a name, otherwise create it with a generated name
-		var md api.Metadata
+		var selfURL string
 		if len(args) > 0 && args[0] != "" {
 			name := applications.ApplicationName(args[0])
-			md, err = appAPI.UpsertApplicationByName(ctx, name, app)
+			md, err := appAPI.UpsertApplicationByName(ctx, name, app)
+			if err != nil {
+				return err
+			}
+			selfURL = md.Link(api.RelationSelf)
 		} else {
-			md, err = appAPI.CreateApplication(ctx, app)
-		}
-		if err != nil {
-			return err
+			md, err := appAPI.CreateApplication(ctx, app)
+			if err != nil {
+				return err
+			}
+			selfURL = md.Location()
 		}
 
 		// Fetch the application back for display
-		if md.Location() != "" {
-			if a, err := appAPI.GetApplication(ctx, md.Location()); err == nil {
+		if selfURL != "" {
+			if a, err := appAPI.GetApplication(ctx, selfURL); err == nil {
 				app = a
 			}
 		}

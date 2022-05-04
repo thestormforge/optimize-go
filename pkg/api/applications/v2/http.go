@@ -235,6 +235,21 @@ func (h *httpAPI) ListScenarios(ctx context.Context, u string, q ScenarioListQue
 func (h *httpAPI) CreateScenario(ctx context.Context, u string, scn Scenario) (api.Metadata, error) {
 	result := api.Metadata{}
 
+	// This is ugly. The idea is that we switch over to upsert for you if the
+	// scenario name is set (assuming that the only reason there would be a name
+	// is when you actually also have a URL).
+	if scn.Name != "" {
+		// Scenarios named "scenarios"...
+		if uu, err := url.Parse(u); err == nil && path.Base(uu.Path) != scn.Name {
+			uu.Path = path.Join(uu.Path, scn.Name)
+			sscn, err := h.UpsertScenario(ctx, uu.String(), scn)
+			if err != nil {
+				return nil, err
+			}
+			return sscn.Metadata, nil
+		}
+	}
+
 	req, err := httpNewJSONRequest(http.MethodPost, u, scn)
 	if err != nil {
 		return nil, err

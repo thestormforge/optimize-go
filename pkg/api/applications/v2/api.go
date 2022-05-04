@@ -68,7 +68,7 @@ type API interface {
 	CreateScenario(ctx context.Context, u string, scn Scenario) (api.Metadata, error)
 	// GetScenario retrieves a scenario.
 	GetScenario(ctx context.Context, u string) (Scenario, error)
-	// UpsertScenario updates or creates a scenario with the URL scenario name.
+	// UpsertScenario updates or creates a scenario.
 	UpsertScenario(ctx context.Context, u string, scn Scenario) (Scenario, error)
 	// DeleteScenario deletes a scenario.
 	DeleteScenario(ctx context.Context, u string) error
