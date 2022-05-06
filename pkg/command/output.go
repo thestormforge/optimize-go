@@ -89,6 +89,28 @@ func (o *ApplicationOutput) Add(item *applications.ApplicationItem) error {
 	return nil
 }
 
+// ScenarioRow is a table row representation of a scenario.
+type ScenarioRow struct {
+	Name string `table:"name" csv:"name" json:"-"`
+
+	applications.ScenarioItem `table:"-" csv:"-"`
+}
+
+// ScenarioOutput wraps a scenario list for output.
+type ScenarioOutput struct {
+	Items []ScenarioRow `json:"items"`
+}
+
+// Add a scenario item to the output.
+func (o *ScenarioOutput) Add(item *applications.ScenarioItem) error {
+	o.Items = append(o.Items, ScenarioRow{
+		Name: item.Name.String(),
+
+		ScenarioItem: *item,
+	})
+	return nil
+}
+
 // RecommendationRow is a table row representation of a recommendation.
 type RecommendationRow struct {
 	applications.RecommendationItem `table:"-" csv:"-"`

@@ -68,6 +68,7 @@ func main() {
 
 	createCmd.AddCommand(
 		command.NewCreateApplicationCommand(cfg, &printer{format: `created application %q.`}),
+		command.NewCreateScenarioCommand(cfg, &printer{format: `created scenario %q.`}),
 		command.NewCreateTrialCommand(cfg, &printer{format: `created trial %q.`}),
 	)
 
@@ -90,6 +91,7 @@ func main() {
 
 	getCmd.AddCommand(
 		command.NewGetApplicationsCommand(cfg, &printer{}),
+		command.NewGetScenariosCommand(cfg, &printer{}),
 		command.NewGetRecommendationsCommand(cfg, &printer{}),
 		command.NewGetExperimentsCommand(cfg, &printer{}),
 		command.NewGetTrialsCommand(cfg, &printer{}),
@@ -103,6 +105,7 @@ func main() {
 
 	deleteCmd.AddCommand(
 		command.NewDeleteApplicationsCommand(cfg, &printer{format: `deleted application %q.`}),
+		command.NewDeleteScenariosCommand(cfg, &printer{format: `deleted scenario %q.`}),
 		command.NewDeleteExperimentsCommand(cfg, &printer{format: `deleted experiment %q.`}),
 		command.NewDeleteTrialsCommand(cfg, &printer{format: `deleted trial %q.`}),
 		command.NewDeleteClustersCommand(cfg, &printer{format: `deleted cluster %q.`}),

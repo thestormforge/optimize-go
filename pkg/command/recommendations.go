@@ -44,7 +44,6 @@ func NewGetRecommendationsCommand(cfg Config, p Printer) *cobra.Command {
 		}
 
 		result := &RecommendationOutput{Items: make([]RecommendationRow, 0, len(args))}
-
 		if err := l.ForEachNamedRecommendation(ctx, args, false, result.Add); err != nil {
 			return err
 		}
