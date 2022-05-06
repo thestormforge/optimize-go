@@ -123,6 +123,46 @@ func (l *Lister) ForEachScenario(ctx context.Context, app *Application, q Scenar
 	return
 }
 
+// ForEachNamedScenario iterates over all the named scenarios, optionally ignoring those that do not exist.
+func (l *Lister) ForEachNamedScenario(ctx context.Context, names []string, ignoreNotFound bool, f func(item *ScenarioItem) error) error {
+	cache := make(map[ApplicationName]*Application)
+	for _, name := range names {
+		appName, scnName := SplitScenarioName(name)
+
+		app, ok := cache[appName]
+		if !ok {
+			appByName, err := l.API.GetApplicationByName(ctx, appName)
+			if err != nil {
+				return err
+			}
+			app = &appByName
+			cache[appName] = app
+		}
+
+		scenarioURL := app.Link(api.RelationScenarios)
+		if scenarioURL == "" {
+			return fmt.Errorf("malformed respose: missing scenarios link")
+		}
+
+		if scnName == "" {
+			return l.ForEachScenario(ctx, app, ScenarioListQuery{}, f)
+		}
+
+		scn, err := l.API.GetScenarioByName(ctx, scenarioURL, scnName)
+		if err != nil {
+			var notFoundErr *api.Error
+			if errors.As(err, &notFoundErr) && notFoundErr.Type == ErrScenarioNotFound && ignoreNotFound {
+				continue
+			}
+			return err
+		}
+		if err := f(&ScenarioItem{Scenario: scn}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // ForEachRecommendation iterates over all the recommendations for an application.
 func (l *Lister) ForEachRecommendation(ctx context.Context, app *Application, f func(item *RecommendationItem) error) (err error) {
 	// Define a helper to iteratively (NOT recursively) list and visit recommendations
@@ -272,7 +312,7 @@ func (l *Lister) GetScenarioByNameOrTitle(ctx context.Context, app *Application,
 	var scnByName, scnByTitle *Scenario
 	err := l.ForEachScenario(ctx, app, ScenarioListQuery{}, func(scn *ScenarioItem) error {
 		// This should be unique
-		if scn.Name == name {
+		if scn.Name.String() == name {
 			scnByName = &scn.Scenario
 		}
 

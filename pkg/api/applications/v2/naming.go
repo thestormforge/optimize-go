@@ -33,6 +33,15 @@ type ClusterName string
 
 func (n ClusterName) String() string { return string(n) }
 
+func SplitScenarioName(name string) (ApplicationName, ScenarioName) {
+	parts := strings.SplitN(name, "/", 2)
+	var scenarioName string
+	if len(parts) > 1 {
+		scenarioName = parts[1]
+	}
+	return ApplicationName(parts[0]), ScenarioName(scenarioName)
+}
+
 func SplitRecommendationName(name string) (ApplicationName, string) {
 	parts := strings.SplitN(name, "/", 2)
 	var recommendationName string
