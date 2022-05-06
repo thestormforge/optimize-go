@@ -24,10 +24,10 @@ import (
 
 type Application struct {
 	api.Metadata `json:"-"`
-	Name         ApplicationName `json:"name"`
+	Name         ApplicationName `json:"name,omitempty"`
 	DisplayName  string          `json:"title,omitempty"` // TODO This doesn't seem to get set
 	Resources    []Resource      `json:"resources,omitempty"`
-	CreatedAt    time.Time       `json:"createdAt"`
+	CreatedAt    *time.Time      `json:"createdAt,omitempty"`
 }
 
 // NOTE: Use `DisplayName` as the field since `Title()` is a function on the embedded `Metadata`.
@@ -39,7 +39,7 @@ type ApplicationItem struct {
 	Application
 	// The number of scenarios associated with this application.
 	ScenarioCount   int                 `json:"scenarioCount,omitempty"`
-	LastDeployedAt  time.Time           `json:"lastDeployedAt,omitempty"`
+	LastDeployedAt  *time.Time          `json:"lastDeployedAt,omitempty"`
 	Recommendations RecommendationsMode `json:"recommendations,omitempty"`
 }
 

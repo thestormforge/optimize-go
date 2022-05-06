@@ -24,10 +24,11 @@ import (
 
 type Scenario struct {
 	api.Metadata  `json:"-"`
-	Name          string        `json:"name"`
+	Name          string        `json:"name,omitempty"`
 	DisplayName   string        `json:"title,omitempty"`
 	Configuration []interface{} `json:"configuration,omitempty"`
 	Objective     []interface{} `json:"objective,omitempty"`
+	Clusters      []string      `json:"clusters,omitempty"`
 
 	StormForgePerformance interface{} `json:"stormforgePerf,omitempty"`
 	Locust                interface{} `json:"locust,omitempty"`

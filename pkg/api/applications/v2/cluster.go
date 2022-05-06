@@ -24,13 +24,13 @@ import (
 
 type Cluster struct {
 	api.Metadata           `json:"-"`
-	Name                   ClusterName `json:"name"`
-	CreatedAt              time.Time   `json:"created"`
+	Name                   ClusterName `json:"name,omitempty"`
+	CreatedAt              *time.Time  `json:"created,omitempty"`
 	OptimizeProVersion     string      `json:"optimizeProVersion,omitempty"`
 	OptimizeLiveVersion    string      `json:"optimizeLiveVersion,omitempty"`
 	PerformanceTestVersion string      `json:"performanceTestVersion,omitempty"`
 	KubernetesVersion      string      `json:"kubernetesVersion,omitempty"`
-	LastSeen               time.Time   `json:"lastSeen"`
+	LastSeen               *time.Time  `json:"lastSeen,omitempty"`
 }
 
 type ClusterItem struct {

@@ -37,14 +37,14 @@ type Printer interface {
 
 // formatTime is a helper that returns empty strings for zero times and adds
 // support for a humanized format (if the layout is empty).
-func formatTime(t time.Time, layout string) string {
+func formatTime(t *time.Time, layout string) string {
 	switch {
-	case t.IsZero():
+	case t == nil || t.IsZero():
 		return ""
 	case layout == "ago":
-		return humanize.Time(t)
+		return humanize.Time(*t)
 	case layout == "":
-		return strings.TrimSpace(humanize.RelTime(t, time.Now(), "", ""))
+		return strings.TrimSpace(humanize.RelTime(*t, time.Now(), "", ""))
 	default:
 		return t.Format(layout)
 	}
