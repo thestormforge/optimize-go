@@ -17,6 +17,8 @@ limitations under the License.
 package v2
 
 import (
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/thestormforge/optimize-go/pkg/api"
@@ -31,6 +33,28 @@ type Cluster struct {
 	PerformanceTestVersion string      `json:"performanceTestVersion,omitempty"`
 	KubernetesVersion      string      `json:"kubernetesVersion,omitempty"`
 	LastSeen               *time.Time  `json:"lastSeen,omitempty"`
+}
+
+type ClusterModule string
+
+const (
+	ClusterRecommendations ClusterModule = "recommendations"
+	ClusterScenarios       ClusterModule = "scenarios"
+)
+
+type ClusterListQuery struct{ api.IndexQuery }
+
+func (q *ClusterListQuery) SetModules(modules ...ClusterModule) {
+	str := make([]string, 0, len(modules))
+	for _, s := range modules {
+		str = append(str, string(s))
+	}
+	if len(str) > 0 {
+		if q.IndexQuery == nil {
+			q.IndexQuery = api.IndexQuery{}
+		}
+		url.Values(q.IndexQuery).Set("modules", strings.Join(str, ","))
+	}
 }
 
 type ClusterItem struct {

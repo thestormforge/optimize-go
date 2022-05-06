@@ -112,7 +112,7 @@ type API interface {
 	// GetClusterByName retrieves a cluster.
 	GetClusterByName(ctx context.Context, n ClusterName) (Cluster, error)
 	// ListClusters lists clusters.
-	ListClusters(ctx context.Context) (ClusterList, error)
+	ListClusters(ctx context.Context, q ClusterListQuery) (ClusterList, error)
 	// PatchCluster updates a cluster title.
 	PatchCluster(ctx context.Context, u string, c ClusterTitle) error
 	// DeleteCluster deletes a cluster.

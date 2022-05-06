@@ -72,6 +72,11 @@ func NewEditClusterCommand(cfg Config, p Printer) *cobra.Command {
 
 // NewGetClustersCommand returns a command for getting clusters.
 func NewGetClustersCommand(cfg Config, p Printer) *cobra.Command {
+	var (
+		optimizeProOnly  bool
+		optimizeLiveOnly bool
+	)
+
 	cmd := &cobra.Command{
 		Use:               "clusters [NAME ...]",
 		Aliases:           []string{"cluster"},
@@ -95,13 +100,23 @@ func NewGetClustersCommand(cfg Config, p Printer) *cobra.Command {
 				return err
 			}
 		} else {
-			if err := l.ForEachCluster(ctx, result.Add); err != nil {
+			q := applications.ClusterListQuery{}
+			switch {
+			case optimizeProOnly && !optimizeLiveOnly:
+				q.SetModules(applications.ClusterScenarios)
+			case optimizeLiveOnly && !optimizeProOnly:
+				q.SetModules(applications.ClusterRecommendations)
+			}
+			if err := l.ForEachCluster(ctx, q, result.Add); err != nil {
 				return err
 			}
 		}
 
 		return p.Fprint(out, result)
 	}
+
+	cmd.Flags().BoolVar(&optimizeProOnly, "optimize-pro", false, "show only StormForge Optimize Pro clusters")
+	cmd.Flags().BoolVar(&optimizeProOnly, "optimize-live", false, "show only StormForge Optimize Live clusters")
 
 	return cmd
 }

@@ -685,9 +685,10 @@ func (h *httpAPI) GetCluster(ctx context.Context, u string) (Cluster, error) {
 	}
 }
 
-func (h *httpAPI) ListClusters(ctx context.Context) (ClusterList, error) {
+func (h *httpAPI) ListClusters(ctx context.Context, q ClusterListQuery) (ClusterList, error) {
 	// TODO This is less then ideal
 	u := h.client.URL(h.endpoint + "../clusters")
+	u.RawQuery = url.Values(q.IndexQuery).Encode()
 
 	result := ClusterList{}
 

@@ -90,7 +90,7 @@ func (c *completionLister) forAllExperiments(f func(item *experiments.Experiment
 // forEachCluster lists all cluster, ignoring errors.
 func (c *completionLister) forAllClusters(f func(item *applications.ClusterItem)) {
 	l := applications.Lister{API: applications.NewAPI(c.client)}
-	_ = l.ForEachCluster(c.ctx, func(item *applications.ClusterItem) error {
+	_ = l.ForEachCluster(c.ctx, applications.ClusterListQuery{}, func(item *applications.ClusterItem) error {
 		f(item)
 		return nil
 	})
