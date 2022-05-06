@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"time"
 
@@ -30,15 +31,19 @@ import (
 )
 
 // NewAPI returns a new API implementation for the specified client.
-func NewAPI(c api.Client) API {
-	return &httpAPI{client: c, endpoint: "v1/experiments/"}
+func NewAPI(client api.Client) API {
+	endpoint := os.Getenv("STORMFORGE_EXPERIMENTS_ENDPOINT")
+	if endpoint == "" {
+		endpoint = "v1/experiments/"
+	}
+	return &httpAPI{client: client, endpoint: endpoint}
 }
 
 // NewAPIWithEndpoint returns a new API implementation with an alternate endpoint.
-func NewAPIWithEndpoint(c api.Client, endpoint string) (API, error) {
+func NewAPIWithEndpoint(client api.Client, endpoint string) (API, error) {
 	// If endpoint is not a valid URL, calling `c.URL(endpoint)` would panic
 	_, err := url.Parse(endpoint)
-	return &httpAPI{client: c, endpoint: endpoint}, err
+	return &httpAPI{client: client, endpoint: endpoint}, err
 }
 
 type httpAPI struct {

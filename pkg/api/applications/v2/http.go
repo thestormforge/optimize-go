@@ -23,13 +23,18 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 
 	"github.com/thestormforge/optimize-go/pkg/api"
 )
 
-func NewAPI(c api.Client) API {
-	return &httpAPI{client: c, endpoint: "v2/applications/"}
+func NewAPI(client api.Client) API {
+	endpoint := os.Getenv("STORMFORGE_APPLICATIONS_ENDPOINT")
+	if endpoint == "" {
+		endpoint = "v2/applications/"
+	}
+	return &httpAPI{client: client, endpoint: endpoint}
 }
 
 type httpAPI struct {
