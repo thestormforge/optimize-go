@@ -24,7 +24,7 @@ import (
 
 type Scenario struct {
 	api.Metadata  `json:"-"`
-	Name          string        `json:"name,omitempty"`
+	Name          ScenarioName  `json:"name,omitempty"`
 	DisplayName   string        `json:"title,omitempty"`
 	Configuration []interface{} `json:"configuration,omitempty"`
 	Objective     []interface{} `json:"objective,omitempty"`

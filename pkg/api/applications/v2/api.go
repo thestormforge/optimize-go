@@ -68,8 +68,12 @@ type API interface {
 	CreateScenario(ctx context.Context, u string, scn Scenario) (api.Metadata, error)
 	// GetScenario retrieves a scenario.
 	GetScenario(ctx context.Context, u string) (Scenario, error)
+	// GetScenarioByName retrieves a scenario by name.
+	GetScenarioByName(ctx context.Context, u string, n ScenarioName) (Scenario, error)
 	// UpsertScenario updates or creates a scenario.
 	UpsertScenario(ctx context.Context, u string, scn Scenario) (Scenario, error)
+	// UpsertScenarioByName updates or creates a scenario.
+	UpsertScenarioByName(ctx context.Context, u string, n ScenarioName, scn Scenario) (Scenario, error)
 	// DeleteScenario deletes a scenario.
 	DeleteScenario(ctx context.Context, u string) error
 	// PatchScenario updates attributes on a scenario.

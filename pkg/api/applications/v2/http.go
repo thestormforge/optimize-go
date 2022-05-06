@@ -240,21 +240,6 @@ func (h *httpAPI) ListScenarios(ctx context.Context, u string, q ScenarioListQue
 func (h *httpAPI) CreateScenario(ctx context.Context, u string, scn Scenario) (api.Metadata, error) {
 	result := api.Metadata{}
 
-	// This is ugly. The idea is that we switch over to upsert for you if the
-	// scenario name is set (assuming that the only reason there would be a name
-	// is when you actually also have a URL).
-	if scn.Name != "" {
-		// Scenarios named "scenarios"...
-		if uu, err := url.Parse(u); err == nil && path.Base(uu.Path) != scn.Name {
-			uu.Path = path.Join(uu.Path, scn.Name)
-			sscn, err := h.UpsertScenario(ctx, uu.String(), scn)
-			if err != nil {
-				return nil, err
-			}
-			return sscn.Metadata, nil
-		}
-	}
-
 	req, err := httpNewJSONRequest(http.MethodPost, u, scn)
 	if err != nil {
 		return nil, err
@@ -303,6 +288,15 @@ func (h *httpAPI) GetScenario(ctx context.Context, u string) (Scenario, error) {
 	}
 }
 
+func (h *httpAPI) GetScenarioByName(ctx context.Context, u string, n ScenarioName) (Scenario, error) {
+	uu, err := url.Parse(u)
+	if err != nil {
+		return Scenario{}, err
+	}
+	uu.Path = path.Join(uu.Path, n.String())
+	return h.GetScenario(ctx, uu.String())
+}
+
 func (h *httpAPI) UpsertScenario(ctx context.Context, u string, scn Scenario) (Scenario, error) {
 	result := Scenario{}
 
@@ -328,6 +322,15 @@ func (h *httpAPI) UpsertScenario(ctx context.Context, u string, scn Scenario) (S
 	default:
 		return result, api.NewUnexpectedError(resp, body)
 	}
+}
+
+func (h *httpAPI) UpsertScenarioByName(ctx context.Context, u string, n ScenarioName, scn Scenario) (Scenario, error) {
+	uu, err := url.Parse(u)
+	if err != nil {
+		return Scenario{}, err
+	}
+	uu.Path = path.Join(uu.Path, n.String())
+	return h.UpsertScenario(ctx, uu.String(), scn)
 }
 
 func (h *httpAPI) DeleteScenario(ctx context.Context, u string) error {

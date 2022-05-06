@@ -23,6 +23,11 @@ type ApplicationName string
 
 func (n ApplicationName) String() string { return string(n) }
 
+// ScenarioName represents a name token used to identify a scenario.
+type ScenarioName string
+
+func (n ScenarioName) String() string { return string(n) }
+
 // ClusterName represents a name token used to identify a cluster.
 type ClusterName string
 
