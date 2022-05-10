@@ -91,7 +91,7 @@ func NewCreateApplicationCommand(cfg Config, p Printer) *cobra.Command {
 	return cmd
 }
 
-// NewEditApplicationCommand returns a command for editing an applications.
+// NewEditApplicationCommand returns a command for editing an application.
 func NewEditApplicationCommand(cfg Config, p Printer) *cobra.Command {
 	var (
 		title    string

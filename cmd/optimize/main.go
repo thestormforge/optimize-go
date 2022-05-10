@@ -79,6 +79,7 @@ func main() {
 
 	editCmd.AddCommand(
 		command.NewEditApplicationCommand(cfg, &printer{format: `updated application %q.`}),
+		command.NewEditScenarioCommand(cfg, &printer{format: `updated scenario %q.`}),
 		command.NewEditExperimentCommand(cfg, &printer{format: `updated experiment %q.`}),
 		command.NewEditTrialCommand(cfg, &printer{format: `updated trial %q.`}),
 		command.NewEditClusterCommand(cfg, &printer{format: `updated cluster %q.`}),

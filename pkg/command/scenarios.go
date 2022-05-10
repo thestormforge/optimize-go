@@ -55,9 +55,9 @@ func NewCreateScenarioCommand(cfg Config, p Printer) *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "scenario APP_NAME [NAME]",
+		Use:     "scenario APP_NAME[/NAME]",
 		Aliases: []string{"scn"},
-		Args:    cobra.RangeArgs(1, 2),
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx, out := cmd.Context(), cmd.OutOrStdout()
 			client, err := api.NewClient(cfg.Address(), nil)
@@ -67,7 +67,8 @@ func NewCreateScenarioCommand(cfg Config, p Printer) *cobra.Command {
 
 			appAPI := applications.NewAPI(client)
 
-			app, err := appAPI.GetApplicationByName(ctx, applications.ApplicationName(args[0]))
+			appName, scnName := applications.SplitScenarioName(args[0])
+			app, err := appAPI.GetApplicationByName(ctx, appName)
 			if err != nil {
 				return err
 			}
@@ -178,9 +179,8 @@ func NewCreateScenarioCommand(cfg Config, p Printer) *cobra.Command {
 			}
 
 			var selfURL string
-			if len(args) > 1 && args[1] != "" {
-				name := applications.ScenarioName(args[1])
-				md, err := appAPI.UpsertScenarioByName(ctx, scenariosURL, name, scn)
+			if scnName != "" {
+				md, err := appAPI.UpsertScenarioByName(ctx, scenariosURL, scnName, scn)
 				if err != nil {
 					return err
 				}
@@ -219,6 +219,58 @@ func NewCreateScenarioCommand(cfg Config, p Printer) *cobra.Command {
 	cmd.Flags().DurationVar(&customScenario.initialDelay, "custom-initial-delay", 0, "additional `delay` before starting the trial job pod")
 	cmd.Flags().DurationVar(&customScenario.approximateRuntime, "custom-approximate-runtime", 0, "the estimated amount of `time` the trial should last")
 	cmd.Flags().StringVar(&customScenario.image, "custom-image", "", "override the image `name` of the first container in the trial job pod")
+
+	return cmd
+}
+
+// NewEditScenarioCommand returns a command for editing a scenario.
+func NewEditScenarioCommand(cfg Config, p Printer) *cobra.Command {
+	var (
+		title    string
+		clusters []string
+	)
+
+	cmd := &cobra.Command{
+		Use:     "scenario APP_NAME/NAME",
+		Aliases: []string{"scn"},
+		Args:    cobra.ExactArgs(1),
+
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx, out := cmd.Context(), cmd.OutOrStdout()
+			client, err := api.NewClient(cfg.Address(), nil)
+			if err != nil {
+				return err
+			}
+
+			l := applications.Lister{
+				API: applications.NewAPI(client),
+			}
+
+			return l.ForEachNamedScenario(ctx, args, false, func(item *applications.ScenarioItem) error {
+				selfURL := item.Link(api.RelationSelf)
+				if selfURL == "" {
+					return fmt.Errorf("malformed response, missing self link")
+				}
+
+				scn := applications.Scenario{
+					DisplayName: title,
+					Clusters:    nil,
+				}
+
+				if scn.DisplayName == "" {
+					return nil
+				}
+
+				if err := l.API.PatchScenario(ctx, selfURL, scn); err != nil {
+					return err
+				}
+				return p.Fprint(out, item)
+			})
+		},
+	}
+
+	cmd.Flags().StringVar(&title, "title", "", "human readable `name` for the scenario")
+	cmd.Flags().StringArrayVar(&clusters, "cluster", nil, "cluster `name` used for experimentation")
 
 	return cmd
 }
