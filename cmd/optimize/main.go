@@ -111,12 +111,22 @@ func main() {
 		command.NewDeleteClustersCommand(cfg, &printer{format: `deleted cluster %q.`}),
 	)
 
+	// Aggregate the WATCH commands
+	watchCmd := &cobra.Command{
+		Use: "watch",
+	}
+
+	watchCmd.AddCommand(
+		command.NewWatchActivityCommand(cfg),
+	)
+
 	// Add the aggregate commends to the root
 	cmd.AddCommand(
 		createCmd,
 		editCmd,
 		getCmd,
 		deleteCmd,
+		watchCmd,
 	)
 
 	// Create a context for the command
