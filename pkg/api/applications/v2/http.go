@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/thestormforge/optimize-go/pkg/api"
 )
@@ -33,6 +34,8 @@ func NewAPI(client api.Client) API {
 	endpoint := os.Getenv("STORMFORGE_APPLICATIONS_ENDPOINT")
 	if endpoint == "" {
 		endpoint = "v2/applications/"
+	} else {
+		endpoint = strings.TrimRight(endpoint, "/") + "/"
 	}
 	return &httpAPI{client: client, endpoint: endpoint}
 }
