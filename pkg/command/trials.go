@@ -33,7 +33,7 @@ func NewCreateTrialCommand(cfg Config, p Printer) *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:  "trial NAME",
+		Use:  "trial EXP_NAME",
 		Args: cobra.ExactArgs(1),
 	}
 
@@ -99,7 +99,7 @@ func NewEditTrialCommand(cfg Config, p Printer) *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:               "trial NAME",
+		Use:               "trial EXP_NAME/TRIAL_NUM",
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: validTrialArgs(cfg),
 	}
@@ -148,7 +148,7 @@ func NewGetTrialsCommand(cfg Config, p Printer) *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:               "trials [NAME ...]",
+		Use:               "trials [EXP_NAME/TRIAL_NUM ...]",
 		Aliases:           []string{"trial"},
 		ValidArgsFunction: validTrialArgs(cfg),
 	}
@@ -193,7 +193,7 @@ func NewDeleteTrialsCommand(cfg Config, p Printer) *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:               "trials [NAME ...]",
+		Use:               "trials [EXP_NAME/TRIAL_NUM ...]",
 		Aliases:           []string{"trial"},
 		ValidArgsFunction: validTrialArgs(cfg),
 	}
