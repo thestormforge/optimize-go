@@ -17,7 +17,6 @@ limitations under the License.
 package command
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -64,13 +63,6 @@ func NewCreateRecommendationsConfigCommand(cfg Config, p Printer) *cobra.Command
 			containerResources.Apply(&recs.Configuration)
 
 			if recs.DeployConfiguration == nil && len(recs.Configuration) == 0 {
-				return nil
-			}
-
-			// Test...
-			enc := json.NewEncoder(out)
-			enc.SetIndent("", "  ")
-			if err = enc.Encode(recs); err == nil {
 				return nil
 			}
 
