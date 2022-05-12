@@ -25,7 +25,7 @@ import (
 type Recommendation struct {
 	api.Metadata `json:"-"`
 	Name         string      `json:"name"`
-	DeployedAt   time.Time   `json:"deployedAt,omitempty"`
+	DeployedAt   *time.Time  `json:"deployedAt,omitempty"`
 	Parameters   []Parameter `json:"parameters,omitempty"`
 }
 
@@ -51,13 +51,26 @@ func (l *RecommendationItem) UnmarshalJSON(b []byte) error {
 
 type RecommendationList struct {
 	api.Metadata        `json:"-"`
-	DeployConfiguration DeployConfiguration  `json:"deploy,omitempty"`
+	DeployConfiguration *DeployConfiguration `json:"deploy,omitempty"`
 	Configuration       []interface{}        `json:"configuration,omitempty"`
 	Recommendations     []RecommendationItem `json:"recommendations,omitempty"`
 }
 
 type DeployConfiguration struct {
-	Interval               string      `json:"interval,omitempty"`
-	Limits                 interface{} `json:"limits,omitempty"`
-	MaxRecommendationRatio interface{} `json:"maxRecommendationRatio,omitempty"`
+	Mode                   string           `json:"mode,omitempty"` // TODO Is this read-only?
+	Interval               api.Duration     `json:"interval,omitempty"`
+	Limits                 []LimitRangeItem `json:"limits,omitempty"`
+	MaxRecommendationRatio *ResourceList    `json:"maxRecommendationRatio,omitempty"`
+	Clusters               []string         `json:"clusters,omitempty"`
+}
+
+type LimitRangeItem struct {
+	Type string        `json:"type,omitempty"`
+	Max  *ResourceList `json:"max,omitempty"`
+	Min  *ResourceList `json:"min,omitempty"`
+}
+
+type ResourceList struct {
+	CPU    *api.NumberOrString `json:"cpu,omitempty"`
+	Memory *api.NumberOrString `json:"memory,omitempty"`
 }

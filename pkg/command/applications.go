@@ -209,7 +209,9 @@ func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			result.Items[i].DeployInterval = rl.DeployConfiguration.Interval
+			if rl.DeployConfiguration != nil && rl.DeployConfiguration.Interval > 0 {
+				result.Items[i].DeployInterval = rl.DeployConfiguration.Interval.String()
+			}
 		}
 
 		return p.Fprint(out, result)
