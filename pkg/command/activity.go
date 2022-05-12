@@ -54,7 +54,7 @@ func NewWatchActivityCommand(cfg Config) *cobra.Command {
 			}
 
 			// Create the templates for rendering activities
-			tmpl := template.New("activity").Funcs(map[string]any{
+			tmpl := template.New("activity").Funcs(map[string]interface{}{
 				"subject": subject(ctx, cfg),
 				"join":    strings.Join,
 			})
