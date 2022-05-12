@@ -43,20 +43,30 @@ func main() {
 		Use:          "optimize",
 		SilenceUsage: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			cc := clientcredentials.Config{
-				ClientID:     os.Getenv("STORMFORGE_CLIENT_ID"),
-				ClientSecret: os.Getenv("STORMFORGE_CLIENT_SECRET"),
-				TokenURL:     os.Getenv("STORMFORGE_ISSUER") + "oauth/token",
-				AuthStyle:    oauth2.AuthStyleInParams,
-				EndpointParams: map[string][]string{
-					"audience": {cfg.address},
-				},
+			var src oauth2.TokenSource
+			if clientID := os.Getenv("STORMFORGE_CLIENT_ID"); clientID != "" {
+				cc := clientcredentials.Config{
+					ClientID:     clientID,
+					ClientSecret: os.Getenv("STORMFORGE_CLIENT_SECRET"),
+					TokenURL:     os.Getenv("STORMFORGE_ISSUER") + "oauth/token",
+					AuthStyle:    oauth2.AuthStyleInParams,
+					EndpointParams: map[string][]string{
+						"audience": {cfg.address},
+					},
+				}
+				src = cc.TokenSource(cmd.Context())
+			} else if accessToken := os.Getenv("STORMFORGE_TOKEN"); accessToken != "" {
+				src = oauth2.StaticTokenSource(&oauth2.Token{
+					AccessToken: accessToken,
+				})
 			}
 
-			dt := http.DefaultTransport
-			http.DefaultTransport = &oauth2.Transport{
-				Source: oauth2.ReuseTokenSource(nil, cc.TokenSource(cmd.Context())),
-				Base:   dt,
+			if src != nil {
+				dt := http.DefaultTransport
+				http.DefaultTransport = &oauth2.Transport{
+					Source: src,
+					Base:   dt,
+				}
 			}
 		},
 	}
