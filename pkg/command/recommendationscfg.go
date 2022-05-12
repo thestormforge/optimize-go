@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
 	"github.com/thestormforge/optimize-go/pkg/api"
 	applications "github.com/thestormforge/optimize-go/pkg/api/applications/v2"
 	"github.com/thestormforge/optimize-go/pkg/command/recommendation"
@@ -84,7 +85,7 @@ func NewCreateRecommendationsConfigCommand(cfg Config, p Printer) *cobra.Command
 			return p.Fprint(out, recs)
 		},
 	}
-	
+
 	deployConfiguration.AddFlags(cmd)
 	containerResources.AddFlags(cmd)
 

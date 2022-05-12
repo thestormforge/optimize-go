@@ -178,7 +178,7 @@ func (p *printer) Fprint(w io.Writer, obj interface{}) error {
 		case *applications.ScenarioItem:
 			_, err = fmt.Fprintf(w, format, obj.Name)
 		case *applications.RecommendationList:
-			_, err = fmt.Fprintf(w, format)
+			_, err = fmt.Fprint(w, format)
 		case *applications.RecommendationItem:
 			_, err = fmt.Fprintf(w, format, obj.Name)
 		case *experiments.ExperimentItem:
