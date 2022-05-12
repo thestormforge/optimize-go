@@ -69,6 +69,7 @@ func main() {
 	createCmd.AddCommand(
 		command.NewCreateApplicationCommand(cfg, &printer{format: `created application %q.`}),
 		command.NewCreateScenarioCommand(cfg, &printer{format: `created scenario %q.`}),
+		command.NewCreateRecommendationsConfigCommand(cfg, &printer{format: `created recommendation configuration.`}),
 		command.NewCreateTrialCommand(cfg, &printer{format: `created trial %q.`}),
 	)
 
@@ -159,14 +160,21 @@ type printer struct {
 
 func (p *printer) Fprint(w io.Writer, obj interface{}) error {
 	if p.format != "" {
+		format := p.format + "\n"
 		var err error
 		switch obj := obj.(type) {
 		case *applications.ApplicationItem:
-			_, err = fmt.Fprintf(w, p.format, obj.Name)
+			_, err = fmt.Fprintf(w, format, obj.Name)
+		case *applications.ScenarioItem:
+			_, err = fmt.Fprintf(w, format, obj.Name)
+		case *applications.RecommendationList:
+			_, err = fmt.Fprintf(w, format)
+		case *applications.RecommendationItem:
+			_, err = fmt.Fprintf(w, format, obj.Name)
 		case *experiments.ExperimentItem:
-			_, err = fmt.Fprintf(w, p.format, obj.Name)
+			_, err = fmt.Fprintf(w, format, obj.Name)
 		case *experiments.TrialItem:
-			_, err = fmt.Fprintf(w, p.format, experiments.JoinTrialName(obj.Experiment, obj.Number))
+			_, err = fmt.Fprintf(w, format, experiments.JoinTrialName(obj.Experiment, obj.Number))
 		}
 		return err
 	}
