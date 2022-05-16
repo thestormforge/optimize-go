@@ -178,7 +178,7 @@ func (h *httpAPI) UpsertApplication(ctx context.Context, u string, app Applicati
 	}
 
 	switch resp.StatusCode {
-	case http.StatusCreated, http.StatusAccepted:
+	case http.StatusOK, http.StatusCreated, http.StatusAccepted:
 		api.UnmarshalMetadata(resp, &result)
 		return result, nil
 	case http.StatusBadRequest:
