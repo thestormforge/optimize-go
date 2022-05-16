@@ -114,7 +114,7 @@ func (h *httpAPI) CreateApplication(ctx context.Context, app Application) (api.M
 	}
 
 	switch resp.StatusCode {
-	case http.StatusCreated:
+	case http.StatusOK, http.StatusCreated:
 		api.UnmarshalMetadata(resp, &result)
 		return result, nil
 	case http.StatusBadRequest:
@@ -254,7 +254,7 @@ func (h *httpAPI) CreateScenario(ctx context.Context, u string, scn Scenario) (a
 	}
 
 	switch resp.StatusCode {
-	case http.StatusCreated:
+	case http.StatusOK, http.StatusCreated:
 		api.UnmarshalMetadata(resp, &result)
 		return result, nil
 	case http.StatusBadRequest:
@@ -348,7 +348,7 @@ func (h *httpAPI) DeleteScenario(ctx context.Context, u string) error {
 	}
 
 	switch resp.StatusCode {
-	case http.StatusNoContent:
+	case http.StatusOK, http.StatusNoContent:
 		return nil
 	default:
 		return api.NewUnexpectedError(resp, body)
@@ -367,7 +367,7 @@ func (h *httpAPI) PatchScenario(ctx context.Context, u string, scn Scenario) err
 	}
 
 	switch resp.StatusCode {
-	case http.StatusNoContent:
+	case http.StatusOK, http.StatusNoContent:
 		return nil
 	case http.StatusBadRequest:
 		return api.NewError(ErrScenarioInvalid, resp, body)
@@ -435,7 +435,7 @@ func (h *httpAPI) PatchTemplate(ctx context.Context, u string, t Template) error
 	}
 
 	switch resp.StatusCode {
-	case http.StatusNoContent:
+	case http.StatusOK, http.StatusNoContent:
 		return nil
 	case http.StatusBadRequest:
 		return api.NewError(ErrScanInvalid, resp, body)
@@ -482,7 +482,7 @@ func (h *httpAPI) CreateActivity(ctx context.Context, u string, a Activity) erro
 	}
 
 	switch resp.StatusCode {
-	case http.StatusNoContent, http.StatusCreated:
+	case http.StatusOK, http.StatusNoContent, http.StatusCreated:
 		return nil
 	case http.StatusBadRequest:
 		return api.NewError(ErrActivityInvalid, resp, body)
@@ -505,7 +505,7 @@ func (h *httpAPI) DeleteActivity(ctx context.Context, u string) error {
 	}
 
 	switch resp.StatusCode {
-	case http.StatusNoContent:
+	case http.StatusOK, http.StatusNoContent:
 		return nil
 	default:
 		return api.NewUnexpectedError(resp, body)
@@ -565,7 +565,7 @@ func (h *httpAPI) CreateRecommendation(ctx context.Context, u string) (api.Metad
 	}
 
 	switch resp.StatusCode {
-	case http.StatusCreated:
+	case http.StatusOK, http.StatusCreated:
 		api.UnmarshalMetadata(resp, &result)
 		return result, nil
 	case http.StatusBadRequest:
@@ -637,7 +637,7 @@ func (h *httpAPI) PatchRecommendations(ctx context.Context, u string, details Re
 	}
 
 	switch resp.StatusCode {
-	case http.StatusNoContent:
+	case http.StatusOK, http.StatusNoContent:
 		return nil
 	case http.StatusBadRequest:
 		return api.NewError(ErrRecommendationInvalid, resp, body)
@@ -746,7 +746,7 @@ func (h *httpAPI) DeleteCluster(ctx context.Context, u string) error {
 	}
 
 	switch resp.StatusCode {
-	case http.StatusNoContent:
+	case http.StatusOK, http.StatusNoContent:
 		return nil
 	case http.StatusNotFound:
 		return api.NewError(ErrClusterNotFound, resp, body)
