@@ -314,7 +314,7 @@ func (h *httpAPI) UpsertScenario(ctx context.Context, u string, scn Scenario) (S
 	}
 
 	switch resp.StatusCode {
-	case http.StatusAccepted, http.StatusCreated:
+	case http.StatusOK, http.StatusAccepted, http.StatusCreated:
 		api.UnmarshalMetadata(resp, &result.Metadata)
 		err = json.Unmarshal(body, &result)
 		return result, err
