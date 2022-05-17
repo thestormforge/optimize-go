@@ -263,7 +263,9 @@ type ActivityRow struct {
 }
 
 type ActivityOutput struct {
-	Items []ActivityRow
+	Items []ActivityRow `json:"-"`
+
+	applications.ActivityFeed
 }
 
 func (o *ActivityOutput) Add(item *applications.ActivityItem) {

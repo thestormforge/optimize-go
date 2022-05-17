@@ -70,7 +70,10 @@ func NewGetActivityCommand(cfg Config, p Printer) *cobra.Command {
 			return err
 		}
 
-		result := ActivityOutput{Items: make([]ActivityRow, len(feed.Items))}
+		result := ActivityOutput{
+			Items:        make([]ActivityRow, 0, len(feed.Items)),
+			ActivityFeed: feed,
+		}
 		for i := range feed.Items {
 			result.Add(&feed.Items[i])
 		}
