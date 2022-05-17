@@ -18,7 +18,6 @@ package apitest
 
 import (
 	"context"
-	"flag"
 	"net/http"
 	"os"
 
@@ -27,50 +26,29 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 )
 
-// ClientConfiguration is used to gather configuration for an integration testing API client.
-type ClientConfiguration struct {
-	// The URL of the StormForge server.
-	Address string
-	// A static token to use for authorization.
-	StaticToken oauth2.Token
-	// Configuration to use a client credentials grant for authorization.
-	ClientCredentials clientcredentials.Config
-}
-
-// Authorization returns a round tripper for handling request authorization. May
-// return `nil` to allow for accessing unprotected endpoints.
-func (c *ClientConfiguration) Authorization(ctx context.Context) http.RoundTripper {
-	switch {
-	case c.StaticToken.AccessToken != "":
-		return &oauth2.Transport{Source: oauth2.StaticTokenSource(&c.StaticToken)}
-	case c.ClientCredentials.ClientID != "":
-		return &oauth2.Transport{Source: c.ClientCredentials.TokenSource(ctx)}
-	}
-	return nil
-}
-
 // NewClient returns a new API client from the default configuration.
 func NewClient(ctx context.Context) (api.Client, error) {
-	// TODO Should we return a nil client if the address is HTTPS and both the access token and client ID are empty?
-	return api.NewClient(DefaultConfig.Address, DefaultConfig.Authorization(ctx))
-}
+	address := os.Getenv("STORMFORGE_SERVER")
 
-// DefaultConfig is a client configuration to use for integration testing. It's default values are populated using flags.
-var DefaultConfig = ClientConfiguration{
-	ClientCredentials: clientcredentials.Config{
-		EndpointParams: map[string][]string{"audience": {"https://api.carbonrelay.io/v1/"}},
-		AuthStyle:      oauth2.AuthStyleInParams,
-	},
-}
+	var transport http.RoundTripper
+	if clientID := os.Getenv("STORMFORGE_CLIENT_ID"); clientID != "" {
+		cc := clientcredentials.Config{
+			ClientID:     clientID,
+			ClientSecret: os.Getenv("STORMFORGE_CLIENT_SECRET"),
+			TokenURL:     os.Getenv("STORMFORGE_ISSUER") + "oauth/token",
+			AuthStyle:    oauth2.AuthStyleInParams,
+			EndpointParams: map[string][]string{
+				"audience": {address},
+			},
+		}
+		transport = &oauth2.Transport{Source: cc.TokenSource(ctx)}
+	} else if accessToken := os.Getenv("STORMFORGE_TOKEN"); accessToken != "" {
+		transport = &oauth2.Transport{
+			Source: oauth2.StaticTokenSource(&oauth2.Token{
+				AccessToken: accessToken,
+			}),
+		}
+	}
 
-// init sets the values for integration testing via flags or environment variables.
-func init() {
-	DefaultConfig.ClientCredentials.ClientID = os.Getenv("STORMFORGE_AUTHORIZATION_CLIENT_ID")
-	DefaultConfig.ClientCredentials.ClientSecret = os.Getenv("STORMFORGE_AUTHORIZATION_CLIENT_SECRET")
-	DefaultConfig.StaticToken.AccessToken = os.Getenv("STORMFORGE_AUTHORIZATION_ACCESS_TOKEN")
-
-	flag.StringVar(&DefaultConfig.Address, "stormforge.address", "https://api.stormforge.dev/", "the `url` of the StormForge API server")
-	flag.StringVar(&DefaultConfig.ClientCredentials.TokenURL, "stormforge.token-url", "https://auth.stormforge.dev/oauth/token", "the `url` of the StormForge token endpoint")
-	flag.StringVar(&DefaultConfig.ClientCredentials.ClientID, "stormforge.client-id", "", "the client `identifier` used to obtain an access token")
-	flag.StringVar(&DefaultConfig.ClientCredentials.ClientSecret, "stormforge.client-secret", "", "the client `secret` used to obtain an access token")
+	return api.NewClient(address, transport)
 }
