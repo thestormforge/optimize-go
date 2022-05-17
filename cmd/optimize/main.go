@@ -108,6 +108,7 @@ func main() {
 		command.NewGetExperimentsCommand(cfg, &printer{}),
 		command.NewGetTrialsCommand(cfg, &printer{}),
 		command.NewGetClustersCommand(cfg, &printer{}),
+		command.NewGetActivityCommand(cfg, &printer{}),
 	)
 
 	// Aggregate the DELETE commands

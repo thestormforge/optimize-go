@@ -248,3 +248,40 @@ func (o *ClusterOutput) Add(item *applications.ClusterItem) error {
 	})
 	return nil
 }
+
+type ActivityRow struct {
+	ID               string `table:"id" csv:"id" json:"-"`
+	Title            string `table:"title" csv:"title" json:"-"`
+	Tags             string `table:"tags" csv:"tags" json:"-"`
+	ExternalURL      string `table:"reference" csv:"external_url" json:"-"`
+	URL              string `table:"url,wide" csv:"url" json:"-"`
+	FailureReason    string `table:"reason,wide" csv:"failure_reason" json:"-"`
+	PublishedHuman   string `table:"published" csv:"-" json:"-"`
+	PublishedMachine string `table:"-" csv:"published" json:"-"`
+
+	applications.ActivityItem `table:"-" csv:"-"`
+}
+
+type ActivityOutput struct {
+	Items []ActivityRow
+}
+
+func (o *ActivityOutput) Add(item *applications.ActivityItem) {
+	var fr string
+	if item.StormForge != nil {
+		fr = item.StormForge.FailureReason
+	}
+
+	o.Items = append(o.Items, ActivityRow{
+		ID:               item.ID,
+		Title:            item.Title,
+		Tags:             strings.Join(item.Tags, ", "),
+		ExternalURL:      item.ExternalURL,
+		URL:              item.URL,
+		FailureReason:    fr,
+		PublishedMachine: formatTime(&item.DatePublished, time.RFC3339),
+		PublishedHuman:   formatTime(&item.DatePublished, "ago"),
+
+		ActivityItem: *item,
+	})
+}

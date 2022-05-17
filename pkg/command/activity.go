@@ -30,6 +30,58 @@ import (
 	"gopkg.in/square/go-jose.v2/jwt"
 )
 
+// NewGetActivityCommand returns a command for getting activity feed items.
+func NewGetActivityCommand(cfg Config, p Printer) *cobra.Command {
+	var (
+		tags []string
+	)
+
+	cmd := &cobra.Command{
+		Use:     "activity-feed",
+		Aliases: []string{"activity", "feed"},
+	}
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		ctx, out := cmd.Context(), cmd.OutOrStdout()
+		client, err := api.NewClient(cfg.Address(), nil)
+		if err != nil {
+			return err
+		}
+
+		appAPI := applications.NewAPI(client)
+
+		q := applications.ActivityFeedQuery{}
+		if len(tags) > 0 {
+			q.SetType(tags...)
+		}
+
+		md, err := appAPI.CheckEndpoint(ctx)
+		if err != nil {
+			return err
+		}
+
+		u := md.Link(api.RelationAlternate)
+		if u == "" {
+			return fmt.Errorf("missing activity feed URL")
+		}
+
+		feed, err := appAPI.ListActivity(ctx, u, q)
+		if err != nil {
+			return err
+		}
+
+		result := ActivityOutput{Items: make([]ActivityRow, len(feed.Items))}
+		for i := range feed.Items {
+			result.Add(&feed.Items[i])
+		}
+		return p.Fprint(out, result)
+	}
+
+	cmd.Flags().StringSliceVar(&tags, "tags", nil, "limit activity items to the specified `tag`s")
+
+	return cmd
+}
+
 // NewWatchActivityCommand returns a command for watching the activity feed.
 func NewWatchActivityCommand(cfg Config) *cobra.Command {
 	var (
