@@ -18,14 +18,12 @@ package v2_test
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base32"
-	"encoding/binary"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
+	"math/rand"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -46,6 +44,9 @@ func TestMain(m *testing.M) {
 	var err error
 	path := "testdata"
 	flag.Parse()
+
+	// Seed the random number generator using the time (which should be sufficient for testing)
+	rand.Seed(time.Now().UnixNano())
 
 	// Create a client
 	client, err = apitest.NewClient(context.TODO())
@@ -81,6 +82,40 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 	ctx := context.Background()
 	ok := true
 	var appMeta, scnMeta api.Metadata
+
+	ok = t.Run("Create Cluster", func(t *testing.T) {
+		if !ok {
+			t.Skip("skipping create cluster.")
+		}
+
+		// Creating a cluster is done by fetching the activity feed; we are going
+		// to be a little tricky and send a unique User-Agent string to appear
+		// in the cluster information, this will allow us to identify ourselves
+		// and verify that a cluster was created (or at least updated)
+		optimizeProVersion := "0.0.0-test." + randomSuffix()
+		ctx = apitest.WithUserAgent(ctx, "optimize-pro/"+optimizeProVersion+" (optimize-go api_test)")
+
+		var err error
+		_, err = appAPI.SubscribeActivity(ctx, applications.ActivityFeedQuery{})
+		require.NoError(t, err, "failed to fetch activity feed")
+		cl, err := appAPI.ListClusters(ctx, applications.ClusterListQuery{})
+		require.NoError(t, err, "failed to fetch cluster list")
+		var clusterName string
+		for i := range cl.Items {
+			if cl.Items[i].OptimizeProVersion != optimizeProVersion {
+				continue
+			}
+
+			assert.Empty(t, clusterName, "found multiple clusters associated with one-off User-Agent")
+			clusterName = cl.Items[i].Name.String()
+
+			// Save the current cluster name on the scenario for later
+			if len(td.Scenario.Clusters) == 0 {
+				td.Scenario.Clusters = append(td.Scenario.Clusters, clusterName)
+			}
+		}
+		assert.NotEmpty(t, clusterName, "could not find cluster associated with one-off User-Agent")
+	}) && ok
 
 	ok = t.Run("Create Application", func(t *testing.T) {
 		if !ok {
@@ -144,22 +179,22 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 		subCtx, cancelSub := context.WithTimeout(ctx, 30*time.Second)
 		defer cancelSub()
 
-		t.Run("Subscribe", func(t *testing.T) {
-			q := applications.ActivityFeedQuery{}
-			q.SetType(applications.TagScan, applications.TagRun)
-			sub, err := appAPI.SubscribeActivity(ctx, q)
-			require.NoError(t, err, "failed to create activity subscriber")
+		go func() {
+			t.Run("Subscribe", func(t *testing.T) {
+				q := applications.ActivityFeedQuery{}
+				q.SetType(applications.TagScan, applications.TagRun)
+				sub, err := appAPI.SubscribeActivity(ctx, q)
+				require.NoError(t, err, "failed to create activity subscriber")
 
-			// Reduce the poll time for testing
-			if ps, ok := sub.(*applications.PollingSubscriber); ok {
-				ps.PollInterval = 3 * time.Second
-			}
+				// Reduce the poll time for testing
+				if ps, ok := sub.(*applications.PollingSubscriber); ok {
+					ps.PollInterval = 3 * time.Second
+				}
 
-			go func() {
-				err := sub.Subscribe(subCtx, activity)
-				require.NoError(t, err)
-			}()
-		})
+				err = sub.Subscribe(subCtx, activity)
+				require.ErrorIs(t, err, context.Canceled)
+			})
+		}()
 
 		var okScan, okRun bool
 		for ai := range activity {
@@ -207,13 +242,14 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 					expAPI, err := experiments.NewAPIWithEndpoint(client, scn.Link(api.RelationExperiments))
 					require.NoError(t, err, "failed to create experiment API for application")
 
-					exp, err = expAPI.CreateExperimentByName(ctx, newExperimentName(), exp)
+					expName := experiments.ExperimentName(fmt.Sprintf("%s-%s", scn.Name, randomSuffix()))
+					exp, err = expAPI.CreateExperimentByName(ctx, expName, exp)
 					require.NoError(t, err, "failed to create experiment")
 					assert.NotEmpty(t, exp.Link(api.RelationTrials), "missing trials link")
 					assert.NotEmpty(t, exp.Link(api.RelationNextTrial), "missing next trial link")
 					assert.NotEmpty(t, exp.Link(api.RelationSelf), "missing self link")
 					assert.Equal(t, app.Name.String(), exp.Labels["application"], "incorrect application label")
-					assert.Equal(t, scn.Name, exp.Labels["scenario"], "incorrect scenario label")
+					assert.Equal(t, scn.Name.String(), exp.Labels["scenario"], "incorrect scenario label")
 
 					_, err = expAPI.CreateTrial(ctx, exp.Link(api.RelationTrials), experiments.TrialAssignments{
 						Labels:      map[string]string{"baseline": "true"},
@@ -262,17 +298,12 @@ func runTest(t *testing.T, td *apitest.ApplicationTestDefinition, appAPI applica
 	})
 }
 
-// newExperimentName returns a random experiment name. For consistency with the
-// backend you would normally want to use a ULID here. To avoid introducing an
-// explicit dependencies for testing, we are just using something that looks
-// kind of like a lowercase ULID.
-func newExperimentName() experiments.ExperimentName {
-	var name [16]byte
-	binary.BigEndian.PutUint64(name[:], uint64(time.Now().UTC().UnixNano()/int64(time.Millisecond))<<16)
-	_, _ = rand.Read(name[6:])
+const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
 
-	var notCrockford = base32.
-		NewEncoding(strings.ToLower("0123456789ABCDEFGHJKMNPQRSTVWXYZ")).
-		WithPadding(base32.NoPadding)
-	return experiments.ExperimentName(notCrockford.EncodeToString(name[:]))
+func randomSuffix() string {
+	s := make([]byte, 8)
+	for i := range s {
+		s[i] = alphabet[rand.Intn(len(alphabet))]
+	}
+	return string(s)
 }
