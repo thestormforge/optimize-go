@@ -30,7 +30,8 @@ import (
 func NewClient(ctx context.Context) (api.Client, error) {
 	address := os.Getenv("STORMFORGE_SERVER")
 
-	var transport http.RoundTripper
+	transport := &userAgentTransport{}
+
 	if clientID := os.Getenv("STORMFORGE_CLIENT_ID"); clientID != "" {
 		cc := clientcredentials.Config{
 			ClientID:     clientID,
@@ -41,14 +42,40 @@ func NewClient(ctx context.Context) (api.Client, error) {
 				"audience": {address},
 			},
 		}
-		transport = &oauth2.Transport{Source: cc.TokenSource(ctx)}
+		transport.Base = &oauth2.Transport{
+			Source: cc.TokenSource(ctx),
+		}
 	} else if accessToken := os.Getenv("STORMFORGE_TOKEN"); accessToken != "" {
-		transport = &oauth2.Transport{
-			Source: oauth2.StaticTokenSource(&oauth2.Token{
-				AccessToken: accessToken,
-			}),
+		transport.Base = &oauth2.Transport{
+			Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken}),
 		}
 	}
 
 	return api.NewClient(address, transport)
+}
+
+type uaKey struct{}
+
+// WithUserAgent updates the value of the User-Agent header to send with the supplied context.
+func WithUserAgent(ctx context.Context, ua string) context.Context {
+	return context.WithValue(ctx, uaKey{}, ua)
+}
+
+type userAgentTransport struct {
+	Base http.RoundTripper
+}
+
+// RoundTrip updates the User-Agent header based on the current context value.
+func (u *userAgentTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	// Check the context for a User-Agent value
+	if ua, ok := r.Context().Value(uaKey{}).(string); ok {
+		r = r.WithContext(r.Context())
+		r.Header.Set("User-Agent", ua)
+	}
+
+	// Finish the request
+	if u.Base != nil {
+		return u.Base.RoundTrip(r)
+	}
+	return http.DefaultTransport.RoundTrip(r)
 }
