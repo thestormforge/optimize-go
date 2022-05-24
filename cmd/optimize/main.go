@@ -26,48 +26,28 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/caarlos0/env/v6"
 	"github.com/spf13/cobra"
 	applications "github.com/thestormforge/optimize-go/pkg/api/applications/v2"
 	experiments "github.com/thestormforge/optimize-go/pkg/api/experiments/v1alpha1"
 	"github.com/thestormforge/optimize-go/pkg/command"
+	"github.com/thestormforge/optimize-go/pkg/config"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/clientcredentials"
 )
 
 func main() {
-	cfg := &config{
-		address: os.Getenv("STORMFORGE_SERVER"),
-	}
+	cfg := &config.Config{}
 
 	cmd := &cobra.Command{
 		Use:          "optimize",
 		SilenceUsage: true,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			var src oauth2.TokenSource
-			if clientID := os.Getenv("STORMFORGE_CLIENT_ID"); clientID != "" {
-				cc := clientcredentials.Config{
-					ClientID:     clientID,
-					ClientSecret: os.Getenv("STORMFORGE_CLIENT_SECRET"),
-					TokenURL:     os.Getenv("STORMFORGE_ISSUER") + "oauth/token",
-					AuthStyle:    oauth2.AuthStyleInParams,
-					EndpointParams: map[string][]string{
-						"audience": {cfg.address},
-					},
-				}
-				src = cc.TokenSource(cmd.Context())
-			} else if accessToken := os.Getenv("STORMFORGE_TOKEN"); accessToken != "" {
-				src = oauth2.StaticTokenSource(&oauth2.Token{
-					AccessToken: accessToken,
-				})
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if err := env.Parse(cfg); err != nil {
+				return err
 			}
 
-			if src != nil {
-				dt := http.DefaultTransport
-				http.DefaultTransport = &oauth2.Transport{
-					Source: src,
-					Base:   dt,
-				}
-			}
+			http.DefaultTransport = cfg.Transport(cmd.Context(), http.DefaultTransport)
+			return nil
 		},
 	}
 
@@ -140,6 +120,7 @@ func main() {
 		getCmd,
 		deleteCmd,
 		watchCmd,
+		command.NewWhoAmICommand(cfg),
 	)
 
 	// Create a context for the command
@@ -155,14 +136,6 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
-}
-
-type config struct {
-	address string
-}
-
-func (c *config) Address() string {
-	return c.address
 }
 
 type printer struct {
