@@ -84,6 +84,7 @@ func main() {
 	getCmd.AddCommand(
 		command.NewGetApplicationsCommand(cfg, &printer{}),
 		command.NewGetScenariosCommand(cfg, &printer{}),
+		command.NewGetRecommendationsConfigCommand(cfg, &printer{}),
 		command.NewGetRecommendationsCommand(cfg, &printer{}),
 		command.NewGetExperimentsCommand(cfg, &printer{}),
 		command.NewGetTrialsCommand(cfg, &printer{}),
