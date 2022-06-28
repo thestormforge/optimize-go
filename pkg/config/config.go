@@ -30,10 +30,10 @@ import (
 type Config struct {
 	// The API server address, this should correspond exactly to value of the
 	// audience specified during token exchanges.
-	Server url.URL `json:"server" yaml:"server" env:"STORMFORGE_SERVER" envDefault:"https://api.stormforge.io/"`
+	Server string `json:"server" yaml:"server" env:"STORMFORGE_SERVER" envDefault:"https://api.stormforge.io/"`
 	// The API authorization server address, this should correspond exactly to
 	// the expected issuer claim of the tokens being used.
-	Issuer url.URL `json:"issuer,omitempty" yaml:"issuer,omitempty" env:"STORMFORGE_ISSUER" envDefault:"https://auth.stormforge.io/"`
+	Issuer string `json:"issuer,omitempty" yaml:"issuer,omitempty" env:"STORMFORGE_ISSUER" envDefault:"https://auth.stormforge.io/"`
 	// The client ID used to obtain tokens via a client credentials grant.
 	ClientID string `json:"client_id,omitempty" yaml:"client_id,omitempty" env:"STORMFORGE_CLIENT_ID"`
 	// The client secret used to obtain tokens via a client credentials grant.
@@ -48,7 +48,7 @@ type Config struct {
 // Address returns the API server address. The canonical value will be slash-terminated,
 // however it is not guaranteed and callers are responsible for sanitizing the value.
 func (cfg *Config) Address() string {
-	return cfg.Server.String()
+	return cfg.Server
 }
 
 // Transport wraps the supplied round tripper (presumably the `http.DefaultTransport`)
@@ -77,12 +77,16 @@ func (cfg *Config) TokenSource(ctx context.Context) oauth2.TokenSource {
 		})
 
 	case cfg.ClientID != "":
-		tokenURL, err := cfg.Issuer.Parse("oauth/token")
+		tokenURL, err := url.Parse(cfg.Issuer)
 		if err != nil {
 			return &errorTokenSource{err: err}
 		}
 		if tokenURL.Scheme != "https" {
 			return &errorTokenSource{err: fmt.Errorf("issuer is required and must be HTTPS")}
+		}
+		tokenURL, err = tokenURL.Parse("oauth/token")
+		if err != nil {
+			return &errorTokenSource{err: err}
 		}
 
 		cc := clientcredentials.Config{
@@ -90,7 +94,7 @@ func (cfg *Config) TokenSource(ctx context.Context) oauth2.TokenSource {
 			ClientSecret:   cfg.ClientSecret,
 			TokenURL:       tokenURL.String(),
 			Scopes:         cfg.Scopes,
-			EndpointParams: url.Values{"audience": []string{cfg.Server.String()}},
+			EndpointParams: url.Values{"audience": []string{cfg.Server}},
 			AuthStyle:      oauth2.AuthStyleInParams,
 		}
 		return cc.TokenSource(ctx)
