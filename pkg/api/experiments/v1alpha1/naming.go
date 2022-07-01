@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/url"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -82,4 +83,28 @@ func SplitTrialName(name string) (ExperimentName, int64) {
 	}
 
 	return ExperimentName(name), -1
+}
+
+// nameRegexp is used to validate the experiment labels that are required to be names.
+var nameRegexp = regexp.MustCompile(`^[a-z\d](?:[-a-z\d]{0,61}[a-z\d])?$`)
+
+// CheckLabels ensures the supplied experiment labels are valid.
+func CheckLabels(labels map[string]string) error {
+	if v, ok := labels["application"]; !ok {
+		return fmt.Errorf("missing required label: application")
+	} else if !nameRegexp.MatchString(v) {
+		return fmt.Errorf("invalid label value (must be lowercase): application=%q", v)
+	}
+
+	if v, ok := labels["scenario"]; !ok {
+		return fmt.Errorf("missing required label: application")
+	} else if !nameRegexp.MatchString(v) {
+		return fmt.Errorf("invalid label value (must be lowercase): scenario=%q", v)
+	}
+
+	if v, ok := labels["objective"]; ok && !nameRegexp.MatchString(v) {
+		return fmt.Errorf("invalid label value (must be lowercase): objective=%q", v)
+	}
+
+	return nil
 }

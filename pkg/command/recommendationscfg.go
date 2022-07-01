@@ -83,3 +83,46 @@ func NewCreateRecommendationsConfigCommand(cfg Config, p Printer) *cobra.Command
 
 	return cmd
 }
+
+// NewGetRecommendationsConfigCommand returns a command for getting recommendation configuration.
+func NewGetRecommendationsConfigCommand(cfg Config, p Printer) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:               "recommendations-config APP_NAME",
+		Aliases:           []string{"recommendation-config", "rec-config", "rec-cfg", "recconfig", "reccfg"},
+		ValidArgsFunction: validApplicationArgs(cfg),
+	}
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		ctx, out := cmd.Context(), cmd.OutOrStdout()
+		client, err := api.NewClient(cfg.Address(), nil)
+		if err != nil {
+			return err
+		}
+
+		appAPI := applications.NewAPI(client)
+
+		appName := applications.ApplicationName(args[0])
+		app, err := appAPI.GetApplicationByName(ctx, appName)
+		if err != nil {
+			return err
+		}
+
+		recommendationsURL := app.Link(api.RelationRecommendations)
+		if recommendationsURL == "" {
+			return fmt.Errorf("malformed response, missing recommendations link")
+		}
+
+		rl, err := appAPI.ListRecommendations(ctx, recommendationsURL)
+		if err != nil {
+			return err
+		}
+
+		result := &RecommendationConfigOutput{
+			Name:               app.Name.String(),
+			RecommendationList: rl,
+		}
+		return p.Fprint(out, result)
+	}
+
+	return cmd
+}

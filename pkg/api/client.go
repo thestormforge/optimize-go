@@ -26,9 +26,9 @@ import (
 
 // Client is used to handle interactions with the API Server.
 type Client interface {
-	// URL returns the location of the specified endpoint
+	// URL returns the location of the specified endpoint.
 	URL(endpoint string) *url.URL
-	// Do performs the interaction specified by the HTTP request
+	// Do sends an HTTP request and returns the buffered body contents.
 	Do(context.Context, *http.Request) (*http.Response, []byte, error)
 }
 
@@ -40,22 +40,22 @@ func NewClient(address string, transport http.RoundTripper) (Client, error) {
 	}
 
 	return &httpClient{
-		endpoint: u,
 		client: http.Client{
 			Transport: transport,
-			Timeout:   10 * time.Second,
+			Timeout:   10 * time.Second, // TODO This should be configurable, e.g. for debugging
 		},
+		base: *u,
 	}, nil
 }
 
 type httpClient struct {
-	endpoint *url.URL
-	client   http.Client
+	client http.Client
+	base   url.URL
 }
 
 // URL resolves an endpoint to a fully qualified URL.
 func (c *httpClient) URL(ep string) *url.URL {
-	u, err := c.endpoint.Parse(ep)
+	u, err := c.base.Parse(ep)
 	if err != nil {
 		// If code panics here, the caller needs to verify it's input before
 		// passing it on to the `Client.URL(endpoint string)` function.

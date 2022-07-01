@@ -111,6 +111,13 @@ func (o *ScenarioOutput) Add(item *applications.ScenarioItem) error {
 	return nil
 }
 
+// RecommendationConfigOutput wraps the recommendation list (with configuration) for output.
+type RecommendationConfigOutput struct {
+	Name string `table:"name" csv:"name" json:"-"`
+
+	applications.RecommendationList `table:"-" csv:"-"`
+}
+
 // RecommendationRow is a table row representation of a recommendation.
 type RecommendationRow struct {
 	applications.RecommendationItem `table:"-" csv:"-"`
