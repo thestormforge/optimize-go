@@ -593,7 +593,8 @@ func (h *httpAPI) GetRecommendation(ctx context.Context, u string) (Recommendati
 	switch resp.StatusCode {
 	case http.StatusOK:
 		api.UnmarshalMetadata(resp, &result.Metadata)
-		err = json.Unmarshal(body, &result)
+		// TODO This should be `err = json.Unmarshal(body, &result)` but the recommendations API isn't setting headers...
+		err = api.UnmarshalJSON(body, &result)
 		return result, err
 	case http.StatusNotFound:
 		return result, api.NewError(ErrRecommendationNotFound, resp, body)
