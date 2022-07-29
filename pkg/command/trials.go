@@ -37,6 +37,9 @@ func NewCreateTrialCommand(cfg Config, p Printer) *cobra.Command {
 		Args: cobra.ExactArgs(1),
 	}
 
+	cmd.Flags().StringToStringVarP(&assignments, "assign", "A", nil, "assign an explicit `key=value` to a parameter")
+	cmd.Flags().StringVar(&defaultBehavior, "default", "", "select the `behavior` for default values; one of: none|min|max|rand")
+
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
 		client, err := api.NewClient(cfg.Address(), nil)
@@ -85,10 +88,6 @@ func NewCreateTrialCommand(cfg Config, p Printer) *cobra.Command {
 		_ = o.Add(&t)
 		return p.Fprint(out, o.Items[0])
 	}
-
-	cmd.Flags().StringToStringVarP(&assignments, "assign", "A", nil, "assign an explicit `key=value` to a parameter")
-	cmd.Flags().StringVar(&defaultBehavior, "default", "", "select the `behavior` for default values; one of: none|min|max|rand")
-
 	return cmd
 }
 
@@ -103,6 +102,8 @@ func NewEditTrialCommand(cfg Config, p Printer) *cobra.Command {
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: validTrialArgs(cfg),
 	}
+
+	cmd.Flags().StringToStringVar(&labels, "set-label", nil, "label `key=value` pairs to assign")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
@@ -134,9 +135,6 @@ func NewEditTrialCommand(cfg Config, p Printer) *cobra.Command {
 			return p.Fprint(out, item)
 		})
 	}
-
-	cmd.Flags().StringToStringVar(&labels, "set-label", nil, "label `key=value` pairs to assign")
-
 	return cmd
 }
 
@@ -152,6 +150,9 @@ func NewGetTrialsCommand(cfg Config, p Printer) *cobra.Command {
 		Aliases:           []string{"trial"},
 		ValidArgsFunction: validTrialArgs(cfg),
 	}
+
+	cmd.Flags().StringVarP(&selector, "selector", "l", selector, "selector (label `query`) to filter on")
+	cmd.Flags().BoolVarP(&all, "all", "A", all, "include all resources")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
@@ -179,10 +180,6 @@ func NewGetTrialsCommand(cfg Config, p Printer) *cobra.Command {
 
 		return p.Fprint(out, result)
 	}
-
-	cmd.Flags().StringVarP(&selector, "selector", "l", selector, "selector (label `query`) to filter on")
-	cmd.Flags().BoolVarP(&all, "all", "A", all, "include all resources")
-
 	return cmd
 }
 
@@ -225,7 +222,6 @@ func NewDeleteTrialsCommand(cfg Config, p Printer) *cobra.Command {
 			return p.Fprint(out, item)
 		})
 	}
-
 	return cmd
 }
 

@@ -50,7 +50,6 @@ func NewGetRecommendationsCommand(cfg Config, p Printer) *cobra.Command {
 
 		return p.Fprint(out, result)
 	}
-
 	return cmd
 }
 

@@ -38,6 +38,8 @@ func NewEditExperimentCommand(cfg Config, p Printer) *cobra.Command {
 		ValidArgsFunction: validExperimentArgs(cfg),
 	}
 
+	cmd.Flags().StringToStringVar(&labels, "set-label", nil, "label `key=value` pairs to assign")
+
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
 		client, err := api.NewClient(cfg.Address(), nil)
@@ -65,9 +67,6 @@ func NewEditExperimentCommand(cfg Config, p Printer) *cobra.Command {
 			return p.Fprint(out, item)
 		})
 	}
-
-	cmd.Flags().StringToStringVar(&labels, "set-label", nil, "label `key=value` pairs to assign")
-
 	return cmd
 }
 
@@ -83,6 +82,9 @@ func NewGetExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 		Aliases:           []string{"experiment", "exps", "exp"},
 		ValidArgsFunction: validExperimentArgs(cfg),
 	}
+
+	cmd.Flags().IntVar(&batchSize, "batch-size", batchSize, "fetch large lists in chu`n`ks rather then all at once")
+	cmd.Flags().StringVarP(&selector, "selector", "l", selector, "selector (label `query`) to filter on")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
@@ -111,10 +113,6 @@ func NewGetExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 
 		return p.Fprint(out, result)
 	}
-
-	cmd.Flags().IntVar(&batchSize, "batch-size", batchSize, "fetch large lists in chu`n`ks rather then all at once")
-	cmd.Flags().StringVarP(&selector, "selector", "l", selector, "selector (label `query`) to filter on")
-
 	return cmd
 }
 
@@ -129,6 +127,8 @@ func NewDeleteExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 		Aliases:           []string{"experiment", "exps", "exp"},
 		ValidArgsFunction: validExperimentArgs(cfg),
 	}
+
+	cmd.Flags().BoolVar(&ignoreNotFound, "ignore-not-found", ignoreNotFound, "treat not found errors as successful deletes")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
@@ -154,9 +154,6 @@ func NewDeleteExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 			return p.Fprint(out, item)
 		})
 	}
-
-	cmd.Flags().BoolVar(&ignoreNotFound, "ignore-not-found", ignoreNotFound, "treat not found errors as successful deletes")
-
 	return cmd
 }
 

@@ -37,50 +37,49 @@ func NewCreateRecommendationsConfigCommand(cfg Config, p Printer) *cobra.Command
 		Use:     "recommendations-config APP_NAME",
 		Aliases: []string{"recommendation-config", "rec-config", "rec-cfg", "recconfig", "reccfg"},
 		Args:    cobra.ExactArgs(1),
-
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx, out := cmd.Context(), cmd.OutOrStdout()
-			client, err := api.NewClient(cfg.Address(), nil)
-			if err != nil {
-				return err
-			}
-
-			appAPI := applications.NewAPI(client)
-
-			appName := applications.ApplicationName(args[0])
-			app, err := appAPI.GetApplicationByName(ctx, appName)
-			if err != nil {
-				return err
-			}
-
-			recommendationsURL := app.Link(api.RelationRecommendations)
-			if recommendationsURL == "" {
-				return fmt.Errorf("malformed response, missing recommendations link")
-			}
-
-			recs := applications.RecommendationList{}
-			deployConfiguration.Apply(&recs.DeployConfiguration)
-			containerResources.Apply(&recs.Configuration)
-
-			if recs.DeployConfiguration == nil && len(recs.Configuration) == 0 {
-				return nil
-			}
-
-			if err := appAPI.PatchRecommendations(ctx, recommendationsURL, recs); err != nil {
-				return err
-			}
-
-			if rl, err := appAPI.ListRecommendations(ctx, recommendationsURL); err == nil {
-				recs = rl
-			}
-
-			return p.Fprint(out, recs)
-		},
 	}
 
 	deployConfiguration.AddFlags(cmd)
 	containerResources.AddFlags(cmd)
 
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		ctx, out := cmd.Context(), cmd.OutOrStdout()
+		client, err := api.NewClient(cfg.Address(), nil)
+		if err != nil {
+			return err
+		}
+
+		appAPI := applications.NewAPI(client)
+
+		appName := applications.ApplicationName(args[0])
+		app, err := appAPI.GetApplicationByName(ctx, appName)
+		if err != nil {
+			return err
+		}
+
+		recommendationsURL := app.Link(api.RelationRecommendations)
+		if recommendationsURL == "" {
+			return fmt.Errorf("malformed response, missing recommendations link")
+		}
+
+		recs := applications.RecommendationList{}
+		deployConfiguration.Apply(&recs.DeployConfiguration)
+		containerResources.Apply(&recs.Configuration)
+
+		if recs.DeployConfiguration == nil && len(recs.Configuration) == 0 {
+			return nil
+		}
+
+		if err := appAPI.PatchRecommendations(ctx, recommendationsURL, recs); err != nil {
+			return err
+		}
+
+		if rl, err := appAPI.ListRecommendations(ctx, recommendationsURL); err == nil {
+			recs = rl
+		}
+
+		return p.Fprint(out, recs)
+	}
 	return cmd
 }
 
@@ -123,6 +122,5 @@ func NewGetRecommendationsConfigCommand(cfg Config, p Printer) *cobra.Command {
 		}
 		return p.Fprint(out, result)
 	}
-
 	return cmd
 }

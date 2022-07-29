@@ -37,6 +37,8 @@ func NewEditClusterCommand(cfg Config, p Printer) *cobra.Command {
 		ValidArgsFunction: validClusterArgs(cfg),
 	}
 
+	cmd.Flags().StringVar(&title, "title", "", "update the `title` value")
+
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
 		client, err := api.NewClient(cfg.Address(), nil)
@@ -64,9 +66,6 @@ func NewEditClusterCommand(cfg Config, p Printer) *cobra.Command {
 			return p.Fprint(out, item)
 		})
 	}
-
-	cmd.Flags().StringVar(&title, "title", "", "update the `title` value")
-
 	return cmd
 }
 
@@ -82,6 +81,9 @@ func NewGetClustersCommand(cfg Config, p Printer) *cobra.Command {
 		Aliases:           []string{"cluster"},
 		ValidArgsFunction: validClusterArgs(cfg),
 	}
+
+	cmd.Flags().BoolVar(&optimizeProOnly, "optimize-pro", false, "show only StormForge Optimize Pro clusters")
+	cmd.Flags().BoolVar(&optimizeProOnly, "optimize-live", false, "show only StormForge Optimize Live clusters")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
@@ -114,10 +116,6 @@ func NewGetClustersCommand(cfg Config, p Printer) *cobra.Command {
 
 		return p.Fprint(out, result)
 	}
-
-	cmd.Flags().BoolVar(&optimizeProOnly, "optimize-pro", false, "show only StormForge Optimize Pro clusters")
-	cmd.Flags().BoolVar(&optimizeProOnly, "optimize-live", false, "show only StormForge Optimize Live clusters")
-
 	return cmd
 }
 
@@ -132,6 +130,8 @@ func NewDeleteClustersCommand(cfg Config, p Printer) *cobra.Command {
 		Aliases:           []string{"cluster"},
 		ValidArgsFunction: validClusterArgs(cfg),
 	}
+
+	cmd.Flags().BoolVar(&ignoreNotFound, "ignore-not-found", ignoreNotFound, "treat not found errors as successful deletes")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
@@ -157,9 +157,6 @@ func NewDeleteClustersCommand(cfg Config, p Printer) *cobra.Command {
 			return p.Fprint(out, item)
 		})
 	}
-
-	cmd.Flags().BoolVar(&ignoreNotFound, "ignore-not-found", ignoreNotFound, "treat not found errors as successful deletes")
-
 	return cmd
 }
 

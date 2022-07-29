@@ -37,47 +37,46 @@ func NewWhoAmICommand(cfg Config) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use: "whoami",
-
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx, out := cmd.Context(), cmd.OutOrStdout()
-
-			// Fetch a token so we can inspect the claims
-			tok, err := token(ctx, cfg)
-			if err != nil {
-				return err
-			}
-
-			// Ignore the signature, just extract the claims
-			accessToken, err := jwt.ParseSigned(tok.AccessToken)
-			if err != nil {
-				return err
-			}
-			claims := map[string]interface{}{}
-			if err := accessToken.UnsafeClaimsWithoutVerification(&claims); err != nil {
-				return err
-			}
-
-			// Send it through a template
-			tmpl, err := template.New("out").
-				Funcs(map[string]interface{}{
-					"toJson": func(v interface{}) (string, error) {
-						var buf strings.Builder
-						enc := json.NewEncoder(&buf)
-						enc.SetIndent("", "  ")
-						err := enc.Encode(v)
-						return buf.String(), err
-					},
-				}).
-				Parse(pattern)
-			if err != nil {
-				return err
-			}
-			return tmpl.Execute(out, claims)
-		},
 	}
 
 	cmd.Flags().StringVar(&pattern, "template", "{{ toJson . }}", "the template `text` used to render the claims")
 
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		ctx, out := cmd.Context(), cmd.OutOrStdout()
+
+		// Fetch a token so we can inspect the claims
+		tok, err := token(ctx, cfg)
+		if err != nil {
+			return err
+		}
+
+		// Ignore the signature, just extract the claims
+		accessToken, err := jwt.ParseSigned(tok.AccessToken)
+		if err != nil {
+			return err
+		}
+		claims := map[string]interface{}{}
+		if err := accessToken.UnsafeClaimsWithoutVerification(&claims); err != nil {
+			return err
+		}
+
+		// Send it through a template
+		tmpl, err := template.New("out").
+			Funcs(map[string]interface{}{
+				"toJson": func(v interface{}) (string, error) {
+					var buf strings.Builder
+					enc := json.NewEncoder(&buf)
+					enc.SetIndent("", "  ")
+					err := enc.Encode(v)
+					return buf.String(), err
+				},
+			}).
+			Parse(pattern)
+		if err != nil {
+			return err
+		}
+		return tmpl.Execute(out, claims)
+	}
 	return cmd
 }
 

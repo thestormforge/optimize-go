@@ -38,6 +38,11 @@ func NewCreateApplicationCommand(cfg Config, p Printer) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 	}
 
+	cmd.Flags().StringVar(&title, "title", "", "human readable `name` for the application")
+	cmd.Flags().StringArrayVar(&resource.Kubernetes.Namespaces, "namespace", nil, "select application resources from a specific `namespace`")
+	cmd.Flags().StringVar(&resource.Kubernetes.NamespaceSelector, "ns-selector", "", "`sel`ect application resources from labeled namespaces")
+	cmd.Flags().StringVarP(&resource.Kubernetes.Selector, "selector", "l", "", "`sel`ect only labeled application resources")
+
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
 		client, err := api.NewClient(cfg.Address(), nil)
@@ -82,12 +87,6 @@ func NewCreateApplicationCommand(cfg Config, p Printer) *cobra.Command {
 
 		return p.Fprint(out, &app)
 	}
-
-	cmd.Flags().StringVar(&title, "title", "", "human readable `name` for the application")
-	cmd.Flags().StringArrayVar(&resource.Kubernetes.Namespaces, "namespace", nil, "select application resources from a specific `namespace`")
-	cmd.Flags().StringVar(&resource.Kubernetes.NamespaceSelector, "ns-selector", "", "`sel`ect application resources from labeled namespaces")
-	cmd.Flags().StringVarP(&resource.Kubernetes.Selector, "selector", "l", "", "`sel`ect only labeled application resources")
-
 	return cmd
 }
 
@@ -104,6 +103,11 @@ func NewEditApplicationCommand(cfg Config, p Printer) *cobra.Command {
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: validApplicationArgs(cfg),
 	}
+
+	cmd.Flags().StringVar(&title, "title", "", "human readable `name` for the application")
+	cmd.Flags().StringArrayVar(&resource.Kubernetes.Namespaces, "namespace", nil, "select application resources from a specific `namespace`")
+	cmd.Flags().StringVar(&resource.Kubernetes.NamespaceSelector, "ns-selector", "", "`sel`ect application resources from labeled namespaces")
+	cmd.Flags().StringVarP(&resource.Kubernetes.Selector, "selector", "l", "", "`sel`ect only labeled application resources")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
@@ -150,12 +154,6 @@ func NewEditApplicationCommand(cfg Config, p Printer) *cobra.Command {
 			return p.Fprint(out, item)
 		})
 	}
-
-	cmd.Flags().StringVar(&title, "title", "", "human readable `name` for the application")
-	cmd.Flags().StringArrayVar(&resource.Kubernetes.Namespaces, "namespace", nil, "select application resources from a specific `namespace`")
-	cmd.Flags().StringVar(&resource.Kubernetes.NamespaceSelector, "ns-selector", "", "`sel`ect application resources from labeled namespaces")
-	cmd.Flags().StringVarP(&resource.Kubernetes.Selector, "selector", "l", "", "`sel`ect only labeled application resources")
-
 	return cmd
 }
 
@@ -170,6 +168,8 @@ func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 		Aliases:           []string{"application", "apps", "app"},
 		ValidArgsFunction: validApplicationArgs(cfg),
 	}
+
+	cmd.Flags().IntVar(&batchSize, "batch-size", batchSize, "fetch large lists in chu`n`ks rather then all at once")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
@@ -216,9 +216,6 @@ func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 
 		return p.Fprint(out, result)
 	}
-
-	cmd.Flags().IntVar(&batchSize, "batch-size", batchSize, "fetch large lists in chu`n`ks rather then all at once")
-
 	return cmd
 }
 
@@ -233,6 +230,8 @@ func NewDeleteApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 		Aliases:           []string{"application", "apps", "app"},
 		ValidArgsFunction: validApplicationArgs(cfg),
 	}
+
+	cmd.Flags().BoolVar(&ignoreNotFound, "ignore-not-found", ignoreNotFound, "treat not found errors as successful deletes")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
@@ -258,9 +257,6 @@ func NewDeleteApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 			return p.Fprint(out, item)
 		})
 	}
-
-	cmd.Flags().BoolVar(&ignoreNotFound, "ignore-not-found", ignoreNotFound, "treat not found errors as successful deletes")
-
 	return cmd
 }
 
