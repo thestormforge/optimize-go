@@ -99,6 +99,7 @@ func (opts *ContainerResourcesOptions) Apply(configuration *[]interface{}) {
 }
 
 type DeployConfigurationOptions struct {
+	Mode                   string
 	Interval               time.Duration
 	ContainerMax           map[string]string
 	ContainerMin           map[string]string
@@ -112,6 +113,10 @@ func (opts *DeployConfigurationOptions) Apply(deployConfiguration **applications
 			*deployConfiguration = &applications.DeployConfiguration{}
 		}
 		return *deployConfiguration
+	}
+
+	if opts.Mode != "" {
+		lazyDeployConfig().Mode = opts.Mode
 	}
 
 	if opts.Interval > 0 {
@@ -178,6 +183,8 @@ func (opts *ContainerResourcesOptions) AddFlags(cmd *cobra.Command) {
 }
 
 func (opts *DeployConfigurationOptions) AddFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&opts.Mode, "deploy-mode", "",
+		"deployment `mode`; one of: disabled|auto|manual")
 	cmd.Flags().DurationVar(&opts.Interval, "deploy-interval", 0,
 		"desired amount of `time` between deployments")
 	cmd.Flags().StringToStringVar(&opts.ContainerMax, "deploy-container-max", nil,

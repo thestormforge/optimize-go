@@ -57,7 +57,7 @@ type RecommendationList struct {
 }
 
 type DeployConfiguration struct {
-	Mode                   string           `json:"mode,omitempty"` // TODO Is this read-only?
+	Mode                   string           `json:"mode,omitempty"`
 	Interval               api.Duration     `json:"interval,omitempty"`
 	Limits                 []LimitRangeItem `json:"limits,omitempty"`
 	MaxRecommendationRatio *ResourceList    `json:"maxRecommendationRatio,omitempty"`
