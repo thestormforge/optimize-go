@@ -277,8 +277,9 @@ func NewEditScenarioCommand(cfg Config, p Printer) *cobra.Command {
 // NewGetScenariosCommand returns a command for getting scenarios.
 func NewGetScenariosCommand(cfg Config, p Printer) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "scenarios [APP_NAME/NAME ...]",
+		Use:     "scenarios APP_NAME | APP_NAME/NAME ...",
 		Aliases: []string{"scenario", "scn"},
+		Args:    cobra.MinimumNArgs(1),
 	}
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
@@ -309,8 +310,9 @@ func NewDeleteScenariosCommand(cfg Config, p Printer) *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "scenarios [APPNAME/NAME ...]",
+		Use:     "scenarios APP_NAME | APP_NAME/NAME ...",
 		Aliases: []string{"scenario", "scn"},
+		Args:    cobra.MinimumNArgs(1),
 	}
 
 	cmd.Flags().BoolVar(&ignoreNotFound, "ignore-not-found", ignoreNotFound, "treat not found errors as successful deletes")

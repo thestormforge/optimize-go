@@ -27,8 +27,9 @@ import (
 // NewGetRecommendationsCommand returns a command for getting recommendations.
 func NewGetRecommendationsCommand(cfg Config, p Printer) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "recommendations [APPNAME/NAME ...]",
+		Use:               "recommendations APP_NAME | APP_NAME/NAME ...",
 		Aliases:           []string{"recommendation", "recs", "rec"},
+		Args:              cobra.MinimumNArgs(1),
 		ValidArgsFunction: validRecommendationArgs(cfg),
 	}
 
