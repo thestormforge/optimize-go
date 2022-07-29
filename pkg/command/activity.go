@@ -96,6 +96,7 @@ func NewWatchActivityCommand(cfg Config) *cobra.Command {
 
 		feedTemplateText string
 		itemTemplateText string
+		userAgent        string
 	)
 
 	cmd := &cobra.Command{
@@ -131,6 +132,11 @@ func NewWatchActivityCommand(cfg Config) *cobra.Command {
 			itemTemplate, err := tmpl.New("item").Parse(itemTemplateText)
 			if err != nil {
 				return err
+			}
+
+			// Override the user agent for debugging
+			if userAgent != "" {
+				ctx = context.WithValue(ctx, "User-Agent", userAgent)
 			}
 
 			s := &applications.PollingSubscriber{
@@ -196,8 +202,10 @@ func NewWatchActivityCommand(cfg Config) *cobra.Command {
 	cmd.Flags().BoolVar(&deleteItems, "delete", false, "delete new items")
 	cmd.Flags().StringVar(&feedTemplateText, "feed-template", `{{ template "ActivityFeed" . }}`, "the feed `template` used to render the activity feed")
 	cmd.Flags().StringVar(&itemTemplateText, "item-template", `{{ template "ActivityItem" . }}`, "the item `template` used to render the items")
+	cmd.Flags().StringVar(&userAgent, "user-agent", "", "override the User-Agent `header` used when making requests")
 	cmd.Flag("feed-template").Hidden = true
 	cmd.Flag("item-template").Hidden = true
+	cmd.Flag("user-agent").Hidden = true
 
 	return cmd
 }
