@@ -120,6 +120,8 @@ type RecommendationConfigOutput struct {
 
 // RecommendationRow is a table row representation of a recommendation.
 type RecommendationRow struct {
+	Name string `table:"name" csv:"name" json:"-"`
+
 	applications.RecommendationItem `table:"-" csv:"-"`
 }
 
@@ -131,6 +133,8 @@ type RecommendationOutput struct {
 // Add a recommendation item to the output.
 func (o *RecommendationOutput) Add(item *applications.RecommendationItem) error {
 	o.Items = append(o.Items, RecommendationRow{
+		Name: item.Name,
+
 		RecommendationItem: *item,
 	})
 	return nil
