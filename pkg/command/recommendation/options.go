@@ -37,65 +37,52 @@ type ContainerResourcesOptions struct {
 	Tolerance         map[string]string
 }
 
-func (opts *ContainerResourcesOptions) Apply(configuration *[]interface{}) {
-	containerResources := map[string]interface{}{}
+func (opts *ContainerResourcesOptions) Apply(configuration *[]applications.Configuration) error {
+	lazyContainerResources := func() *applications.ContainerResources {
+		if len(*configuration) == 0 {
+			*configuration = append(*configuration, applications.Configuration{ContainerResources: &applications.ContainerResources{}})
+		}
+		if (*configuration)[0].ContainerResources == nil {
+			(*configuration)[0].ContainerResources = &applications.ContainerResources{}
+		}
+		return (*configuration)[0].ContainerResources
+	}
 
 	if opts.Selector != "" {
-		containerResources["selector"] = opts.Selector
+		lazyContainerResources().Selector = opts.Selector
 	}
 
 	if opts.Interval > 0 {
-		containerResources["interval"] = opts.Interval.String()
+		lazyContainerResources().Interval = api.Duration(opts.Interval)
 	}
 
 	if size := len(opts.TargetUtilization); size > 0 {
-		targetUtilization := make(map[string]interface{}, size)
+		targetUtilization := &applications.ResourceList{}
 		for k, v := range opts.TargetUtilization {
 			switch strings.ToLower(k) {
 			case "cpu":
-				targetUtilization["cpu"] = json.Number(v)
+				targetUtilization.CPU = &api.NumberOrString{NumVal: json.Number(v)}
 			case "memory":
-				targetUtilization["memory"] = json.Number(v)
-			default:
-				targetUtilization[k] = json.Number(v)
+				targetUtilization.Memory = &api.NumberOrString{NumVal: json.Number(v)}
 			}
 		}
-		containerResources["targetUtilization"] = targetUtilization
+		lazyContainerResources().TargetUtilization = targetUtilization
 	}
 
 	if size := len(opts.Tolerance); size > 0 {
-		tolerance := make(map[string]interface{}, size)
+		tolerance := &applications.ResourceList{}
 		for k, v := range opts.Tolerance {
 			switch strings.ToLower(k) {
 			case "cpu":
-				tolerance["cpu"] = v
+				tolerance.CPU = (*api.NumberOrString)(applications.ToleranceFrom(v))
 			case "memory":
-				tolerance["memory"] = v
-			default:
-				tolerance[k] = v
+				tolerance.Memory = (*api.NumberOrString)(applications.ToleranceFrom(v))
 			}
 		}
-		containerResources["tolerance"] = tolerance
+		lazyContainerResources().Tolerance = tolerance
 	}
 
-	if len(containerResources) == 0 {
-		return
-	}
-
-	for i := range *configuration {
-		item, ok := (*configuration)[i].(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		// TODO Implement a proper merge
-		if _, ok := item["containerResources"]; ok {
-			item["containerResources"] = containerResources
-			return
-		}
-	}
-
-	*configuration = append(*configuration, map[string]interface{}{"containerResources": containerResources})
+	return nil
 }
 
 type DeployConfigurationOptions struct {
@@ -107,7 +94,7 @@ type DeployConfigurationOptions struct {
 	Clusters               []string
 }
 
-func (opts *DeployConfigurationOptions) Apply(deployConfiguration **applications.DeployConfiguration) {
+func (opts *DeployConfigurationOptions) Apply(deployConfiguration **applications.DeployConfiguration) error {
 	lazyDeployConfig := func() *applications.DeployConfiguration {
 		if *deployConfiguration == nil {
 			*deployConfiguration = &applications.DeployConfiguration{}
@@ -116,7 +103,7 @@ func (opts *DeployConfigurationOptions) Apply(deployConfiguration **applications
 	}
 
 	if opts.Mode != "" {
-		lazyDeployConfig().Mode = opts.Mode
+		lazyDeployConfig().Mode = applications.RecommendationsMode(opts.Mode)
 	}
 
 	if opts.Interval > 0 {
@@ -169,6 +156,8 @@ func (opts *DeployConfigurationOptions) Apply(deployConfiguration **applications
 	if len(opts.Clusters) > 0 {
 		lazyDeployConfig().Clusters = opts.Clusters
 	}
+
+	return nil
 }
 
 func (opts *ContainerResourcesOptions) AddFlags(cmd *cobra.Command) {

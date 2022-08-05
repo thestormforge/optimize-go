@@ -23,6 +23,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/thestormforge/optimize-go/pkg/api"
 	applications "github.com/thestormforge/optimize-go/pkg/api/applications/v2"
+	"github.com/thestormforge/optimize-go/pkg/command/recommendation"
 )
 
 // NewCreateApplicationCommand returns a command for creating applications.
@@ -157,6 +158,73 @@ func NewEditApplicationCommand(cfg Config, p Printer) *cobra.Command {
 	return cmd
 }
 
+// NewEnableApplicationRecommendationsCommand returns a new command for enabling recommendations.
+func NewEnableApplicationRecommendationsCommand(cfg Config, p Printer) *cobra.Command {
+	var (
+		deployConfiguration recommendation.DeployConfigurationOptions
+		containerResources  recommendation.ContainerResourcesOptions
+	)
+
+	cmd := &cobra.Command{
+		Use:     "application-recommendations APP_NAME",
+		Aliases: []string{"app-recs", "recs"},
+		Args:    cobra.ExactArgs(1),
+	}
+
+	deployConfiguration.AddFlags(cmd)
+	containerResources.AddFlags(cmd)
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		ctx, out := cmd.Context(), cmd.OutOrStdout()
+		client, err := api.NewClient(cfg.Address(), nil)
+		if err != nil {
+			return err
+		}
+
+		appAPI := applications.NewAPI(client)
+
+		appName := applications.ApplicationName(args[0])
+		app, err := appAPI.GetApplicationByName(ctx, appName)
+		if err != nil {
+			return err
+		}
+
+		recommendationsURL := app.Link(api.RelationRecommendations)
+		if recommendationsURL == "" {
+			return fmt.Errorf("malformed response, missing recommendations link")
+		}
+
+		recs := applications.RecommendationList{}
+		if err := deployConfiguration.Apply(&recs.DeployConfiguration); err != nil {
+			return err
+		}
+		if err := containerResources.Apply(&recs.Configuration); err != nil {
+			return err
+		}
+		if recs.DeployConfiguration == nil && len(recs.Configuration) == 0 {
+			return fmt.Errorf("missing configuration options")
+		}
+
+		if err := appAPI.PatchRecommendations(ctx, recommendationsURL, recs); err != nil {
+			return err
+		}
+
+		if rl, err := appAPI.ListRecommendations(ctx, recommendationsURL); err == nil {
+			recs = rl
+		}
+
+		// Re-use the application list output to generate an ApplicationRow
+		result := &ApplicationOutput{}
+		if err := result.Add(&applications.ApplicationItem{Application: app}); err != nil {
+			return err
+		}
+		result.Items[0].SetRecommendationsDeployConfig(recs.DeployConfiguration)
+		result.Items[0].SetRecommendationsConfiguration(recs.Configuration)
+		return p.Fprint(out, &result.Items[0])
+	}
+	return cmd
+}
+
 // NewGetApplicationsCommand returns a command for getting applications.
 func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 	var (
@@ -209,9 +277,9 @@ func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if rl.DeployConfiguration != nil && rl.DeployConfiguration.Interval > 0 {
-				result.Items[i].DeployInterval = rl.DeployConfiguration.Interval.String()
-			}
+
+			result.Items[i].SetRecommendationsDeployConfig(rl.DeployConfiguration)
+			result.Items[i].SetRecommendationsConfiguration(rl.Configuration)
 		}
 
 		return p.Fprint(out, result)
