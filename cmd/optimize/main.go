@@ -59,7 +59,6 @@ func main() {
 	createCmd.AddCommand(
 		command.NewCreateApplicationCommand(cfg, &printer{format: `created application %q.`}),
 		command.NewCreateScenarioCommand(cfg, &printer{format: `created scenario %q.`}),
-		command.NewCreateRecommendationsConfigCommand(cfg, &printer{format: `created recommendation configuration.`}),
 		command.NewCreateTrialCommand(cfg, &printer{format: `created trial %q.`}),
 	)
 
