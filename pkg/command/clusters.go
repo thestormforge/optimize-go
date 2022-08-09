@@ -72,8 +72,7 @@ func NewEditClusterCommand(cfg Config, p Printer) *cobra.Command {
 // NewGetClustersCommand returns a command for getting clusters.
 func NewGetClustersCommand(cfg Config, p Printer) *cobra.Command {
 	var (
-		optimizeProOnly  bool
-		optimizeLiveOnly bool
+		product string
 	)
 
 	cmd := &cobra.Command{
@@ -82,8 +81,11 @@ func NewGetClustersCommand(cfg Config, p Printer) *cobra.Command {
 		ValidArgsFunction: validClusterArgs(cfg),
 	}
 
-	cmd.Flags().BoolVar(&optimizeProOnly, "optimize-pro", false, "show only StormForge Optimize Pro clusters")
-	cmd.Flags().BoolVar(&optimizeProOnly, "optimize-live", false, "show only StormForge Optimize Live clusters")
+	cmd.Flags().StringVar(&product, "for", product, "show only clusters for a specific `product`; one of: optimize-pro|optimize-live")
+
+	_ = cmd.RegisterFlagCompletionFunc("for", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return []string{"optimize-pro", "optimize-live"}, cobra.ShellCompDirectiveDefault
+	})
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
@@ -103,10 +105,10 @@ func NewGetClustersCommand(cfg Config, p Printer) *cobra.Command {
 			}
 		} else {
 			q := applications.ClusterListQuery{}
-			switch {
-			case optimizeProOnly && !optimizeLiveOnly:
+			switch product {
+			case "optimize-pro", "pro":
 				q.SetModules(applications.ClusterScenarios)
-			case optimizeLiveOnly && !optimizeProOnly:
+			case "optimize-live", "live":
 				q.SetModules(applications.ClusterRecommendations)
 			}
 			if err := l.ForEachCluster(ctx, q, result.Add); err != nil {
