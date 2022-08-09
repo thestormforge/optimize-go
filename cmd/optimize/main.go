@@ -84,7 +84,6 @@ func main() {
 	getCmd.AddCommand(
 		command.NewGetApplicationsCommand(cfg, &printer{}),
 		command.NewGetScenariosCommand(cfg, &printer{}),
-		command.NewGetRecommendationsConfigCommand(cfg, &printer{}),
 		command.NewGetRecommendationsCommand(cfg, &printer{}),
 		command.NewGetExperimentsCommand(cfg, &printer{}),
 		command.NewGetTrialsCommand(cfg, &printer{}),
@@ -105,6 +104,15 @@ func main() {
 		command.NewDeleteClustersCommand(cfg, &printer{format: `deleted cluster %q.`}),
 	)
 
+	// Aggregate the ENABLE commands
+	enableCmd := &cobra.Command{
+		Use: "enable",
+	}
+
+	enableCmd.AddCommand(
+		command.NewEnableApplicationRecommendationsCommand(cfg, &printer{format: `enabled application recommendations.`}),
+	)
+
 	// Aggregate the WATCH commands
 	watchCmd := &cobra.Command{
 		Use: "watch",
@@ -120,6 +128,7 @@ func main() {
 		editCmd,
 		getCmd,
 		deleteCmd,
+		enableCmd,
 		watchCmd,
 		command.NewWhoAmICommand(cfg),
 	)

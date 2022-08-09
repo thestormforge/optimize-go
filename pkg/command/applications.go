@@ -166,13 +166,16 @@ func NewEnableApplicationRecommendationsCommand(cfg Config, p Printer) *cobra.Co
 	)
 
 	cmd := &cobra.Command{
-		Use:     "application-recommendations APP_NAME",
-		Aliases: []string{"app-recs", "recs"},
-		Args:    cobra.ExactArgs(1),
+		Use:               "application-recommendations APP_NAME",
+		Aliases:           []string{"app-recs", "recs"},
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: validApplicationArgs(cfg),
 	}
 
 	deployConfiguration.AddFlags(cmd)
 	containerResources.AddFlags(cmd)
+
+	_ = cmd.RegisterFlagCompletionFunc("cluster", validClusterArgs(cfg, applications.ClusterRecommendations))
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
@@ -194,18 +197,19 @@ func NewEnableApplicationRecommendationsCommand(cfg Config, p Printer) *cobra.Co
 			return fmt.Errorf("malformed response, missing recommendations link")
 		}
 
-		recs := applications.RecommendationList{}
-		if err := deployConfiguration.Apply(&recs.DeployConfiguration); err != nil {
+		recs, err := appAPI.ListRecommendations(ctx, recommendationsURL)
+		if err != nil {
 			return err
-		}
-		if err := containerResources.Apply(&recs.Configuration); err != nil {
-			return err
-		}
-		if recs.DeployConfiguration == nil && len(recs.Configuration) == 0 {
-			return fmt.Errorf("missing configuration options")
 		}
 
-		if err := appAPI.PatchRecommendations(ctx, recommendationsURL, recs); err != nil {
+		patch := applications.RecommendationList{}
+		deployConfiguration.Apply(&patch.DeployConfiguration)
+		containerResources.Apply(&patch.Configuration)
+		if err := recommendation.Finish(cmd, appAPI, app, recs, &patch); err != nil {
+			return err
+		}
+
+		if err := appAPI.PatchRecommendations(ctx, recommendationsURL, patch); err != nil {
 			return err
 		}
 

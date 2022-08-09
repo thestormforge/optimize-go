@@ -65,6 +65,15 @@ type DeployConfiguration struct {
 	Clusters               []string            `json:"clusters,omitempty"`
 }
 
+func (dc *DeployConfiguration) GetLimits(t string) *LimitRangeItem {
+	for i := range dc.Limits {
+		if t == dc.Limits[i].Type {
+			return &dc.Limits[i]
+		}
+	}
+	return nil
+}
+
 type Configuration struct {
 	ContainerResources *ContainerResources `json:"containerResources,omitempty"`
 }
@@ -85,6 +94,27 @@ type LimitRangeItem struct {
 type ResourceList struct {
 	CPU    *api.NumberOrString `json:"cpu,omitempty"`
 	Memory *api.NumberOrString `json:"memory,omitempty"`
+}
+
+func (rl *ResourceList) Get(name string) *api.NumberOrString {
+	if rl != nil {
+		switch name {
+		case "cpu":
+			return rl.CPU
+		case "memory":
+			return rl.Memory
+		}
+	}
+	return nil
+}
+
+func (rl *ResourceList) Set(name string, value api.NumberOrString) {
+	switch name {
+	case "cpu":
+		rl.CPU = &value
+	case "memory":
+		rl.Memory = &value
+	}
 }
 
 // NOTE: tolerance is a number or string type to allow it in a resource list
