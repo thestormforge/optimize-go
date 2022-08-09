@@ -58,14 +58,45 @@ func formatTime(t *time.Time, layout string) string {
 type ApplicationRow struct {
 	Name                string `table:"name" csv:"name" json:"-"`
 	Title               string `table:"title" csv:"title" json:"-"`
-	ScenarioCount       int    `table:"scenarios,wide" csv:"scenario_count" json:"-"`
+	ScenarioCount       int    `table:"scenarios" csv:"scenario_count" json:"-"`
 	RecommendationMode  string `table:"recommendations" csv:"recommendations" json:"-"`
-	DeployInterval      string `table:"deploy_interval" csv:"deploy_interval" json:"-"`
+	DeployInterval      string `table:"deploy_interval,wide" csv:"deploy_interval" json:"-"`
 	LastDeployedMachine string `table:"-" csv:"last_deployed" json:"-"`
-	LastDeployedHuman   string `table:"last_deployed" csv:"-" json:"-"`
+	LastDeployedHuman   string `table:"last_deployed,wide" csv:"-" json:"-"`
 	Age                 string `table:"age,wide" csv:"-" json:"-"`
 
 	applications.ApplicationItem `table:"-" csv:"-"`
+
+	// Special case: the recommendation configuration fields are sub-resources of the actual application
+
+	RecommendationsDeployConfig  *applications.DeployConfiguration `table:"-" csv:"-" json:"recommendationsDeployConfig,omitempty"`
+	RecommendationsConfiguration []applications.Configuration      `table:"-" csv:"-" json:"recommendationsConfiguration,omitempty"`
+}
+
+func (r *ApplicationRow) SetRecommendationsDeployConfig(deploy *applications.DeployConfiguration) {
+	if deploy == nil {
+		return
+	}
+
+	// Hack to account for missing mode information
+	if deploy.Mode == "" {
+		deploy.Mode = r.ApplicationItem.Recommendations
+	}
+	if deploy.Mode != "" {
+		r.RecommendationMode = cases.Title(language.AmericanEnglish).String(string(deploy.Mode))
+	}
+
+	if deploy.Interval > 0 {
+		r.DeployInterval = deploy.Interval.String()
+	}
+
+	r.RecommendationsDeployConfig = deploy
+}
+
+func (r *ApplicationRow) SetRecommendationsConfiguration(config []applications.Configuration) {
+	for i := range config {
+		r.RecommendationsConfiguration = append(r.RecommendationsConfiguration, config[i])
+	}
 }
 
 // ApplicationOutput wraps an application list for output.
@@ -79,7 +110,7 @@ func (o *ApplicationOutput) Add(item *applications.ApplicationItem) error {
 		Name:                item.Name.String(),
 		Title:               item.Title(),
 		ScenarioCount:       item.ScenarioCount,
-		RecommendationMode:  cases.Title(language.AmericanEnglish).String(string(item.Recommendations)),
+		RecommendationMode:  "Disabled",
 		LastDeployedMachine: formatTime(item.LastDeployedAt, time.RFC3339),
 		LastDeployedHuman:   formatTime(item.LastDeployedAt, "ago"),
 		Age:                 formatTime(item.CreatedAt, ""),
@@ -109,13 +140,6 @@ func (o *ScenarioOutput) Add(item *applications.ScenarioItem) error {
 		ScenarioItem: *item,
 	})
 	return nil
-}
-
-// RecommendationConfigOutput wraps the recommendation list (with configuration) for output.
-type RecommendationConfigOutput struct {
-	Name string `table:"name" csv:"name" json:"-"`
-
-	applications.RecommendationList `table:"-" csv:"-"`
 }
 
 // RecommendationRow is a table row representation of a recommendation.

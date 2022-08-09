@@ -17,6 +17,7 @@ limitations under the License.
 package v2
 
 import (
+	"strings"
 	"time"
 
 	"github.com/thestormforge/optimize-go/pkg/api"
@@ -52,16 +53,36 @@ func (l *RecommendationItem) UnmarshalJSON(b []byte) error {
 type RecommendationList struct {
 	api.Metadata        `json:"-"`
 	DeployConfiguration *DeployConfiguration `json:"deploy,omitempty"`
-	Configuration       []interface{}        `json:"configuration,omitempty"`
+	Configuration       []Configuration      `json:"configuration,omitempty"`
 	Recommendations     []RecommendationItem `json:"recommendations,omitempty"`
 }
 
 type DeployConfiguration struct {
-	Mode                   string           `json:"mode,omitempty"`
-	Interval               api.Duration     `json:"interval,omitempty"`
-	Limits                 []LimitRangeItem `json:"limits,omitempty"`
-	MaxRecommendationRatio *ResourceList    `json:"maxRecommendationRatio,omitempty"`
-	Clusters               []string         `json:"clusters,omitempty"`
+	Mode                   RecommendationsMode `json:"mode,omitempty"`
+	Interval               api.Duration        `json:"interval,omitempty"`
+	Limits                 []LimitRangeItem    `json:"limits,omitempty"`
+	MaxRecommendationRatio *ResourceList       `json:"maxRecommendationRatio,omitempty"`
+	Clusters               []string            `json:"clusters,omitempty"`
+}
+
+func (dc *DeployConfiguration) GetLimits(t string) *LimitRangeItem {
+	for i := range dc.Limits {
+		if t == dc.Limits[i].Type {
+			return &dc.Limits[i]
+		}
+	}
+	return nil
+}
+
+type Configuration struct {
+	ContainerResources *ContainerResources `json:"containerResources,omitempty"`
+}
+
+type ContainerResources struct {
+	Selector          string        `json:"selector,omitempty"`
+	Interval          api.Duration  `json:"interval,omitempty"`
+	TargetUtilization *ResourceList `json:"targetUtilization,omitempty"`
+	Tolerance         *ResourceList `json:"tolerance,omitempty"`
 }
 
 type LimitRangeItem struct {
@@ -73,4 +94,41 @@ type LimitRangeItem struct {
 type ResourceList struct {
 	CPU    *api.NumberOrString `json:"cpu,omitempty"`
 	Memory *api.NumberOrString `json:"memory,omitempty"`
+}
+
+func (rl *ResourceList) Get(name string) *api.NumberOrString {
+	if rl != nil {
+		switch name {
+		case "cpu":
+			return rl.CPU
+		case "memory":
+			return rl.Memory
+		}
+	}
+	return nil
+}
+
+func (rl *ResourceList) Set(name string, value api.NumberOrString) {
+	switch name {
+	case "cpu":
+		rl.CPU = &value
+	case "memory":
+		rl.Memory = &value
+	}
+}
+
+// NOTE: tolerance is a number or string type to allow it in a resource list
+
+type Tolerance api.NumberOrString
+
+func ToleranceFrom(s string) *Tolerance {
+	switch strings.ToLower(s) {
+	case "low", "l":
+		return &Tolerance{StrVal: "low", IsString: true}
+	case "medium", "med", "m":
+		return &Tolerance{StrVal: "medium", IsString: true}
+	case "high", "h":
+		return &Tolerance{StrVal: "high", IsString: true}
+	}
+	return nil
 }

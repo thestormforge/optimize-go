@@ -50,6 +50,9 @@ func FromString(val string) NumberOrString {
 
 // String coerces the value to a string.
 func (s *NumberOrString) String() string {
+	if s == nil {
+		return "null"
+	}
 	if s.IsString {
 		return s.StrVal
 	}

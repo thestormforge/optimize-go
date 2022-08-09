@@ -72,7 +72,8 @@ type completionLister struct {
 // forEachApplication lists all applications, ignoring errors.
 func (c *completionLister) forAllApplications(f func(item *applications.ApplicationItem)) {
 	l := applications.Lister{API: applications.NewAPI(c.client)}
-	_ = l.ForEachApplication(c.ctx, applications.ApplicationListQuery{}, func(item *applications.ApplicationItem) error {
+	q := applications.ApplicationListQuery{}
+	_ = l.ForEachApplication(c.ctx, q, func(item *applications.ApplicationItem) error {
 		f(item)
 		return nil
 	})
@@ -81,16 +82,19 @@ func (c *completionLister) forAllApplications(f func(item *applications.Applicat
 // forEachExperiment lists all experiments, ignoring errors.
 func (c *completionLister) forAllExperiments(f func(item *experiments.ExperimentItem)) {
 	l := experiments.Lister{API: experiments.NewAPI(c.client)}
-	_ = l.ForEachExperiment(c.ctx, experiments.ExperimentListQuery{}, func(item *experiments.ExperimentItem) error {
+	q := experiments.ExperimentListQuery{}
+	_ = l.ForEachExperiment(c.ctx, q, func(item *experiments.ExperimentItem) error {
 		f(item)
 		return nil
 	})
 }
 
 // forEachCluster lists all cluster, ignoring errors.
-func (c *completionLister) forAllClusters(f func(item *applications.ClusterItem)) {
+func (c *completionLister) forAllClusters(f func(item *applications.ClusterItem), m ...applications.ClusterModule) {
 	l := applications.Lister{API: applications.NewAPI(c.client)}
-	_ = l.ForEachCluster(c.ctx, applications.ClusterListQuery{}, func(item *applications.ClusterItem) error {
+	q := applications.ClusterListQuery{}
+	q.SetModules(m...)
+	_ = l.ForEachCluster(c.ctx, q, func(item *applications.ClusterItem) error {
 		f(item)
 		return nil
 	})

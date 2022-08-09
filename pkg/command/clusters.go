@@ -160,14 +160,14 @@ func NewDeleteClustersCommand(cfg Config, p Printer) *cobra.Command {
 	return cmd
 }
 
-func validClusterArgs(cfg Config) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+func validClusterArgs(cfg Config, modules ...applications.ClusterModule) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 	return validArgs(cfg, func(l *completionLister, toComplete string) (completions []string, directive cobra.ShellCompDirective) {
 		directive |= cobra.ShellCompDirectiveNoFileComp
 		l.forAllClusters(func(item *applications.ClusterItem) {
 			if strings.HasPrefix(item.Name.String(), toComplete) {
-				completions = append(completions, item.Name.String())
+				completions = append(completions, item.Name.String()+"\t"+item.Title())
 			}
-		})
+		}, modules...)
 		return
 	})
 }

@@ -51,6 +51,10 @@ const (
 	RecommendationsAuto     RecommendationsMode = "auto"
 )
 
+func (m RecommendationsMode) Enabled() bool {
+	return m != RecommendationsDisabled && m != ""
+}
+
 func (ai *ApplicationItem) UnmarshalJSON(b []byte) error {
 	type t ApplicationItem
 	return api.UnmarshalJSON(b, (*t)(ai))
@@ -69,9 +73,9 @@ type ApplicationList struct {
 
 type Resource struct {
 	Kubernetes struct {
-		Namespace         string   `json:"namespace,omitempty"`
-		Namespaces        []string `json:"namespaces,omitempty"`
-		NamespaceSelector string   `json:"namespaceSelector,omitempty"`
+		Namespace         string   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+		Namespaces        []string `json:"namespaces,omitempty" yaml:"namespaces,omitempty"`
+		NamespaceSelector string   `json:"namespaceSelector,omitempty" yaml:"namespaceSelector,omitempty"`
 		Types             []string `json:"types,omitempty" yaml:"types,omitempty"`
 		Selector          string   `json:"selector,omitempty" yaml:"selector,omitempty"`
 	} `json:"kubernetes" yaml:"kubernetes"`
