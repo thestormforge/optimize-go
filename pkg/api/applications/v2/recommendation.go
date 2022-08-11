@@ -17,6 +17,7 @@ limitations under the License.
 package v2
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/thestormforge/optimize-go/pkg/api"
@@ -65,9 +66,29 @@ type DeployConfiguration struct {
 }
 
 type LimitRangeItem struct {
-	Type string        `json:"type,omitempty"`
-	Max  *ResourceList `json:"max,omitempty"`
-	Min  *ResourceList `json:"min,omitempty"`
+	Type                 string        `json:"type,omitempty"`
+	Max                  *ResourceList `json:"max,omitempty"`
+	Min                  *ResourceList `json:"min,omitempty"`
+	Default              *ResourceList `json:"default,omitempty"`
+	MaxRequest           *ResourceList `json:"maxRequest,omitempty"`
+	MinRequest           *ResourceList `json:"minRequest,omitempty"`
+	MaxLimitRequestRatio *ResourceList `json:"maxLimitRequestRatio,omitempty"`
+}
+
+func (l *LimitRangeItem) UnmarshalJSON(bytes []byte) error {
+	type t LimitRangeItem
+	if err := json.Unmarshal(bytes, (*t)(l)); err != nil {
+		return err
+	}
+
+	// Handle a legacy data migration lazily
+	// NOTE: MinRequest/MaxRequest are required, so if they are both missing, swap with Min/Max
+	if l.MaxRequest == nil && l.MinRequest == nil && l.Max != nil && l.Min != nil {
+		l.MaxRequest, l.Max = l.Max, l.MaxRequest
+		l.MinRequest, l.Min = l.Min, l.MinRequest
+	}
+
+	return nil
 }
 
 type ResourceList struct {
