@@ -112,6 +112,15 @@ func main() {
 		command.NewEnableApplicationRecommendationsCommand(cfg, &printer{format: `enabled application recommendations.`}),
 	)
 
+	// Aggregate the DISABLE commands
+	disableCmd := &cobra.Command{
+		Use: "disable",
+	}
+
+	disableCmd.AddCommand(
+		command.NewDisableApplicationRecommendationsCommand(cfg, &printer{format: `disabled application recommendations.`}),
+	)
+
 	// Aggregate the WATCH commands
 	watchCmd := &cobra.Command{
 		Use: "watch",

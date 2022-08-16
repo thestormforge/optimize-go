@@ -229,6 +229,55 @@ func NewEnableApplicationRecommendationsCommand(cfg Config, p Printer) *cobra.Co
 	return cmd
 }
 
+// NewDisableApplicationRecommendationsCommand returns a new command for disabling recommendations.
+func NewDisableApplicationRecommendationsCommand(cfg Config, p Printer) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:               "application-recommendations APP_NAME",
+		Aliases:           []string{"app-recs", "recs"},
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: validApplicationArgs(cfg),
+	}
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		ctx, out := cmd.Context(), cmd.OutOrStdout()
+		client, err := api.NewClient(cfg.Address(), nil)
+		if err != nil {
+			return err
+		}
+
+		appAPI := applications.NewAPI(client)
+
+		appName := applications.ApplicationName(args[0])
+		app, err := appAPI.GetApplicationByName(ctx, appName)
+		if err != nil {
+			return err
+		}
+
+		recommendationsURL := app.Link(api.RelationRecommendations)
+		if recommendationsURL == "" {
+			return fmt.Errorf("malformed response, missing recommendations link")
+		}
+
+		// Construct a patch to disable recommendations
+		patch := applications.RecommendationList{
+			DeployConfiguration: &applications.DeployConfiguration{
+				Mode: applications.RecommendationsDisabled,
+			},
+		}
+		if err := appAPI.PatchRecommendations(ctx, recommendationsURL, patch); err != nil {
+			return err
+		}
+
+		// Re-use the application list output to generate an ApplicationRow
+		result := &ApplicationOutput{}
+		if err := result.Add(&applications.ApplicationItem{Application: app}); err != nil {
+			return err
+		}
+		return p.Fprint(out, &result.Items[0])
+	}
+	return cmd
+}
+
 // NewGetApplicationsCommand returns a command for getting applications.
 func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 	var (
