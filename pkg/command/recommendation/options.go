@@ -32,13 +32,15 @@ const (
 	flagContainerResourcesInterval          = "container-resource-interval"
 	flagContainerResourcesTargetUtilization = "container-resource-target-utilization"
 	flagContainerResourcesTolerance         = "tolerance"
+	flagContainerResourcesBoundsLimitsMax   = "max-limit"
+	flagContainerResourcesBoundsLimitsMin   = "min-limit"
+	flagContainerResourcesRequestsMax       = "max-request"
+	flagContainerResourcesRequestsMin       = "min-request"
 )
 
 const (
 	flagDeployMode                   = "mode"
 	flagDeployInterval               = "interval"
-	flagDeployContainerMax           = "max"
-	flagDeployContainerMin           = "min"
 	flagDeployMaxRecommendationRatio = "deploy-max-ratio"
 	flagDeployCluster                = "cluster"
 )
@@ -59,13 +61,21 @@ type ContainerResourcesOptions struct {
 	Interval          time.Duration
 	TargetUtilization map[string]string
 	Tolerance         map[string]string
+	BoundsLimitsMax   map[string]string
+	BoundsLimitsMin   map[string]string
+	BoundsRequestsMax map[string]string
+	BoundsRequestsMin map[string]string
 }
 
 func (opts *ContainerResourcesOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&opts.Selector, flagContainerResourcesSelector, opts.Selector, "`selector` for application resources which should have container resource optimization applied")
 	cmd.Flags().DurationVar(&opts.Interval, flagContainerResourcesInterval, opts.Interval, "amount of `time` between container resource recommendation computations")
-	cmd.Flags().StringToStringVar(&opts.TargetUtilization, flagContainerResourcesTargetUtilization, opts.TargetUtilization, "container resource target utilization as `cpu|memory=value`")
-	cmd.Flags().StringToStringVar(&opts.Tolerance, flagContainerResourcesTolerance, opts.Tolerance, "container resource tolerance as `cpu|memory=low|medium|high`")
+	cmd.Flags().StringToStringVar(&opts.TargetUtilization, flagContainerResourcesTargetUtilization, opts.TargetUtilization, "container resource target utilization as `resource=value`; resource is one of: cpu|memory")
+	cmd.Flags().StringToStringVar(&opts.Tolerance, flagContainerResourcesTolerance, opts.Tolerance, "container resource tolerance as `resource=tolerance`; resource is one of: cpu|memory; tolerance is one of: low|medium|high")
+	cmd.Flags().StringToStringVar(&opts.BoundsLimitsMax, flagContainerResourcesBoundsLimitsMax, opts.BoundsLimitsMax, "per-container resource max limits as `resource=quantity`; resource is one of: cpu|memory")
+	cmd.Flags().StringToStringVar(&opts.BoundsLimitsMin, flagContainerResourcesBoundsLimitsMin, opts.BoundsLimitsMin, "per-container resource min limits as `resource=quantity`; resource is one of: cpu|memory")
+	cmd.Flags().StringToStringVar(&opts.BoundsRequestsMax, flagContainerResourcesRequestsMax, opts.BoundsRequestsMax, "per-container resource max requests as `resource=quantity`; resource is one of: cpu|memory")
+	cmd.Flags().StringToStringVar(&opts.BoundsRequestsMin, flagContainerResourcesRequestsMin, opts.BoundsRequestsMin, "per-container resource min requests as `resource=quantity`; resource is one of: cpu|memory")
 
 	cmd.Flag(flagContainerResourcesInterval).Hidden = true
 	cmd.Flag(flagContainerResourcesTargetUtilization).Hidden = true
@@ -105,13 +115,65 @@ func (opts *ContainerResourcesOptions) Apply(configuration *[]applications.Confi
 		}
 		lazyContainerResources().Tolerance = tolerance
 	}
+
+	bounds := &applications.Bounds{}
+	lazyLimits := func() *applications.BoundsRange {
+		if bounds.Limits == nil {
+			bounds.Limits = &applications.BoundsRange{}
+		}
+		return bounds.Limits
+	}
+	if len(opts.BoundsLimitsMax) > 0 {
+		limits := lazyLimits()
+		if limits.Max == nil {
+			limits.Max = &applications.ResourceList{}
+		}
+		for k, v := range opts.BoundsLimitsMax {
+			limits.Max.Set(strings.ToLower(k), api.FromString(v))
+		}
+	}
+	if len(opts.BoundsLimitsMin) > 0 {
+		limits := lazyLimits()
+		if limits.Min == nil {
+			limits.Min = &applications.ResourceList{}
+		}
+		for k, v := range opts.BoundsLimitsMin {
+			limits.Min.Set(strings.ToLower(k), api.FromString(v))
+		}
+	}
+
+	lazyRequests := func() *applications.BoundsRange {
+		if bounds.Requests == nil {
+			bounds.Requests = &applications.BoundsRange{}
+		}
+		return bounds.Requests
+	}
+	if len(opts.BoundsRequestsMax) > 0 {
+		requests := lazyRequests()
+		if requests.Max == nil {
+			requests.Max = &applications.ResourceList{}
+		}
+		for k, v := range opts.BoundsRequestsMax {
+			requests.Max.Set(strings.ToLower(k), api.FromString(v))
+		}
+	}
+	if len(opts.BoundsLimitsMin) > 0 {
+		requests := lazyRequests()
+		if requests.Min == nil {
+			requests.Min = &applications.ResourceList{}
+		}
+		for k, v := range opts.BoundsLimitsMin {
+			requests.Min.Set(strings.ToLower(k), api.FromString(v))
+		}
+	}
+	if bounds.Limits != nil || bounds.Requests != nil {
+		lazyContainerResources().Bounds = bounds
+	}
 }
 
 type DeployConfigurationOptions struct {
 	Mode                   string
 	Interval               time.Duration
-	ContainerMax           map[string]string
-	ContainerMin           map[string]string
 	MaxRecommendationRatio map[string]string
 	Clusters               []string
 }
@@ -119,8 +181,6 @@ type DeployConfigurationOptions struct {
 func (opts *DeployConfigurationOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&opts.Mode, flagDeployMode, opts.Mode, "deployment `mode`; one of: manual|auto|disabled")
 	cmd.Flags().DurationVar(&opts.Interval, flagDeployInterval, opts.Interval, "desired amount of `time` between deployments")
-	cmd.Flags().StringToStringVar(&opts.ContainerMax, flagDeployContainerMax, opts.ContainerMax, "per-container resource max limits as `resource=quantity`")
-	cmd.Flags().StringToStringVar(&opts.ContainerMin, flagDeployContainerMin, opts.ContainerMin, "per-container resource min limits as `resource=quantity`")
 	cmd.Flags().StringToStringVar(&opts.MaxRecommendationRatio, flagDeployMaxRecommendationRatio, opts.MaxRecommendationRatio, "limit the recommended/current value ratio as `resource=ratio`")
 	cmd.Flags().StringArrayVar(&opts.Clusters, flagDeployCluster, opts.Clusters, "cluster `name` used for recommendations")
 
@@ -145,23 +205,6 @@ func (opts *DeployConfigurationOptions) Apply(deployConfiguration **applications
 
 	if opts.Interval > 0 {
 		lazyDeployConfig().Interval = api.Duration(opts.Interval)
-	}
-
-	containerLimit := applications.LimitRangeItem{Type: "Container"}
-	if len(opts.ContainerMax) > 0 {
-		containerLimit.Max = &applications.ResourceList{}
-		for k, v := range opts.ContainerMax {
-			containerLimit.Max.Set(strings.ToLower(k), api.FromString(v))
-		}
-	}
-	if len(opts.ContainerMin) > 0 {
-		containerLimit.Min = &applications.ResourceList{}
-		for k, v := range opts.ContainerMin {
-			containerLimit.Min.Set(strings.ToLower(k), api.FromString(v))
-		}
-	}
-	if containerLimit.Max != nil || containerLimit.Min != nil {
-		lazyDeployConfig().Limits = append(lazyDeployConfig().Limits, containerLimit)
 	}
 
 	if len(opts.MaxRecommendationRatio) > 0 {
@@ -239,75 +282,6 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 		}
 	}
 
-	// Validate the container limits
-	containerLimits := patch.DeployConfiguration.GetLimits("Container")
-	if containerLimits == nil {
-		containerLimits = &applications.LimitRangeItem{}
-	}
-	defaultContainerLimits := recs.DeployConfiguration.GetLimits("Container")
-	if defaultContainerLimits == nil {
-		defaultContainerLimits = &applications.LimitRangeItem{}
-	}
-	for _, res := range []string{"cpu", "memory"} {
-		valid := true
-
-		min := containerLimits.Min.Get(res)
-		if min == nil {
-			min = defaultContainerLimits.Min.Get(res)
-		}
-		if min == nil {
-			valid = false
-			if mode.Enabled() {
-				errs = append(errs, &Error{
-					Message:        fmt.Sprintf("missing minimum container limit for %s: %s", res, min),
-					FixCommand:     cmd.CommandPath(),
-					FixFlag:        flagDeployContainerMin,
-					FixValidValues: []string{res + "=VALUE"},
-				})
-			}
-		} else if min.IsString || min.Int64Value() < 0 {
-			valid = false
-			errs = append(errs, &Error{
-				Message:        fmt.Sprintf("invalid minimum container limit for %s: %s", res, min),
-				FixCommand:     cmd.CommandPath(),
-				FixFlag:        flagDeployContainerMin,
-				FixValidValues: []string{res + "=VALUE"},
-			})
-		}
-
-		max := containerLimits.Max.Get(res)
-		if max == nil {
-			max = defaultContainerLimits.Max.Get(res)
-		}
-		if max == nil {
-			valid = false
-			if mode.Enabled() {
-				errs = append(errs, &Error{
-					Message:        fmt.Sprintf("missing maximum container limit for %s: %s", res, max),
-					FixCommand:     cmd.CommandPath(),
-					FixFlag:        flagDeployContainerMax,
-					FixValidValues: []string{res + "=VALUE"},
-				})
-			}
-		} else if max.IsString || max.Int64Value() < 0 {
-			valid = false
-			errs = append(errs, &Error{
-				Message:        fmt.Sprintf("invalid maximum container limit for %s: %s", res, max),
-				FixCommand:     cmd.CommandPath(),
-				FixFlag:        flagDeployContainerMax,
-				FixValidValues: []string{res + "=VALUE"},
-			})
-
-		}
-
-		if valid && min.Int64Value() > max.Int64Value() {
-			errs = append(errs, &Error{
-				Message:    fmt.Sprintf("invalid container limit range for %s: %s-%s", res, min, max),
-				FixCommand: cmd.CommandPath(),
-			})
-		}
-	}
-
 	// TODO MaxRecommendationRatio
 
 	// A cluster is required to enable recommendations
@@ -336,7 +310,37 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 		}
 	}
 
-	// TODO Configuration
+	for i := range patch.Configuration {
+		if patch.Configuration[i].ContainerResources == nil {
+			continue
+		}
+
+		// Validate bounds
+		bounds := patch.Configuration[i].ContainerResources.Bounds
+		if bounds == nil {
+			bounds = &applications.Bounds{}
+		}
+		defaultBounds := recs.Configuration[i].ContainerResources.Bounds
+		if defaultBounds == nil {
+			defaultBounds = &applications.Bounds{}
+		}
+		if bounds.Limits != nil {
+			errs = append(errs, checkResourceList(
+				mode, "limit",
+				bounds.Limits.Min, defaultBounds.Limits.Min,
+				bounds.Limits.Max, defaultBounds.Limits.Max,
+				cmd.CommandPath(), flagContainerResourcesBoundsLimitsMin, flagContainerResourcesBoundsLimitsMax,
+			)...)
+		}
+		if bounds.Requests != nil {
+			errs = append(errs, checkResourceList(
+				mode, "request",
+				bounds.Requests.Min, defaultBounds.Requests.Min,
+				bounds.Requests.Max, defaultBounds.Requests.Max,
+				cmd.CommandPath(), flagContainerResourcesRequestsMin, flagContainerResourcesRequestsMax,
+			)...)
+		}
+	}
 
 	// Application resources are required to enable recommendations
 	if mode.Enabled() && len(app.Resources) == 0 {
@@ -348,6 +352,62 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 	}
 
 	return errs.Err()
+}
+
+// checkResourceList looks through the resource lists for errors.
+func checkResourceList(mode applications.RecommendationsMode, name string, minList, defMinList, maxList, defMaxList *applications.ResourceList, fixCommand, fixFlagMin, fixFlagMax string) ErrorList {
+	var errs ErrorList
+
+	required := mode.Enabled() && name == "request"
+
+	checkResource := func(resourceName, minmax string, value *api.NumberOrString, fixFlag string) bool {
+		if value == nil {
+			if required {
+				errs = append(errs, &Error{
+					Message:        fmt.Sprintf("missing %s container %s for %s", minmax, name, resourceName),
+					FixCommand:     fixCommand,
+					FixFlag:        fixFlag,
+					FixValidValues: []string{resourceName + "=VALUE"},
+				})
+			}
+			return false
+		}
+
+		if value.IsString || value.Int64Value() < 0 {
+			errs = append(errs, &Error{
+				Message:        fmt.Sprintf("invalid %s container %s for %s: %s", minmax, name, resourceName, value),
+				FixCommand:     fixCommand,
+				FixFlag:        fixFlag,
+				FixValidValues: []string{resourceName + "=VALUE"},
+			})
+			return false
+		}
+
+		return true
+	}
+
+	for _, resourceName := range []string{"cpu", "memory"} {
+		min := minList.Get(resourceName)
+		if min == nil {
+			min = defMinList.Get(resourceName)
+		}
+
+		max := maxList.Get(resourceName)
+		if max == nil {
+			max = defMaxList.Get(resourceName)
+		}
+
+		minOk := checkResource(resourceName, "minimum", min, fixFlagMin)
+		maxOk := checkResource(resourceName, "maximum", max, fixFlagMax)
+		if minOk && maxOk && min.Int64Value() > max.Int64Value() {
+			errs = append(errs, &Error{
+				Message:    fmt.Sprintf("invalid container %s range for %s: %s-%s", name, resourceName, min, max),
+				FixCommand: fixCommand,
+			})
+		}
+	}
+
+	return errs
 }
 
 type Error struct {
@@ -381,6 +441,7 @@ func (el ErrorList) Error() string {
 		msgs = append(msgs, err.Error())
 
 		if err.FixCommand != "" && err.FixFlag != "" {
+			// TODO Can we batch up flags that can be combined, e.g. "--max-request x=y --max-request a=b" => "--max-request x=y,a=b"?
 			suggestions[err.FixCommand] = append(suggestions[err.FixCommand], "--"+err.FixFlag)
 			if len(err.FixValidValues) > 0 {
 				suggestions[err.FixCommand] = append(suggestions[err.FixCommand], strings.Join(err.FixValidValues, "|"))
