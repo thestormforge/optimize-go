@@ -54,6 +54,7 @@ type RecommendationList struct {
 	api.Metadata        `json:"-"`
 	DeployConfiguration *DeployConfiguration `json:"deploy,omitempty"`
 	Configuration       []Configuration      `json:"configuration,omitempty"`
+	BackfillProgress    *BackfillProgress    `json:"backfillProgress,omitempty"`
 	Recommendations     []RecommendationItem `json:"recommendations,omitempty"`
 }
 
@@ -133,4 +134,8 @@ func ToleranceFrom(s string) *Tolerance {
 		return &Tolerance{StrVal: "high", IsString: true}
 	}
 	return nil
+}
+
+type BackfillProgress struct {
+	Timestamp time.Time `json:"timestamp"`
 }
