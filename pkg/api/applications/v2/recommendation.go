@@ -65,13 +65,10 @@ type DeployConfiguration struct {
 	Clusters               []string            `json:"clusters,omitempty"`
 }
 
-func (dc *DeployConfiguration) GetLimits(t string) *LimitRangeItem {
-	for i := range dc.Limits {
-		if t == dc.Limits[i].Type {
-			return &dc.Limits[i]
-		}
-	}
-	return nil
+type LimitRangeItem struct {
+	Type string        `json:"type,omitempty"`
+	Max  *ResourceList `json:"max,omitempty"`
+	Min  *ResourceList `json:"min,omitempty"`
 }
 
 type Configuration struct {
@@ -83,12 +80,17 @@ type ContainerResources struct {
 	Interval          api.Duration  `json:"interval,omitempty"`
 	TargetUtilization *ResourceList `json:"targetUtilization,omitempty"`
 	Tolerance         *ResourceList `json:"tolerance,omitempty"`
+	Bounds            *Bounds       `json:"bounds,omitempty"`
 }
 
-type LimitRangeItem struct {
-	Type string        `json:"type,omitempty"`
-	Max  *ResourceList `json:"max,omitempty"`
-	Min  *ResourceList `json:"min,omitempty"`
+type Bounds struct {
+	Limits   *BoundsRange `json:"limits,omitempty"`
+	Requests *BoundsRange `json:"requests,omitempty"`
+}
+
+type BoundsRange struct {
+	Max *ResourceList `json:"max,omitempty"`
+	Min *ResourceList `json:"min,omitempty"`
 }
 
 type ResourceList struct {
