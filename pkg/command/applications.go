@@ -281,6 +281,7 @@ func NewDisableApplicationRecommendationsCommand(cfg Config, p Printer) *cobra.C
 // NewGetApplicationsCommand returns a command for getting applications.
 func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 	var (
+		product   string
 		batchSize int
 	)
 
@@ -290,6 +291,7 @@ func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 		ValidArgsFunction: validApplicationArgs(cfg),
 	}
 
+	cmd.Flags().StringVar(&product, "for", product, "show only clusters for a specific `product`; one of: optimize-pro|optimize-live")
 	cmd.Flags().IntVar(&batchSize, "batch-size", batchSize, "fetch large lists in chu`n`ks rather then all at once")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
@@ -333,6 +335,32 @@ func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 
 			result.Items[i].SetRecommendationsDeployConfig(rl.DeployConfiguration)
 			result.Items[i].SetRecommendationsConfiguration(rl.Configuration)
+		}
+
+		// Filter applications by product
+		if product != "" {
+			items := make([]ApplicationRow, 0, len(result.Items))
+			for i := range result.Items {
+				isPro := result.Items[i].ScenarioCount > 0
+				isLive := result.Items[i].Recommendations != applications.RecommendationsDisabled
+
+				// Only skip applications if we know it is one or the other
+				if isPro || isLive {
+					switch product {
+					case "optimize-pro", "pro":
+						if !isPro {
+							continue
+						}
+					case "optimize-live", "live":
+						if !isLive {
+							continue
+						}
+					}
+				}
+
+				items = append(items, result.Items[i])
+			}
+			result.Items = items
 		}
 
 		return p.Fprint(out, result)
