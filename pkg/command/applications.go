@@ -294,6 +294,10 @@ func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 	cmd.Flags().StringVar(&product, "for", product, "show only clusters for a specific `product`; one of: optimize-pro|optimize-live")
 	cmd.Flags().IntVar(&batchSize, "batch-size", batchSize, "fetch large lists in chu`n`ks rather then all at once")
 
+	_ = cmd.RegisterFlagCompletionFunc("for", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return []string{"optimize-pro", "optimize-live"}, cobra.ShellCompDirectiveDefault
+	})
+
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
 		client, err := api.NewClient(cfg.Address(), nil)
@@ -347,7 +351,7 @@ func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 				// Only skip applications if we know it is one or the other
 				if isPro || isLive {
 					switch product {
-					case "optimize-pro", "pro":
+					case "optimize-pro", "pro", "optimize-controller", "controller":
 						if !isPro {
 							continue
 						}

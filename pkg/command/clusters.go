@@ -106,7 +106,7 @@ func NewGetClustersCommand(cfg Config, p Printer) *cobra.Command {
 		} else {
 			q := applications.ClusterListQuery{}
 			switch product {
-			case "optimize-pro", "pro":
+			case "optimize-pro", "pro", "optimize-controller", "controller":
 				q.SetModules(applications.ClusterScenarios)
 			case "optimize-live", "live":
 				q.SetModules(applications.ClusterRecommendations)
