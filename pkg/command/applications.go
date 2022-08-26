@@ -351,7 +351,7 @@ func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 				// Only skip applications if we know it is one or the other
 				if isPro || isLive {
 					switch product {
-					case "optimize-pro", "pro", "optimize-controller", "controller":
+					case "optimize-pro", "pro":
 						if !isPro {
 							continue
 						}
