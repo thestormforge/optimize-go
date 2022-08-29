@@ -76,6 +76,12 @@ func NewCreateScenarioCommand(cfg Config, p Printer) *cobra.Command {
 	cmd.Flags().DurationVar(&customScenario.approximateRuntime, "custom-approximate-runtime", 0, "the estimated amount of `time` the trial should last")
 	cmd.Flags().StringVar(&customScenario.image, "custom-image", "", "override the image `name` of the first container in the trial job pod")
 
+	// TODO The application service will not persist these values
+	cmd.Flag("locustfile").Hidden = true
+	cmd.Flag("locust-users").Hidden = true
+	cmd.Flag("locust-spawn-rate").Hidden = true
+	cmd.Flag("locust-run-time").Hidden = true
+
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
 		client, err := api.NewClient(cfg.Address(), nil)
