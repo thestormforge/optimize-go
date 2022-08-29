@@ -113,9 +113,9 @@ func (rl *ResourceList) Get(name string) *api.NumberOrString {
 
 func (rl *ResourceList) Set(name string, value api.NumberOrString) {
 	switch name {
-	case "cpu":
+	case "cpu", "c":
 		rl.CPU = &value
-	case "memory":
+	case "memory", "mem", "m":
 		rl.Memory = &value
 	}
 }
