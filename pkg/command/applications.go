@@ -66,7 +66,7 @@ func NewCreateApplicationCommand(cfg Config, p Printer) *cobra.Command {
 		var selfURL string
 		if len(args) > 0 && args[0] != "" {
 			name := applications.ApplicationName(args[0])
-			md, err := appAPI.UpsertApplicationByName(ctx, name, app)
+			md, err := appAPI.CreateApplicationByName(ctx, name, app)
 			if err != nil {
 				return err
 			}
@@ -149,7 +149,7 @@ func NewEditApplicationCommand(cfg Config, p Printer) *cobra.Command {
 				return nil
 			}
 
-			if _, err := l.API.UpsertApplication(ctx, selfURL, item.Application); err != nil {
+			if _, err := l.API.UpdateApplication(ctx, selfURL, item.Application); err != nil {
 				return err
 			}
 			return p.Fprint(out, item)

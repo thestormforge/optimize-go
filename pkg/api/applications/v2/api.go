@@ -25,6 +25,7 @@ import (
 const (
 	ErrApplicationInvalid     api.ErrorType = "application-invalid"
 	ErrApplicationNotFound    api.ErrorType = "application-not-found"
+	ErrApplicationExists      api.ErrorType = "application-exists"
 	ErrScenarioInvalid        api.ErrorType = "scenario-invalid"
 	ErrScenarioNotFound       api.ErrorType = "scenario-not-found"
 	ErrScanInvalid            api.ErrorType = "scan-invalid"
@@ -51,14 +52,16 @@ type API interface {
 	ListApplicationsByPage(ctx context.Context, u string) (ApplicationList, error)
 	// CreateApplication creates a new application.
 	CreateApplication(ctx context.Context, app Application) (api.Metadata, error)
+	// CreateApplicationByName creates a new application.
+	CreateApplicationByName(ctx context.Context, n ApplicationName, app Application) (api.Metadata, error)
 	// GetApplication retrieves an application.
 	GetApplication(ctx context.Context, u string) (Application, error)
 	// GetApplicationByName retrieves an application.
 	GetApplicationByName(ctx context.Context, n ApplicationName) (Application, error)
-	// UpsertApplication updates or creates an application.
-	UpsertApplication(ctx context.Context, u string, app Application) (api.Metadata, error)
-	// UpsertApplicationByName updates or creates an application.
-	UpsertApplicationByName(ctx context.Context, n ApplicationName, app Application) (api.Metadata, error)
+	// UpdateApplication updates an application.
+	UpdateApplication(ctx context.Context, u string, app Application) (api.Metadata, error)
+	// UpdateApplicationByName updates or creates an application.
+	UpdateApplicationByName(ctx context.Context, n ApplicationName, app Application) (api.Metadata, error)
 	// DeleteApplication deletes an application.
 	DeleteApplication(ctx context.Context, u string) error
 

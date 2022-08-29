@@ -126,6 +126,44 @@ func (h *httpAPI) CreateApplication(ctx context.Context, app Application) (api.M
 	}
 }
 
+func (h *httpAPI) CreateApplicationByName(ctx context.Context, n ApplicationName, app Application) (api.Metadata, error) {
+	u := h.client.URL(h.endpoint)
+	u.Path = path.Join(u.Path, n.String())
+	result := api.Metadata{}
+
+	req, err := httpNewJSONRequest(http.MethodPut, u.String(), app)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("If-None-Match", "*")
+
+	// TODO Fake support for conditional PUT
+	if _, err := h.GetApplication(ctx, u.String()); err == nil {
+		msg := fmt.Sprintf("application %q already exists", n)
+		return nil, &api.Error{Type: ErrApplicationExists, Message: msg, Location: u.String()}
+	}
+
+	resp, body, err := h.client.Do(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	switch resp.StatusCode {
+	case http.StatusOK, http.StatusCreated, http.StatusAccepted:
+		api.UnmarshalMetadata(resp, &result)
+		return result, nil
+	case http.StatusBadRequest:
+		return nil, api.NewError(ErrApplicationInvalid, resp, body)
+	case http.StatusPreconditionFailed:
+		return nil, api.NewError(ErrApplicationExists, resp, body)
+	case http.StatusUnprocessableEntity:
+		return nil, api.NewError(ErrApplicationInvalid, resp, body)
+	default:
+		return nil, api.NewUnexpectedError(resp, body)
+	}
+}
+
 func (h *httpAPI) GetApplication(ctx context.Context, u string) (Application, error) {
 	result := Application{}
 
@@ -164,7 +202,7 @@ func (h *httpAPI) GetApplicationByName(ctx context.Context, n ApplicationName) (
 	return result, err
 }
 
-func (h *httpAPI) UpsertApplication(ctx context.Context, u string, app Application) (api.Metadata, error) {
+func (h *httpAPI) UpdateApplication(ctx context.Context, u string, app Application) (api.Metadata, error) {
 	result := api.Metadata{}
 
 	req, err := httpNewJSONRequest(http.MethodPut, u, app)
@@ -190,10 +228,10 @@ func (h *httpAPI) UpsertApplication(ctx context.Context, u string, app Applicati
 	}
 }
 
-func (h *httpAPI) UpsertApplicationByName(ctx context.Context, n ApplicationName, app Application) (api.Metadata, error) {
+func (h *httpAPI) UpdateApplicationByName(ctx context.Context, n ApplicationName, app Application) (api.Metadata, error) {
 	u := h.client.URL(h.endpoint)
 	u.Path = path.Join(u.Path, n.String())
-	return h.UpsertApplication(ctx, u.String(), app)
+	return h.UpdateApplication(ctx, u.String(), app)
 }
 
 func (h *httpAPI) DeleteApplication(ctx context.Context, u string) error {
