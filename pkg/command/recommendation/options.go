@@ -157,7 +157,7 @@ func (opts *ContainerResourcesOptions) Apply(configuration *[]applications.Confi
 			requests.Max.Set(strings.ToLower(k), api.FromNumber(json.Number(v)))
 		}
 	}
-	if len(opts.BoundsLimitsMin) > 0 {
+	if len(opts.BoundsRequestsMin) > 0 {
 		requests := lazyRequests()
 		if requests.Min == nil {
 			requests.Min = &applications.ResourceList{}
