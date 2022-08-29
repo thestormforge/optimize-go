@@ -358,9 +358,10 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 	// Application resources are required to enable recommendations
 	if mode.Enabled() && len(app.Resources) == 0 {
 		errs = append(errs, &Error{
-			Message:    "missing application resources",
-			FixCommand: strings.Join([]string{cmd.Root().Name(), "edit", "application", app.Name.String()}, " "),
-			FixFlag:    "namespace",
+			Message:        "missing application resources",
+			FixCommand:     strings.Join([]string{cmd.Root().Name(), "edit", "application", app.Name.String()}, " "),
+			FixFlag:        "namespace",
+			FixValidValues: []string{"default"},
 		})
 	}
 
