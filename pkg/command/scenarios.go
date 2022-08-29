@@ -198,7 +198,7 @@ func NewCreateScenarioCommand(cfg Config, p Printer) *cobra.Command {
 
 		var selfURL string
 		if scnName != "" {
-			md, err := appAPI.UpsertScenarioByName(ctx, scenariosURL, scnName, scn)
+			md, err := appAPI.CreateScenarioByName(ctx, scenariosURL, scnName, scn)
 			if err != nil {
 				return err
 			}

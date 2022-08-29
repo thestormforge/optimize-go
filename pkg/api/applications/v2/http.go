@@ -304,6 +304,48 @@ func (h *httpAPI) CreateScenario(ctx context.Context, u string, scn Scenario) (a
 	}
 }
 
+func (h *httpAPI) CreateScenarioByName(ctx context.Context, u string, n ScenarioName, scn Scenario) (Scenario, error) {
+	uu, err := url.Parse(u)
+	if err != nil {
+		return Scenario{}, err
+	}
+	uu.Path = path.Join(uu.Path, n.String())
+	result := Scenario{}
+
+	req, err := httpNewJSONRequest(http.MethodPut, u, scn)
+	if err != nil {
+		return result, err
+	}
+
+	req.Header.Set("If-None-Match", "*")
+
+	// TODO Fake support for conditional PUT
+	if _, err := h.GetApplication(ctx, uu.String()); err == nil {
+		msg := fmt.Sprintf("scenario %q already exists", n)
+		return result, &api.Error{Type: ErrScenarioExists, Message: msg, Location: uu.String()}
+	}
+
+	resp, body, err := h.client.Do(ctx, req)
+	if err != nil {
+		return result, err
+	}
+
+	switch resp.StatusCode {
+	case http.StatusOK, http.StatusAccepted, http.StatusCreated:
+		api.UnmarshalMetadata(resp, &result.Metadata)
+		err = json.Unmarshal(body, &result)
+		return result, err
+	case http.StatusBadRequest:
+		return result, api.NewError(ErrScenarioInvalid, resp, body)
+	case http.StatusPreconditionFailed:
+		return result, api.NewError(ErrScenarioExists, resp, body)
+	case http.StatusUnprocessableEntity:
+		return result, api.NewError(ErrScenarioInvalid, resp, body)
+	default:
+		return result, api.NewUnexpectedError(resp, body)
+	}
+}
+
 func (h *httpAPI) GetScenario(ctx context.Context, u string) (Scenario, error) {
 	result := Scenario{}
 
@@ -338,7 +380,7 @@ func (h *httpAPI) GetScenarioByName(ctx context.Context, u string, n ScenarioNam
 	return h.GetScenario(ctx, uu.String())
 }
 
-func (h *httpAPI) UpsertScenario(ctx context.Context, u string, scn Scenario) (Scenario, error) {
+func (h *httpAPI) UpdateScenario(ctx context.Context, u string, scn Scenario) (Scenario, error) {
 	result := Scenario{}
 
 	req, err := httpNewJSONRequest(http.MethodPut, u, scn)
@@ -365,13 +407,13 @@ func (h *httpAPI) UpsertScenario(ctx context.Context, u string, scn Scenario) (S
 	}
 }
 
-func (h *httpAPI) UpsertScenarioByName(ctx context.Context, u string, n ScenarioName, scn Scenario) (Scenario, error) {
+func (h *httpAPI) UpdateScenarioByName(ctx context.Context, u string, n ScenarioName, scn Scenario) (Scenario, error) {
 	uu, err := url.Parse(u)
 	if err != nil {
 		return Scenario{}, err
 	}
 	uu.Path = path.Join(uu.Path, n.String())
-	return h.UpsertScenario(ctx, uu.String(), scn)
+	return h.UpdateScenario(ctx, uu.String(), scn)
 }
 
 func (h *httpAPI) DeleteScenario(ctx context.Context, u string) error {
