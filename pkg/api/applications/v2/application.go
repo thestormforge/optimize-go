@@ -23,11 +23,12 @@ import (
 )
 
 type Application struct {
-	api.Metadata `json:"-"`
-	Name         ApplicationName `json:"name,omitempty"`
-	DisplayName  string          `json:"title,omitempty"` // TODO This doesn't seem to get set
-	Resources    []Resource      `json:"resources,omitempty"`
-	CreatedAt    *time.Time      `json:"createdAt,omitempty"`
+	api.Metadata    `json:"-"`
+	Name            ApplicationName     `json:"name,omitempty"`
+	DisplayName     string              `json:"title,omitempty"` // TODO This doesn't seem to get set
+	Resources       []Resource          `json:"resources,omitempty"`
+	CreatedAt       *time.Time          `json:"createdAt,omitempty"`
+	Recommendations RecommendationsMode `json:"recommendations,omitempty"`
 }
 
 // NOTE: Use `DisplayName` as the field since `Title()` is a function on the embedded `Metadata`.
@@ -38,9 +39,8 @@ type ApplicationListQuery struct{ api.IndexQuery }
 type ApplicationItem struct {
 	Application
 	// The number of scenarios associated with this application.
-	ScenarioCount   int                 `json:"scenarioCount,omitempty"`
-	LastDeployedAt  *time.Time          `json:"lastDeployedAt,omitempty"`
-	Recommendations RecommendationsMode `json:"recommendations,omitempty"`
+	ScenarioCount  int        `json:"scenarioCount,omitempty"`
+	LastDeployedAt *time.Time `json:"lastDeployedAt,omitempty"`
 }
 
 type RecommendationsMode string
