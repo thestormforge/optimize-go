@@ -129,7 +129,7 @@ func (opts *ContainerResourcesOptions) Apply(configuration *[]applications.Confi
 			limits.Max = &applications.ResourceList{}
 		}
 		for k, v := range opts.BoundsLimitsMax {
-			limits.Max.Set(strings.ToLower(k), api.FromString(v))
+			limits.Max.Set(strings.ToLower(k), api.FromNumber(json.Number(v)))
 		}
 	}
 	if len(opts.BoundsLimitsMin) > 0 {
@@ -138,7 +138,7 @@ func (opts *ContainerResourcesOptions) Apply(configuration *[]applications.Confi
 			limits.Min = &applications.ResourceList{}
 		}
 		for k, v := range opts.BoundsLimitsMin {
-			limits.Min.Set(strings.ToLower(k), api.FromString(v))
+			limits.Min.Set(strings.ToLower(k), api.FromNumber(json.Number(v)))
 		}
 	}
 
@@ -154,7 +154,7 @@ func (opts *ContainerResourcesOptions) Apply(configuration *[]applications.Confi
 			requests.Max = &applications.ResourceList{}
 		}
 		for k, v := range opts.BoundsRequestsMax {
-			requests.Max.Set(strings.ToLower(k), api.FromString(v))
+			requests.Max.Set(strings.ToLower(k), api.FromNumber(json.Number(v)))
 		}
 	}
 	if len(opts.BoundsLimitsMin) > 0 {
@@ -163,7 +163,7 @@ func (opts *ContainerResourcesOptions) Apply(configuration *[]applications.Confi
 			requests.Min = &applications.ResourceList{}
 		}
 		for k, v := range opts.BoundsLimitsMin {
-			requests.Min.Set(strings.ToLower(k), api.FromString(v))
+			requests.Min.Set(strings.ToLower(k), api.FromNumber(json.Number(v)))
 		}
 	}
 	if bounds.Limits != nil || bounds.Requests != nil {
@@ -320,26 +320,39 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 		if bounds == nil {
 			bounds = &applications.Bounds{}
 		}
-		defaultBounds := recs.Configuration[i].ContainerResources.Bounds
+		var defaultBounds *applications.Bounds
+		if len(recs.Configuration) > i && recs.Configuration[i].ContainerResources != nil {
+			defaultBounds = recs.Configuration[i].ContainerResources.Bounds
+		}
 		if defaultBounds == nil {
 			defaultBounds = &applications.Bounds{}
 		}
-		if bounds.Limits != nil {
-			errs = append(errs, checkResourceList(
-				mode, "limit",
-				bounds.Limits.Min, defaultBounds.Limits.Min,
-				bounds.Limits.Max, defaultBounds.Limits.Max,
-				cmd.CommandPath(), flagContainerResourcesBoundsLimitsMin, flagContainerResourcesBoundsLimitsMax,
-			)...)
+		limits := func(l *applications.Bounds) *applications.BoundsRange {
+			if l.Limits != nil {
+				return l.Limits
+			}
+			return &applications.BoundsRange{}
 		}
-		if bounds.Requests != nil {
-			errs = append(errs, checkResourceList(
-				mode, "request",
-				bounds.Requests.Min, defaultBounds.Requests.Min,
-				bounds.Requests.Max, defaultBounds.Requests.Max,
-				cmd.CommandPath(), flagContainerResourcesRequestsMin, flagContainerResourcesRequestsMax,
-			)...)
+		requests := func(l *applications.Bounds) *applications.BoundsRange {
+			if l.Requests != nil {
+				return l.Requests
+			}
+			return &applications.BoundsRange{}
 		}
+
+		errs = append(errs, checkResourceList(
+			mode, "limit",
+			limits(bounds).Min, limits(defaultBounds).Min,
+			limits(bounds).Max, limits(defaultBounds).Max,
+			cmd.CommandPath(), flagContainerResourcesBoundsLimitsMin, flagContainerResourcesBoundsLimitsMax,
+		)...)
+
+		errs = append(errs, checkResourceList(
+			mode, "request",
+			requests(bounds).Min, requests(defaultBounds).Min,
+			requests(bounds).Max, requests(defaultBounds).Max,
+			cmd.CommandPath(), flagContainerResourcesRequestsMin, flagContainerResourcesRequestsMax,
+		)...)
 	}
 
 	// Application resources are required to enable recommendations
