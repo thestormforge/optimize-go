@@ -42,7 +42,7 @@ const (
 	flagDeployMode                   = "mode"
 	flagDeployInterval               = "interval"
 	flagDeployMaxRecommendationRatio = "deploy-max-ratio"
-	flagDeployCluster                = "cluster"
+	flagDeployCluster                = "cluster-name"
 )
 
 var (
