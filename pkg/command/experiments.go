@@ -64,7 +64,7 @@ func NewEditExperimentCommand(cfg Config, p Printer) *cobra.Command {
 				}
 			}
 
-			return p.Fprint(out, item)
+			return p.Fprint(out, NewExperimentRow(item))
 		})
 	}
 	return cmd
@@ -151,7 +151,7 @@ func NewDeleteExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 				return err
 			}
 
-			return p.Fprint(out, item)
+			return p.Fprint(out, NewExperimentRow(item))
 		})
 	}
 	return cmd

@@ -224,7 +224,7 @@ func NewCreateScenarioCommand(cfg Config, p Printer) *cobra.Command {
 			}
 		}
 
-		return p.Fprint(out, &scn)
+		return p.Fprint(out, NewScenarioRow(&applications.ScenarioItem{Scenario: scn}))
 	}
 	return cmd
 }
@@ -274,7 +274,7 @@ func NewEditScenarioCommand(cfg Config, p Printer) *cobra.Command {
 			if err := l.API.PatchScenario(ctx, selfURL, scn); err != nil {
 				return err
 			}
-			return p.Fprint(out, item)
+			return p.Fprint(out, NewScenarioRow(item))
 		})
 	}
 	return cmd
@@ -344,7 +344,7 @@ func NewDeleteScenariosCommand(cfg Config, p Printer) *cobra.Command {
 				return err
 			}
 
-			return p.Fprint(out, item)
+			return p.Fprint(out, NewScenarioRow(item))
 		})
 	}
 	return cmd

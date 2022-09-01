@@ -72,7 +72,7 @@ func NewGetActivityCommand(cfg Config, p Printer) *cobra.Command {
 			return err
 		}
 
-		result := ActivityOutput{
+		result := &ActivityOutput{
 			Items:        make([]ActivityRow, 0, len(feed.Items)),
 			ActivityFeed: feed,
 		}

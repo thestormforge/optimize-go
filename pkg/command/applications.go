@@ -86,7 +86,7 @@ func NewCreateApplicationCommand(cfg Config, p Printer) *cobra.Command {
 			}
 		}
 
-		return p.Fprint(out, &app)
+		return p.Fprint(out, NewApplicationRow(&applications.ApplicationItem{Application: app}))
 	}
 	return cmd
 }
@@ -152,7 +152,7 @@ func NewEditApplicationCommand(cfg Config, p Printer) *cobra.Command {
 			if _, err := l.API.UpdateApplication(ctx, selfURL, item.Application); err != nil {
 				return err
 			}
-			return p.Fprint(out, item)
+			return p.Fprint(out, NewApplicationRow(item))
 		})
 	}
 	return cmd
@@ -217,14 +217,10 @@ func NewEnableApplicationRecommendationsCommand(cfg Config, p Printer) *cobra.Co
 			recs = rl
 		}
 
-		// Re-use the application list output to generate an ApplicationRow
-		result := &ApplicationOutput{}
-		if err := result.Add(&applications.ApplicationItem{Application: app}); err != nil {
-			return err
-		}
-		result.Items[0].SetRecommendationsDeployConfig(recs.DeployConfiguration)
-		result.Items[0].SetRecommendationsConfiguration(recs.Configuration)
-		return p.Fprint(out, &result.Items[0])
+		result := NewApplicationRow(&applications.ApplicationItem{Application: app})
+		result.SetRecommendationsDeployConfig(recs.DeployConfiguration)
+		result.SetRecommendationsConfiguration(recs.Configuration)
+		return p.Fprint(out, result)
 	}
 	return cmd
 }
@@ -268,12 +264,7 @@ func NewDisableApplicationRecommendationsCommand(cfg Config, p Printer) *cobra.C
 			return err
 		}
 
-		// Re-use the application list output to generate an ApplicationRow
-		result := &ApplicationOutput{}
-		if err := result.Add(&applications.ApplicationItem{Application: app}); err != nil {
-			return err
-		}
-		return p.Fprint(out, &result.Items[0])
+		return p.Fprint(out, NewApplicationRow(&applications.ApplicationItem{Application: app}))
 	}
 	return cmd
 }
@@ -407,7 +398,7 @@ func NewDeleteApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 				return err
 			}
 
-			return p.Fprint(out, item)
+			return p.Fprint(out, NewApplicationRow(item))
 		})
 	}
 	return cmd

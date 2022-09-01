@@ -221,7 +221,7 @@ func NewDeleteTrialsCommand(cfg Config, p Printer) *cobra.Command {
 				return err
 			}
 
-			return p.Fprint(out, item)
+			return p.Fprint(out, NewTrialRow(item))
 		})
 	}
 	return cmd

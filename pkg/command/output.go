@@ -73,6 +73,20 @@ type ApplicationRow struct {
 	RecommendationsConfiguration []applications.Configuration      `table:"-" csv:"-" json:"recommendationsConfiguration,omitempty"`
 }
 
+func NewApplicationRow(item *applications.ApplicationItem) *ApplicationRow {
+	return &ApplicationRow{
+		Name:                item.Name.String(),
+		Title:               item.Title(),
+		ScenarioCount:       item.ScenarioCount,
+		RecommendationMode:  "Disabled",
+		LastDeployedMachine: formatTime(item.LastDeployedAt, time.RFC3339),
+		LastDeployedHuman:   formatTime(item.LastDeployedAt, "ago"),
+		Age:                 formatTime(item.CreatedAt, ""),
+
+		ApplicationItem: *item,
+	}
+}
+
 func (r *ApplicationRow) SetRecommendationsDeployConfig(deploy *applications.DeployConfiguration) {
 	if deploy == nil {
 		return
@@ -106,17 +120,7 @@ type ApplicationOutput struct {
 
 // Add an application item to the output.
 func (o *ApplicationOutput) Add(item *applications.ApplicationItem) error {
-	o.Items = append(o.Items, ApplicationRow{
-		Name:                item.Name.String(),
-		Title:               item.Title(),
-		ScenarioCount:       item.ScenarioCount,
-		RecommendationMode:  "Disabled",
-		LastDeployedMachine: formatTime(item.LastDeployedAt, time.RFC3339),
-		LastDeployedHuman:   formatTime(item.LastDeployedAt, "ago"),
-		Age:                 formatTime(item.CreatedAt, ""),
-
-		ApplicationItem: *item,
-	})
+	o.Items = append(o.Items, *NewApplicationRow(item))
 	return nil
 }
 
@@ -127,6 +131,14 @@ type ScenarioRow struct {
 	applications.ScenarioItem `table:"-" csv:"-"`
 }
 
+func NewScenarioRow(item *applications.ScenarioItem) *ScenarioRow {
+	return &ScenarioRow{
+		Name: item.Name.String(),
+
+		ScenarioItem: *item,
+	}
+}
+
 // ScenarioOutput wraps a scenario list for output.
 type ScenarioOutput struct {
 	Items []ScenarioRow `json:"items"`
@@ -134,11 +146,7 @@ type ScenarioOutput struct {
 
 // Add a scenario item to the output.
 func (o *ScenarioOutput) Add(item *applications.ScenarioItem) error {
-	o.Items = append(o.Items, ScenarioRow{
-		Name: item.Name.String(),
-
-		ScenarioItem: *item,
-	})
+	o.Items = append(o.Items, *NewScenarioRow(item))
 	return nil
 }
 
@@ -149,6 +157,14 @@ type RecommendationRow struct {
 	applications.RecommendationItem `table:"-" csv:"-"`
 }
 
+func NewRecommendationRow(item *applications.RecommendationItem) *RecommendationRow {
+	return &RecommendationRow{
+		Name: item.Name,
+
+		RecommendationItem: *item,
+	}
+}
+
 // RecommendationOutput wraps a recommendation list for output.
 type RecommendationOutput struct {
 	Items []RecommendationRow `json:"items"`
@@ -156,11 +172,7 @@ type RecommendationOutput struct {
 
 // Add a recommendation item to the output.
 func (o *RecommendationOutput) Add(item *applications.RecommendationItem) error {
-	o.Items = append(o.Items, RecommendationRow{
-		Name: item.Name,
-
-		RecommendationItem: *item,
-	})
+	o.Items = append(o.Items, *NewRecommendationRow(item))
 	return nil
 }
 
@@ -174,6 +186,17 @@ type ExperimentRow struct {
 	experiments.ExperimentItem `table:"-" csv:"-"`
 }
 
+func NewExperimentRow(item *experiments.ExperimentItem) *ExperimentRow {
+	return &ExperimentRow{
+		Name:         item.Name.String(),
+		DisplayName:  item.DisplayName,
+		Observations: item.Observations,
+		Labels:       item.Labels,
+
+		ExperimentItem: *item,
+	}
+}
+
 // ExperimentOutput wraps an experiment list for output.
 type ExperimentOutput struct {
 	Items []ExperimentRow `json:"items"`
@@ -181,14 +204,7 @@ type ExperimentOutput struct {
 
 // Add an experiment item to the output.
 func (o *ExperimentOutput) Add(item *experiments.ExperimentItem) error {
-	o.Items = append(o.Items, ExperimentRow{
-		Name:         item.Name.String(),
-		DisplayName:  item.DisplayName,
-		Observations: item.Observations,
-		Labels:       item.Labels,
-
-		ExperimentItem: *item,
-	})
+	o.Items = append(o.Items, *NewExperimentRow(item))
 	return nil
 }
 
@@ -207,13 +223,7 @@ type TrialRow struct {
 	experiments.TrialItem `table:"-" csv:"-"`
 }
 
-// TrialOutput wraps a trial list for output.
-type TrialOutput struct {
-	Items []TrialRow `json:"items"`
-}
-
-// Add a trial item to the output.
-func (o *TrialOutput) Add(item *experiments.TrialItem) error {
+func NewTrialRow(item *experiments.TrialItem) *TrialRow {
 	var experiment string
 	if item.Experiment != nil {
 		experiment = item.Experiment.DisplayName
@@ -229,7 +239,7 @@ func (o *TrialOutput) Add(item *experiments.TrialItem) error {
 		values[item.Values[i].MetricName] = strconv.FormatFloat(item.Values[i].Value, 'f', -1, 64)
 	}
 
-	o.Items = append(o.Items, TrialRow{
+	return &TrialRow{
 		Experiment:     experiment,
 		Name:           experiments.JoinTrialName(item.Experiment, item.Number),
 		Number:         item.Number,
@@ -241,8 +251,17 @@ func (o *TrialOutput) Add(item *experiments.TrialItem) error {
 		Labels:         item.Labels,
 
 		TrialItem: *item,
-	})
+	}
+}
 
+// TrialOutput wraps a trial list for output.
+type TrialOutput struct {
+	Items []TrialRow `json:"items"`
+}
+
+// Add a trial item to the output.
+func (o *TrialOutput) Add(item *experiments.TrialItem) error {
+	o.Items = append(o.Items, *NewTrialRow(item))
 	return nil
 }
 
@@ -261,14 +280,8 @@ type ClusterRow struct {
 	applications.ClusterItem `table:"-" csv:"-"`
 }
 
-// ClusterOutput wraps a cluster list for output.
-type ClusterOutput struct {
-	Items []ClusterRow `json:"items"`
-}
-
-// Add a cluster item to the output.
-func (o *ClusterOutput) Add(item *applications.ClusterItem) error {
-	o.Items = append(o.Items, ClusterRow{
+func NewClusterRow(item *applications.ClusterItem) *ClusterRow {
+	return &ClusterRow{
 		Name:                   item.Name.String(),
 		DisplayName:            item.Title(),
 		OptimizeProVersion:     item.OptimizeProVersion,
@@ -280,7 +293,17 @@ func (o *ClusterOutput) Add(item *applications.ClusterItem) error {
 		Age:                    formatTime(item.CreatedAt, ""),
 
 		ClusterItem: *item,
-	})
+	}
+}
+
+// ClusterOutput wraps a cluster list for output.
+type ClusterOutput struct {
+	Items []ClusterRow `json:"items"`
+}
+
+// Add a cluster item to the output.
+func (o *ClusterOutput) Add(item *applications.ClusterItem) error {
+	o.Items = append(o.Items, *NewClusterRow(item))
 	return nil
 }
 
@@ -297,19 +320,13 @@ type ActivityRow struct {
 	applications.ActivityItem `table:"-" csv:"-"`
 }
 
-type ActivityOutput struct {
-	Items []ActivityRow `json:"-"`
-
-	applications.ActivityFeed
-}
-
-func (o *ActivityOutput) Add(item *applications.ActivityItem) {
+func NewActivityRow(item *applications.ActivityItem) *ActivityRow {
 	var fr string
 	if item.StormForge != nil {
 		fr = item.StormForge.FailureReason
 	}
 
-	o.Items = append(o.Items, ActivityRow{
+	return &ActivityRow{
 		ID:               item.ID,
 		Title:            item.Title,
 		Tags:             strings.Join(item.Tags, ", "),
@@ -320,5 +337,15 @@ func (o *ActivityOutput) Add(item *applications.ActivityItem) {
 		PublishedHuman:   formatTime(&item.DatePublished, "ago"),
 
 		ActivityItem: *item,
-	})
+	}
+}
+
+type ActivityOutput struct {
+	Items []ActivityRow `json:"-"`
+
+	applications.ActivityFeed
+}
+
+func (o *ActivityOutput) Add(item *applications.ActivityItem) {
+	o.Items = append(o.Items, *NewActivityRow(item))
 }

@@ -63,7 +63,7 @@ func NewEditClusterCommand(cfg Config, p Printer) *cobra.Command {
 				}
 			}
 
-			return p.Fprint(out, item)
+			return p.Fprint(out, NewClusterRow(item))
 		})
 	}
 	return cmd
@@ -156,7 +156,7 @@ func NewDeleteClustersCommand(cfg Config, p Printer) *cobra.Command {
 				return err
 			}
 
-			return p.Fprint(out, item)
+			return p.Fprint(out, NewClusterRow(item))
 		})
 	}
 	return cmd
