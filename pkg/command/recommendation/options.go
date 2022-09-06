@@ -162,7 +162,7 @@ func (opts *ContainerResourcesOptions) Apply(configuration *[]applications.Confi
 		if requests.Min == nil {
 			requests.Min = &applications.ResourceList{}
 		}
-		for k, v := range opts.BoundsLimitsMin {
+		for k, v := range opts.BoundsRequestsMin {
 			requests.Min.Set(strings.ToLower(k), api.FromNumber(json.Number(v)))
 		}
 	}
