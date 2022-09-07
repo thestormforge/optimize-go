@@ -59,7 +59,7 @@ func NewCreateTrialCommand(cfg Config, p Printer) *cobra.Command {
 			return fmt.Errorf("malformed response, missing trials link")
 		}
 
-		t := experiments.TrialItem{}
+		t := experiments.TrialItem{Experiment: &exp}
 		for _, p := range exp.Parameters {
 			v, err := parameterValue(&p, assignments, defaultBehavior)
 			if err != nil {

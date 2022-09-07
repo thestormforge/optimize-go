@@ -95,6 +95,7 @@ func (l *Lister) ForEachTrial(ctx context.Context, exp *Experiment, q TrialListQ
 		}
 
 		for i := range lst.Trials {
+			lst.Trials[i].Experiment = exp
 			if err := f(&lst.Trials[i]); err != nil {
 				return "", err
 			}
