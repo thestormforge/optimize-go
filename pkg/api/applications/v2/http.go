@@ -312,7 +312,7 @@ func (h *httpAPI) CreateScenarioByName(ctx context.Context, u string, n Scenario
 	uu.Path = path.Join(uu.Path, n.String())
 	result := Scenario{}
 
-	req, err := httpNewJSONRequest(http.MethodPut, u, scn)
+	req, err := httpNewJSONRequest(http.MethodPut, uu.String(), scn)
 	if err != nil {
 		return result, err
 	}
@@ -320,7 +320,7 @@ func (h *httpAPI) CreateScenarioByName(ctx context.Context, u string, n Scenario
 	req.Header.Set("If-None-Match", "*")
 
 	// TODO Fake support for conditional PUT
-	if _, err := h.GetApplication(ctx, uu.String()); err == nil {
+	if _, err := h.GetScenario(ctx, uu.String()); err == nil {
 		msg := fmt.Sprintf("scenario %q already exists", n)
 		return result, &api.Error{Type: ErrScenarioExists, Message: msg, Location: uu.String()}
 	}
