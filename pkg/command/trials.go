@@ -82,11 +82,8 @@ func NewCreateTrialCommand(cfg Config, p Printer) *cobra.Command {
 			return err
 		}
 
-		// Abuse TrialOutput to help with formatting
 		// NOTE: The trial number will not exist until the assignments have been pull from the queue
-		o := TrialOutput{}
-		_ = o.Add(&t)
-		return p.Fprint(out, o.Items[0])
+		return p.Fprint(out, NewTrialRow(&t))
 	}
 	return cmd
 }
@@ -132,7 +129,7 @@ func NewEditTrialCommand(cfg Config, p Printer) *cobra.Command {
 				}
 			}
 
-			return p.Fprint(out, item)
+			return p.Fprint(out, NewTrialRow(item))
 		})
 	}
 	return cmd
