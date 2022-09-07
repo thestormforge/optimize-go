@@ -17,6 +17,7 @@ limitations under the License.
 package command
 
 import (
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -229,6 +230,13 @@ func NewTrialRow(item *experiments.TrialItem) *TrialRow {
 		experiment = item.Experiment.DisplayName
 	}
 
+	var name string
+	if item.Experiment != nil && item.Experiment.Name != "" {
+		name = fmt.Sprintf("%s/%03d", item.Experiment.Name, item.Number)
+	} else {
+		name = fmt.Sprintf("%03d", item.Number)
+	}
+
 	assignments := make(map[string]string, len(item.Assignments))
 	for i := range item.Assignments {
 		assignments[item.Assignments[i].ParameterName] = item.Assignments[i].Value.String()
@@ -241,7 +249,7 @@ func NewTrialRow(item *experiments.TrialItem) *TrialRow {
 
 	return &TrialRow{
 		Experiment:     experiment,
-		Name:           experiments.JoinTrialName(item.Experiment, item.Number),
+		Name:           name,
 		Number:         item.Number,
 		Status:         cases.Title(language.English).String(string(item.Status)),
 		FailureReason:  item.FailureReason,
