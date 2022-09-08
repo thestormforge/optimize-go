@@ -58,7 +58,7 @@ func formatTime(t *time.Time, layout string) string {
 // ApplicationRow is a table row representation of an application.
 type ApplicationRow struct {
 	Name                string `table:"name" csv:"name" json:"-"`
-	Title               string `table:"title" csv:"title" json:"-"`
+	Title               string `table:"title" csv:"title" json:"title,omitempty"`
 	ScenarioCount       int    `table:"scenarios" csv:"scenario_count" json:"-"`
 	RecommendationMode  string `table:"recommendations" csv:"recommendations" json:"-"`
 	DeployInterval      string `table:"deploy_interval,wide" csv:"deploy_interval" json:"-"`
@@ -280,7 +280,7 @@ func (o *TrialOutput) Add(item *experiments.TrialItem) error {
 // ClusterRow is a table row representation of a cluster.
 type ClusterRow struct {
 	Name                   string `table:"name" csv:"name" json:"-"`
-	DisplayName            string `table:"title" csv:"title" json:"-"`
+	DisplayName            string `table:"title" csv:"title" json:"title,omitempty"`
 	OptimizeProVersion     string `table:"optimize_pro" csv:"optimize_pro_version" json:"-"`
 	OptimizeLiveVersion    string `table:"optimize_live" csv:"optimize_live_version" json:"-"`
 	PerformanceTestVersion string `table:"performance_test,wide" csv:"performance_test_version" json:"-"`
