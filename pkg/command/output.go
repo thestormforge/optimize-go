@@ -280,7 +280,7 @@ func (o *TrialOutput) Add(item *experiments.TrialItem) error {
 // ClusterRow is a table row representation of a cluster.
 type ClusterRow struct {
 	Name                   string `table:"name" csv:"name" json:"-"`
-	DisplayName            string `table:"title" json:"-"`
+	DisplayName            string `table:"title" csv:"title" json:"-"`
 	OptimizeProVersion     string `table:"optimize_pro" csv:"optimize_pro_version" json:"-"`
 	OptimizeLiveVersion    string `table:"optimize_live" csv:"optimize_live_version" json:"-"`
 	PerformanceTestVersion string `table:"performance_test,wide" csv:"performance_test_version" json:"-"`
