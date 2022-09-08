@@ -153,14 +153,18 @@ func (o *ScenarioOutput) Add(item *applications.ScenarioItem) error {
 
 // RecommendationRow is a table row representation of a recommendation.
 type RecommendationRow struct {
-	Name string `table:"name" csv:"name" json:"-"`
+	Name              string `table:"name" csv:"name" json:"-"`
+	DeployedAtMachine string `table:"-" csv:"last_deployed" json:"-"`
+	DeployedAtHuman   string `table:"last_deployed" csv:"-" json:"-"`
 
 	applications.RecommendationItem `table:"-" csv:"-"`
 }
 
 func NewRecommendationRow(item *applications.RecommendationItem) *RecommendationRow {
 	return &RecommendationRow{
-		Name: item.Name,
+		Name:              item.Name,
+		DeployedAtMachine: formatTime(item.DeployedAt, time.RFC3339),
+		DeployedAtHuman:   formatTime(item.DeployedAt, "ago"),
 
 		RecommendationItem: *item,
 	}
