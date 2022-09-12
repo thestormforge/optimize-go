@@ -550,7 +550,7 @@ func SortBy(o Output, name string) error {
 	n := o.Len()
 	s := &sorter{
 		Output: o,
-		keys:   make([][]byte, 0, n),
+		keys:   make([][]byte, n),
 	}
 
 	c := collate.New(language.AmericanEnglish, collate.Loose, collate.Numeric)
@@ -596,3 +596,7 @@ type sorter struct {
 }
 
 func (s *sorter) Less(i, j int) bool { return bytes.Compare(s.keys[i], s.keys[j]) == -1 }
+func (s *sorter) Swap(i, j int) {
+	s.keys[i], s.keys[j] = s.keys[j], s.keys[i]
+	s.Output.Swap(i, j)
+}
