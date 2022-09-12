@@ -17,8 +17,10 @@ limitations under the License.
 package command
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -27,6 +29,7 @@ import (
 	applications "github.com/thestormforge/optimize-go/pkg/api/applications/v2"
 	experiments "github.com/thestormforge/optimize-go/pkg/api/experiments/v1alpha1"
 	"golang.org/x/text/cases"
+	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 )
 
@@ -88,6 +91,27 @@ func NewApplicationRow(item *applications.ApplicationItem) *ApplicationRow {
 	}
 }
 
+func (r *ApplicationRow) Lookup(key string) (interface{}, bool) {
+	switch SortByKey(key) {
+	case "name":
+		return r.Name, true
+	case "title":
+		return r.Title, true
+	case "scenarios":
+		return r.ScenarioCount, true
+	case "recommendations":
+		return r.RecommendationMode, true
+	case "deploy_interval":
+		return r.DeployInterval, true
+	case "last_deployed":
+		return r.ApplicationItem.LastDeployedAt, true
+	case "age":
+		return r.ApplicationItem.CreatedAt, true
+	default:
+		return nil, false
+	}
+}
+
 func (r *ApplicationRow) SetRecommendationsDeployConfig(deploy *applications.DeployConfiguration) {
 	if deploy == nil {
 		return
@@ -125,6 +149,18 @@ func (o *ApplicationOutput) Add(item *applications.ApplicationItem) error {
 	return nil
 }
 
+// Len returns the number of items being output.
+func (o *ApplicationOutput) Len() int { return len(o.Items) }
+
+// Swap exchanges the order of the two specified items.
+func (o *ApplicationOutput) Swap(i, j int) { o.Items[i], o.Items[j] = o.Items[j], o.Items[i] }
+
+// Item returns the specified row value.
+func (o *ApplicationOutput) Item(i int) Row { return &o.Items[i] }
+
+// SortBy sorts the output by the named value.
+func (o *ApplicationOutput) SortBy(key string) error { return SortBy(o, key) }
+
 // ScenarioRow is a table row representation of a scenario.
 type ScenarioRow struct {
 	Name string `table:"name" csv:"name" json:"-"`
@@ -140,6 +176,15 @@ func NewScenarioRow(item *applications.ScenarioItem) *ScenarioRow {
 	}
 }
 
+func (r *ScenarioRow) Lookup(key string) (interface{}, bool) {
+	switch SortByKey(key) {
+	case "name":
+		return r.Name, true
+	default:
+		return nil, false
+	}
+}
+
 // ScenarioOutput wraps a scenario list for output.
 type ScenarioOutput struct {
 	Items []ScenarioRow `json:"items"`
@@ -150,6 +195,18 @@ func (o *ScenarioOutput) Add(item *applications.ScenarioItem) error {
 	o.Items = append(o.Items, *NewScenarioRow(item))
 	return nil
 }
+
+// Len returns the number of items being output.
+func (o *ScenarioOutput) Len() int { return len(o.Items) }
+
+// Swap exchanges the order of the two specified items.
+func (o *ScenarioOutput) Swap(i, j int) { o.Items[i], o.Items[j] = o.Items[j], o.Items[i] }
+
+// Item returns the specified row value.
+func (o *ScenarioOutput) Item(i int) Row { return &o.Items[i] }
+
+// SortBy sorts the output by the named value.
+func (o *ScenarioOutput) SortBy(key string) error { return SortBy(o, key) }
 
 // RecommendationRow is a table row representation of a recommendation.
 type RecommendationRow struct {
@@ -170,6 +227,17 @@ func NewRecommendationRow(item *applications.RecommendationItem) *Recommendation
 	}
 }
 
+func (r *RecommendationRow) Lookup(key string) (interface{}, bool) {
+	switch SortByKey(key) {
+	case "name":
+		return r.Name, true
+	case "last_deployed":
+		return r.RecommendationItem.DeployedAt, true
+	default:
+		return nil, false
+	}
+}
+
 // RecommendationOutput wraps a recommendation list for output.
 type RecommendationOutput struct {
 	Items []RecommendationRow `json:"items"`
@@ -180,6 +248,18 @@ func (o *RecommendationOutput) Add(item *applications.RecommendationItem) error 
 	o.Items = append(o.Items, *NewRecommendationRow(item))
 	return nil
 }
+
+// Len returns the number of items being output.
+func (o *RecommendationOutput) Len() int { return len(o.Items) }
+
+// Swap exchanges the order of the two specified items.
+func (o *RecommendationOutput) Swap(i, j int) { o.Items[i], o.Items[j] = o.Items[j], o.Items[i] }
+
+// Item returns the specified row value.
+func (o *RecommendationOutput) Item(i int) Row { return &o.Items[i] }
+
+// SortBy sorts the output by the named value.
+func (o *RecommendationOutput) SortBy(key string) error { return SortBy(o, key) }
 
 // ExperimentRow is a table row representation of an experiment.
 type ExperimentRow struct {
@@ -202,6 +282,17 @@ func NewExperimentRow(item *experiments.ExperimentItem) *ExperimentRow {
 	}
 }
 
+func (r *ExperimentRow) Lookup(key string) (interface{}, bool) {
+	switch SortByKey(key) {
+	case "name":
+		return r.Name, true
+	case "observations":
+		return r.Observations, true
+	default:
+		return nil, false
+	}
+}
+
 // ExperimentOutput wraps an experiment list for output.
 type ExperimentOutput struct {
 	Items []ExperimentRow `json:"items"`
@@ -212,6 +303,18 @@ func (o *ExperimentOutput) Add(item *experiments.ExperimentItem) error {
 	o.Items = append(o.Items, *NewExperimentRow(item))
 	return nil
 }
+
+// Len returns the number of items being output.
+func (o *ExperimentOutput) Len() int { return len(o.Items) }
+
+// Swap exchanges the order of the two specified items.
+func (o *ExperimentOutput) Swap(i, j int) { o.Items[i], o.Items[j] = o.Items[j], o.Items[i] }
+
+// Item returns the specified row value.
+func (o *ExperimentOutput) Item(i int) Row { return &o.Items[i] }
+
+// SortBy sorts the output by the named value.
+func (o *ExperimentOutput) SortBy(key string) error { return SortBy(o, key) }
 
 // TrialRow is a table row representation of a trial.
 type TrialRow struct {
@@ -266,6 +369,19 @@ func NewTrialRow(item *experiments.TrialItem) *TrialRow {
 	}
 }
 
+func (r *TrialRow) Lookup(key string) (interface{}, bool) {
+	switch SortByKey(key) {
+	case "name":
+		return r.Name, true
+	case "status":
+		return r.Status, true
+	case "failure_reason":
+		return r.FailureReason, true
+	default:
+		return nil, false
+	}
+}
+
 // TrialOutput wraps a trial list for output.
 type TrialOutput struct {
 	Items []TrialRow `json:"items"`
@@ -276,6 +392,18 @@ func (o *TrialOutput) Add(item *experiments.TrialItem) error {
 	o.Items = append(o.Items, *NewTrialRow(item))
 	return nil
 }
+
+// Len returns the number of items being output.
+func (o *TrialOutput) Len() int { return len(o.Items) }
+
+// Swap exchanges the order of the two specified items.
+func (o *TrialOutput) Swap(i, j int) { o.Items[i], o.Items[j] = o.Items[j], o.Items[i] }
+
+// Item returns the specified row value.
+func (o *TrialOutput) Item(i int) Row { return &o.Items[i] }
+
+// SortBy sorts the output by the named value.
+func (o *TrialOutput) SortBy(key string) error { return SortBy(o, key) }
 
 // ClusterRow is a table row representation of a cluster.
 type ClusterRow struct {
@@ -308,6 +436,27 @@ func NewClusterRow(item *applications.ClusterItem) *ClusterRow {
 	}
 }
 
+func (r *ClusterRow) Lookup(key string) (interface{}, bool) {
+	switch SortByKey(key) {
+	case "name":
+		return r.Name, true
+	case "title":
+		return r.DisplayName, true
+	case "optimize_pro", "pro":
+		return r.OptimizeProVersion, true
+	case "optimize_live", "live":
+		return r.OptimizeLiveVersion, true
+	case "kubernetes":
+		return r.KubernetesVersion, true
+	case "last_seen":
+		return r.ClusterItem.LastSeen, true
+	case "age":
+		return r.ClusterItem.CreatedAt, true
+	default:
+		return nil, false
+	}
+}
+
 // ClusterOutput wraps a cluster list for output.
 type ClusterOutput struct {
 	Items []ClusterRow `json:"items"`
@@ -318,6 +467,18 @@ func (o *ClusterOutput) Add(item *applications.ClusterItem) error {
 	o.Items = append(o.Items, *NewClusterRow(item))
 	return nil
 }
+
+// Len returns the number of items being output.
+func (o *ClusterOutput) Len() int { return len(o.Items) }
+
+// Swap exchanges the order of the two specified items.
+func (o *ClusterOutput) Swap(i, j int) { o.Items[i], o.Items[j] = o.Items[j], o.Items[i] }
+
+// Item returns the specified row value.
+func (o *ClusterOutput) Item(i int) Row { return &o.Items[i] }
+
+// SortBy sorts the output by the named value.
+func (o *ClusterOutput) SortBy(key string) error { return SortBy(o, key) }
 
 type ActivityRow struct {
 	ID               string `table:"id" csv:"id" json:"-"`
@@ -361,3 +522,77 @@ type ActivityOutput struct {
 func (o *ActivityOutput) Add(item *applications.ActivityItem) {
 	o.Items = append(o.Items, *NewActivityRow(item))
 }
+
+// Row represents a single row in the output.
+type Row interface {
+	// Lookup returns a named value on the row.
+	Lookup(string) (interface{}, bool)
+}
+
+// Output represents an output list.
+type Output interface {
+	// Len returns the number of items in the output.
+	Len() int
+	// Swap exchanges the items at the specified indices.
+	Swap(int, int)
+	// Item returns the complete row.
+	Item(int) Row
+
+	// NOTE: there should also be an `Add(*item) error`-ish function
+}
+
+// SortBy sorts the supplied output using the named value on each row.
+func SortBy(o Output, name string) error {
+	if name == "" {
+		return nil
+	}
+
+	n := o.Len()
+	s := &sorter{
+		Output: o,
+		keys:   make([][]byte, 0, n),
+	}
+
+	c := collate.New(language.AmericanEnglish, collate.Loose, collate.Numeric)
+	buf := &collate.Buffer{}
+	for i := 0; i < n; i++ {
+		value, ok := s.Item(i).Lookup(name)
+		if !ok {
+			return fmt.Errorf("unknown sort-by key: %q", name)
+		}
+
+		if value == nil {
+			s.keys[i] = c.KeyFromString(buf, "")
+			continue
+		}
+
+		switch value := value.(type) {
+		case string:
+			s.keys[i] = c.KeyFromString(buf, value)
+		case int:
+			s.keys[i] = c.KeyFromString(buf, strconv.Itoa(value))
+		case *time.Time:
+			s.keys[i] = c.KeyFromString(buf, strconv.FormatInt(value.Unix(), 10))
+		default:
+			// If you get this panic, add support for the missing type!
+			panic(fmt.Sprintf("unknown sort type %T on %T for %s", value, o, name))
+		}
+	}
+
+	sort.Sort(s)
+	return nil
+}
+
+// SortByKey normalizes the user supplied sort-by key.
+func SortByKey(key string) string {
+	key = strings.ReplaceAll(key, " ", "_")
+	key = strings.ToLower(key)
+	return key
+}
+
+type sorter struct {
+	Output
+	keys [][]byte
+}
+
+func (s *sorter) Less(i, j int) bool { return bytes.Compare(s.keys[i], s.keys[j]) == -1 }

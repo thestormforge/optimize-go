@@ -26,12 +26,18 @@ import (
 
 // NewGetRecommendationsCommand returns a command for getting recommendations.
 func NewGetRecommendationsCommand(cfg Config, p Printer) *cobra.Command {
+	var (
+		sortBy string
+	)
+
 	cmd := &cobra.Command{
 		Use:               "recommendations APP_NAME | APP_NAME/NAME ...",
 		Aliases:           []string{"recommendation", "recs", "rec"},
 		Args:              cobra.MinimumNArgs(1),
 		ValidArgsFunction: validRecommendationArgs(cfg),
 	}
+
+	cmd.Flags().StringVar(&sortBy, "sort-by", sortBy, "sort using `column` name")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
@@ -46,6 +52,10 @@ func NewGetRecommendationsCommand(cfg Config, p Printer) *cobra.Command {
 
 		result := &RecommendationOutput{Items: make([]RecommendationRow, 0, len(args))}
 		if err := l.ForEachNamedRecommendation(ctx, args, false, result.Add); err != nil {
+			return err
+		}
+
+		if err := result.SortBy(sortBy); err != nil {
 			return err
 		}
 

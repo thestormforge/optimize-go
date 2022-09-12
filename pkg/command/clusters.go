@@ -73,6 +73,7 @@ func NewEditClusterCommand(cfg Config, p Printer) *cobra.Command {
 func NewGetClustersCommand(cfg Config, p Printer) *cobra.Command {
 	var (
 		product string
+		sortBy  string
 	)
 
 	cmd := &cobra.Command{
@@ -82,6 +83,7 @@ func NewGetClustersCommand(cfg Config, p Printer) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&product, "for", product, "show only clusters for a specific `product`; one of: optimize-pro|optimize-live")
+	cmd.Flags().StringVar(&sortBy, "sort-by", sortBy, "sort using `column` name")
 
 	_ = cmd.RegisterFlagCompletionFunc("for", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return []string{"optimize-pro", "optimize-live"}, cobra.ShellCompDirectiveDefault
@@ -114,6 +116,10 @@ func NewGetClustersCommand(cfg Config, p Printer) *cobra.Command {
 			if err := l.ForEachCluster(ctx, q, result.Add); err != nil {
 				return err
 			}
+		}
+
+		if err := result.SortBy(sortBy); err != nil {
+			return err
 		}
 
 		return p.Fprint(out, result)

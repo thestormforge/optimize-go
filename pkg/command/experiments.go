@@ -75,6 +75,7 @@ func NewGetExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 	var (
 		batchSize int
 		selector  string
+		sortBy    string
 	)
 
 	cmd := &cobra.Command{
@@ -85,6 +86,7 @@ func NewGetExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 
 	cmd.Flags().IntVar(&batchSize, "batch-size", batchSize, "fetch large lists in chu`n`ks rather then all at once")
 	cmd.Flags().StringVarP(&selector, "selector", "l", selector, "selector (label `query`) to filter on")
+	cmd.Flags().StringVar(&sortBy, "sort-by", sortBy, "sort using `column` name")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
@@ -109,6 +111,10 @@ func NewGetExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 			if err := l.ForEachExperiment(ctx, q, result.Add); err != nil {
 				return err
 			}
+		}
+
+		if err := result.SortBy(sortBy); err != nil {
+			return err
 		}
 
 		return p.Fprint(out, result)

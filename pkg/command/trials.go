@@ -140,6 +140,7 @@ func NewGetTrialsCommand(cfg Config, p Printer) *cobra.Command {
 	var (
 		selector string
 		all      bool
+		sortBy   string
 	)
 
 	cmd := &cobra.Command{
@@ -151,6 +152,7 @@ func NewGetTrialsCommand(cfg Config, p Printer) *cobra.Command {
 
 	cmd.Flags().StringVarP(&selector, "selector", "l", selector, "selector (label `query`) to filter on")
 	cmd.Flags().BoolVarP(&all, "all", "A", all, "include all resources")
+	cmd.Flags().StringVar(&sortBy, "sort-by", sortBy, "sort using `column` name")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
@@ -173,6 +175,10 @@ func NewGetTrialsCommand(cfg Config, p Printer) *cobra.Command {
 		}
 
 		if err := l.ForEachNamedTrial(ctx, args, q, false, result.Add); err != nil {
+			return err
+		}
+
+		if err := result.SortBy(sortBy); err != nil {
 			return err
 		}
 

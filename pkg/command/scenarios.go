@@ -282,11 +282,17 @@ func NewEditScenarioCommand(cfg Config, p Printer) *cobra.Command {
 
 // NewGetScenariosCommand returns a command for getting scenarios.
 func NewGetScenariosCommand(cfg Config, p Printer) *cobra.Command {
+	var (
+		sortBy string
+	)
+
 	cmd := &cobra.Command{
 		Use:     "scenarios APP_NAME | APP_NAME/NAME ...",
 		Aliases: []string{"scenario", "scn"},
 		Args:    cobra.MinimumNArgs(1),
 	}
+
+	cmd.Flags().StringVar(&sortBy, "sort-by", sortBy, "sort using `column` name")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
@@ -301,6 +307,10 @@ func NewGetScenariosCommand(cfg Config, p Printer) *cobra.Command {
 
 		result := &ScenarioOutput{Items: make([]ScenarioRow, 0, len(args))}
 		if err := l.ForEachNamedScenario(ctx, args, false, result.Add); err != nil {
+			return err
+		}
+
+		if err := result.SortBy(sortBy); err != nil {
 			return err
 		}
 
