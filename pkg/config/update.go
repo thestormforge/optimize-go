@@ -141,7 +141,7 @@ func SetExecutionEnvironment(env string) Change {
 func SetProperty(name, value string) Change {
 	// TODO This is a giant hack. Consider not even supporting `config set` generically
 	return func(cfg *Config) error {
-		path := strings.Split(name, ".")
+		path := nameToPath(name)
 		switch path[0] {
 
 		case "env":
@@ -236,7 +236,7 @@ func SetProperty(name, value string) Change {
 func UnsetProperty(name string) Change {
 	// TODO This is just as bad a hack as SetProperty...what are we doing here?
 	return func(cfg *Config) error {
-		path := strings.Split(name, ".")
+		path := nameToPath(name)
 		switch path[0] {
 
 		case "env":
@@ -316,4 +316,30 @@ func UnsetProperty(name string) Change {
 
 		return fmt.Errorf("unknown config property: %s", name)
 	}
+}
+
+// name2Path converts a dot-notation path expression string into a slice of
+// path element strings. In dot-notation, each path element is separated by a
+// "." character.  If a path element contains a literal "." character, it can
+// be escaped with a backslash. For example:
+//
+//   "element1.element\.2" => ["element1", "element.2"]
+func nameToPath(name string) []string {
+	runes := []rune(name)
+	for i := 1; i < len(runes); i++ {
+		if runes[i] == '.' {
+			if runes[i-1] != '\\' {
+				// Split on this character
+				runes[i] = '\x00'
+			} else {
+				// Mark escape character for removal
+				runes[i-1] = '\x01'
+			}
+		}
+	}
+
+	unescaped := strings.ReplaceAll(string(runes), "\x01", "")
+	path := strings.Split(unescaped, "\x00")
+
+	return path
 }
