@@ -176,17 +176,28 @@ func SetProperty(name, value string) Change {
 			}
 
 		case "controller":
+			// controller.default.env.<var>
+			// controller.cluster.name.is.long.<var>
+			if len(path) < 4 {
+				break
+			}
+
+			controllerName := path[1]
+			if len(path) > 4 {
+				controllerName = strings.Join(path[1:len(path)-2], ".")
+			}
+
 			if len(path) == 4 {
 				switch path[2] {
 				case "env":
 					mergeControllers(cfg, []NamedController{{
-						Name:       path[1],
+						Name:       controllerName,
 						Controller: Controller{Env: []ControllerEnvVar{{Name: path[3], Value: value}}},
 					}})
 					return nil
 				case "resources":
 					mergeControllers(cfg, []NamedController{{
-						Name: path[1],
+						Name: controllerName,
 						Controller: Controller{Resources: &ControllerResources{
 							Requests: map[string]string{path[3]: value},
 							Limits:   map[string]string{path[3]: value},
