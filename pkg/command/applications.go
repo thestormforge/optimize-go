@@ -220,6 +220,7 @@ func NewEnableApplicationRecommendationsCommand(cfg Config, p Printer) *cobra.Co
 		result := NewApplicationRow(&applications.ApplicationItem{Application: app})
 		result.SetRecommendationsDeployConfig(recs.DeployConfiguration)
 		result.SetRecommendationsConfiguration(recs.Configuration)
+		result.SetBackfillProgress(recs.BackfillProgress)
 		return p.Fprint(out, result)
 	}
 	return cmd
@@ -332,6 +333,7 @@ func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 
 			result.Items[i].SetRecommendationsDeployConfig(rl.DeployConfiguration)
 			result.Items[i].SetRecommendationsConfiguration(rl.Configuration)
+			result.Items[i].SetBackfillProgress(rl.BackfillProgress)
 		}
 
 		// Filter applications by product

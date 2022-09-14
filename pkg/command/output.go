@@ -73,8 +73,9 @@ type ApplicationRow struct {
 
 	// Special case: the recommendation configuration fields are sub-resources of the actual application
 
-	RecommendationsDeployConfig  *applications.DeployConfiguration `table:"-" csv:"-" json:"recommendationsDeployConfig,omitempty"`
-	RecommendationsConfiguration []applications.Configuration      `table:"-" csv:"-" json:"recommendationsConfiguration,omitempty"`
+	RecommendationsDeployConfig     *applications.DeployConfiguration `table:"-" csv:"-" json:"recommendationsDeployConfig,omitempty"`
+	RecommendationsConfiguration    []applications.Configuration      `table:"-" csv:"-" json:"recommendationsConfiguration,omitempty"`
+	RecommendationsBackfillProgress *applications.BackfillProgress    `table:"-" csv:"-" json:"recommendationsBackfillProgress,omitempty"`
 }
 
 func NewApplicationRow(item *applications.ApplicationItem) *ApplicationRow {
@@ -136,6 +137,14 @@ func (r *ApplicationRow) SetRecommendationsConfiguration(config []applications.C
 	for i := range config {
 		r.RecommendationsConfiguration = append(r.RecommendationsConfiguration, config[i])
 	}
+}
+
+func (r *ApplicationRow) SetBackfillProgress(progress *applications.BackfillProgress) {
+	if progress == nil {
+		return
+	}
+
+	r.RecommendationsBackfillProgress = progress
 }
 
 // ApplicationOutput wraps an application list for output.
