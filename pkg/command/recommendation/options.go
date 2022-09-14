@@ -310,22 +310,21 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 		}
 	}
 
-	for i := range patch.Configuration {
-		if patch.Configuration[i].ContainerResources == nil {
-			continue
+	// NOTE: The service will not merge configurations; do it here instead
+	// NOTE: Only work with index `Configuration[0]` because we can't make things line up otherwise
+	if len(patch.Configuration) > 0 {
+		if len(recs.Configuration) > 0 {
+			configuration, err := applications.MergeConfigurations(&recs.Configuration[0], &patch.Configuration[0])
+			if err != nil {
+				return err
+			}
+			patch.Configuration[0] = *configuration
 		}
 
 		// Validate bounds
-		bounds := patch.Configuration[i].ContainerResources.Bounds
+		bounds := patch.Configuration[0].ContainerResources.Bounds
 		if bounds == nil {
 			bounds = &applications.Bounds{}
-		}
-		var defaultBounds *applications.Bounds
-		if len(recs.Configuration) > i && recs.Configuration[i].ContainerResources != nil {
-			defaultBounds = recs.Configuration[i].ContainerResources.Bounds
-		}
-		if defaultBounds == nil {
-			defaultBounds = &applications.Bounds{}
 		}
 		limits := func(l *applications.Bounds) *applications.BoundsRange {
 			if l.Limits != nil {
@@ -342,15 +341,13 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 
 		errs = append(errs, checkResourceList(
 			mode, "limit",
-			limits(bounds).Min, limits(defaultBounds).Min,
-			limits(bounds).Max, limits(defaultBounds).Max,
+			limits(bounds).Min, limits(bounds).Max,
 			cmd.CommandPath(), flagContainerResourcesBoundsLimitsMin, flagContainerResourcesBoundsLimitsMax,
 		)...)
 
 		errs = append(errs, checkResourceList(
 			mode, "request",
-			requests(bounds).Min, requests(defaultBounds).Min,
-			requests(bounds).Max, requests(defaultBounds).Max,
+			requests(bounds).Min, requests(bounds).Max,
 			cmd.CommandPath(), flagContainerResourcesRequestsMin, flagContainerResourcesRequestsMax,
 		)...)
 	}
@@ -369,7 +366,7 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 }
 
 // checkResourceList looks through the resource lists for errors.
-func checkResourceList(mode applications.RecommendationsMode, name string, minList, defMinList, maxList, defMaxList *applications.ResourceList, fixCommand, fixFlagMin, fixFlagMax string) ErrorList {
+func checkResourceList(mode applications.RecommendationsMode, name string, minList, maxList *applications.ResourceList, fixCommand, fixFlagMin, fixFlagMax string) ErrorList {
 	var errs ErrorList
 
 	required := mode.Enabled() && name == "request"
@@ -402,14 +399,7 @@ func checkResourceList(mode applications.RecommendationsMode, name string, minLi
 
 	for _, resourceName := range []string{"cpu", "memory"} {
 		min := minList.Get(resourceName)
-		if min == nil {
-			min = defMinList.Get(resourceName)
-		}
-
 		max := maxList.Get(resourceName)
-		if max == nil {
-			max = defMaxList.Get(resourceName)
-		}
 
 		minOk := checkResource(resourceName, "minimum", min, fixFlagMin)
 		maxOk := checkResource(resourceName, "maximum", max, fixFlagMax)

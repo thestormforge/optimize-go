@@ -17,6 +17,7 @@ limitations under the License.
 package v2
 
 import (
+	"encoding/json"
 	"strings"
 	"time"
 
@@ -138,4 +139,25 @@ func ToleranceFrom(s string) *Tolerance {
 
 type BackfillProgress struct {
 	Timestamp time.Time `json:"timestamp"`
+}
+
+// MergeConfigurations combines the supplied configurations into a new
+// configuration.
+func MergeConfigurations(a, b *Configuration) (*Configuration, error) {
+	dataA, err := json.Marshal(a)
+	if err != nil {
+		return nil, err
+	}
+	dataB, err := json.Marshal(b)
+	if err != nil {
+		return nil, err
+	}
+	c := &Configuration{}
+	if err := json.Unmarshal(dataA, c); err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(dataB, c); err != nil {
+		return nil, err
+	}
+	return c, nil
 }
