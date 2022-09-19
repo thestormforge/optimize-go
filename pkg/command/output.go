@@ -564,6 +564,7 @@ func SortBy(o Output, name string) error {
 
 	c := collate.New(language.AmericanEnglish, collate.Loose, collate.Numeric)
 	buf := &collate.Buffer{}
+	var reverse bool
 	for i := 0; i < n; i++ {
 		value, ok := s.Item(i).Lookup(name)
 		if !ok {
@@ -582,13 +583,19 @@ func SortBy(o Output, name string) error {
 			s.keys[i] = c.KeyFromString(buf, strconv.Itoa(value))
 		case *time.Time:
 			s.keys[i] = c.KeyFromString(buf, strconv.FormatInt(value.Unix(), 10))
+			reverse = true
 		default:
 			// If you get this panic, add support for the missing type!
 			panic(fmt.Sprintf("unknown sort type %T on %T for %s", value, o, name))
 		}
 	}
 
-	sort.Sort(s)
+	if reverse {
+		sort.Sort(sort.Reverse(s))
+	} else {
+		sort.Sort(s)
+	}
+
 	return nil
 }
 
