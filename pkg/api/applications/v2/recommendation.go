@@ -34,6 +34,7 @@ type Recommendation struct {
 type Parameter struct {
 	Target             TargetRef     `json:"target"`
 	ContainerResources []interface{} `json:"containerResources"`
+	HPAResources       []interface{} `json:"hpaResources"`
 }
 
 type TargetRef struct {
