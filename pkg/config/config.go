@@ -21,6 +21,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
+	"path"
+	"strings"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
@@ -54,15 +57,13 @@ func (cfg *Config) Address() string {
 // Transport wraps the supplied round tripper (presumably the `http.DefaultTransport`)
 // based on the current state of the configuration.
 func (cfg *Config) Transport(ctx context.Context, base http.RoundTripper) http.RoundTripper {
-	transport := base
-
-	// Add an authorization transport if there is a token source available
-	if src := cfg.TokenSource(ctx); src != nil {
-		// TODO This needs to check the URL prefix before sending a token along...
-		transport = &oauth2.Transport{Source: src, Base: transport}
+	return &transport{
+		Transport: oauth2.Transport{
+			Source: cfg.TokenSource(ctx),
+			Base:   base,
+		},
+		Audience: cfg.Server,
 	}
-
-	return transport
 }
 
 // TokenSource returns a new source for obtaining tokens. The token source may be
@@ -102,6 +103,65 @@ func (cfg *Config) TokenSource(ctx context.Context) oauth2.TokenSource {
 	default:
 		return nil
 	}
+}
+
+// transport wraps a stock OAuth2 transport with a check that ensures outbound
+// requests only include tokens if they match the configured audience.
+type transport struct {
+	// The standard OAuth2 transport.
+	oauth2.Transport
+	// The audience used to filter request URLs.
+	Audience string
+}
+
+// RoundTrip ensures the audience value matches the request before adding tokens.
+func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if t.Transport.Source != nil && t.requiresAuthorization(req.URL) {
+		return t.Transport.RoundTrip(req)
+	}
+
+	if t.Base != nil {
+		return t.Base.RoundTrip(req)
+	}
+
+	return http.DefaultTransport.RoundTrip(req)
+}
+
+// requiresAuthorization tests the supplied URL to see if it matches the
+// effective audience.
+func (t *transport) requiresAuthorization(u *url.URL) bool {
+	// Check the actual configured audience value
+	if strings.HasPrefix(u.String(), t.Audience) {
+		return true
+	}
+
+	// Support an alternate audience for testing the application service
+	if endpoint := os.Getenv("STORMFORGE_APPLICATIONS_ENDPOINT"); endpoint != "" {
+		if strings.HasPrefix(u.String(), endpoint) {
+			return true
+		}
+
+		// Special case other resources directly under /v2/
+		if c, err := url.Parse(endpoint); err == nil {
+			c.Path = path.Join(c.Path, "..", "clusters")
+			if strings.HasPrefix(u.String(), c.String()) {
+				return true
+			}
+			c.Path = path.Join(c.Path, "..", "application-activity")
+			if strings.HasPrefix(u.String(), c.String()) {
+				return true
+			}
+		}
+	}
+
+	// Support an alternate audience for testing the experiment service
+	if endpoint := os.Getenv("STORMFORGE_EXPERIMENTS_ENDPOINT"); endpoint != "" {
+		if strings.HasPrefix(u.String(), endpoint) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // errorTokenSource is a TokenSource that always returns an error.
