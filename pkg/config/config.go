@@ -130,6 +130,11 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 // requiresAuthorization tests the supplied URL to see if it matches the
 // effective audience.
 func (t *transport) requiresAuthorization(u *url.URL) bool {
+	// TODO This is a hack, really NONE of the requests through the OAuth2 client should return true here
+	if strings.Contains(u.Path, "/oauth/") {
+		return false
+	}
+
 	// Check the actual configured audience value
 	if strings.HasPrefix(u.String(), t.Audience) {
 		return true
