@@ -27,6 +27,47 @@ import (
 	"github.com/thestormforge/optimize-go/pkg/api"
 )
 
+// NewTrialAssignments constructs a trial assignments instance using the supplied string values.
+// The default behavior can be "none", "baseline", "minimum", "maximum", or "random".
+func NewTrialAssignments(e *Experiment, assignments map[string]string, baselines map[string]*api.NumberOrString, defaultBehavior string) (*TrialAssignments, error) {
+	ta := &TrialAssignments{}
+	for _, p := range e.Parameters {
+		v, err := parameterValue(&p, assignments, baselines, defaultBehavior)
+		if err != nil {
+			return nil, err
+		}
+		if err := CheckParameterValue(&p, v); err != nil {
+			return nil, err
+		}
+		ta.Assignments = append(ta.Assignments, Assignment{ParameterName: p.Name, Value: *v})
+	}
+	if err := CheckParameterConstraints(ta.Assignments, e.Constraints); err != nil {
+		return nil, err
+	}
+	return ta, nil
+}
+
+func parameterValue(p *Parameter, assignments map[string]string, baselines map[string]*api.NumberOrString, defaultBehavior string) (*api.NumberOrString, error) {
+	if a, ok := assignments[p.Name]; ok {
+		return p.ParseValue(a)
+	}
+
+	switch defaultBehavior {
+	case "none", "":
+		return nil, nil
+	case "base", "baseline":
+		return baselines[p.Name], nil
+	case "min", "minimum":
+		return p.LowerBound()
+	case "max", "maximum":
+		return p.UpperBound()
+	case "rand", "random":
+		return p.RandomValue()
+	default:
+		return nil, fmt.Errorf("unknown default behavior %q", defaultBehavior)
+	}
+}
+
 // LowerBound attempts to return the lower bound for this parameter.
 func (p *Parameter) LowerBound() (*api.NumberOrString, error) {
 	if p.Type == ParameterTypeCategorical {

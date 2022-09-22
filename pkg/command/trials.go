@@ -59,28 +59,17 @@ func NewCreateTrialCommand(cfg Config, p Printer) *cobra.Command {
 			return fmt.Errorf("malformed response, missing trials link")
 		}
 
-		t := experiments.TrialItem{Experiment: &exp}
-		for _, p := range exp.Parameters {
-			v, err := parameterValue(&p, assignments, defaultBehavior)
-			if err != nil {
-				return err
-			}
-			if err := experiments.CheckParameterValue(&p, v); err != nil {
-				return err
-			}
-			t.Assignments = append(t.Assignments, experiments.Assignment{ParameterName: p.Name, Value: *v})
-		}
-
-		if err := experiments.CheckParameterConstraints(t.Assignments, exp.Constraints); err != nil {
+		ta, err := experiments.NewTrialAssignments(&exp, assignments, nil, defaultBehavior)
+		if err != nil {
 			return err
 		}
 
-		if _, err := expAPI.CreateTrial(ctx, trialsURL, t.TrialAssignments); err != nil {
+		if _, err := expAPI.CreateTrial(ctx, trialsURL, *ta); err != nil {
 			return err
 		}
 
-		// NOTE: The trial number will not exist until the assignments have been pull from the queue
-		return p.Fprint(out, NewTrialRow(&t))
+		// NOTE: The trial number will not exist until the assignments have been pulled from the queue
+		return p.Fprint(out, NewTrialRow(&experiments.TrialItem{Experiment: &exp, TrialAssignments: *ta}))
 	}
 	return cmd
 }
@@ -243,23 +232,4 @@ func validTrialArgs(cfg Config) func(*cobra.Command, []string, string) ([]string
 
 		return
 	})
-}
-
-func parameterValue(p *experiments.Parameter, assignments map[string]string, defaultBehavior string) (*api.NumberOrString, error) {
-	if a, ok := assignments[p.Name]; ok {
-		return p.ParseValue(a)
-	}
-
-	switch defaultBehavior {
-	case "none", "":
-		return nil, nil
-	case "min", "minimum":
-		return p.LowerBound()
-	case "max", "maximum":
-		return p.UpperBound()
-	case "rand", "random":
-		return p.RandomValue()
-	default:
-		return nil, fmt.Errorf("unknown default behavior %q", defaultBehavior)
-	}
 }
