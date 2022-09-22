@@ -111,6 +111,10 @@ func (p *Parameter) RandomValue() (*api.NumberOrString, error) {
 
 // CheckParameterValue validates that the supplied value can be used for a parameter.
 func CheckParameterValue(p *Parameter, v *api.NumberOrString) error {
+	if v == nil {
+		return fmt.Errorf("no assignment for parameter %q", p.Name)
+	}
+
 	if p.Type == ParameterTypeCategorical {
 		if !v.IsString {
 			return fmt.Errorf("categorical value must be a string: %s", v.String())

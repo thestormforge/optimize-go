@@ -65,9 +65,6 @@ func NewCreateTrialCommand(cfg Config, p Printer) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if v == nil {
-				return fmt.Errorf("no assignment for parameter %q", p.Name)
-			}
 			if err := experiments.CheckParameterValue(&p, v); err != nil {
 				return err
 			}
