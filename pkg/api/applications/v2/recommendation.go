@@ -125,16 +125,16 @@ func (rl *ResourceList) Set(name string, value api.NumberOrString) {
 
 type Tolerance api.NumberOrString
 
-func ToleranceFrom(s string) *Tolerance {
+func ToleranceFrom(s string) Tolerance {
 	switch strings.ToLower(s) {
 	case "low", "l":
-		return &Tolerance{StrVal: "low", IsString: true}
+		return Tolerance{StrVal: "low", IsString: true}
 	case "medium", "med", "m":
-		return &Tolerance{StrVal: "medium", IsString: true}
+		return Tolerance{StrVal: "medium", IsString: true}
 	case "high", "h":
-		return &Tolerance{StrVal: "high", IsString: true}
+		return Tolerance{StrVal: "high", IsString: true}
 	}
-	return nil
+	return Tolerance{StrVal: s, IsString: true}
 }
 
 type BackfillProgress struct {

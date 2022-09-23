@@ -17,7 +17,6 @@ limitations under the License.
 package recommendation
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -103,7 +102,7 @@ func (opts *ContainerResourcesOptions) Apply(configuration *[]applications.Confi
 	if size := len(opts.TargetUtilization); size > 0 {
 		targetUtilization := &applications.ResourceList{}
 		for k, v := range opts.TargetUtilization {
-			targetUtilization.Set(strings.ToLower(k), api.FromNumber(json.Number(v)))
+			targetUtilization.Set(strings.ToLower(k), api.FromValue(v))
 		}
 		lazyContainerResources().TargetUtilization = targetUtilization
 	}
@@ -111,7 +110,7 @@ func (opts *ContainerResourcesOptions) Apply(configuration *[]applications.Confi
 	if size := len(opts.Tolerance); size > 0 {
 		tolerance := &applications.ResourceList{}
 		for k, v := range opts.Tolerance {
-			tolerance.Set(strings.ToLower(k), *(*api.NumberOrString)(applications.ToleranceFrom(v)))
+			tolerance.Set(strings.ToLower(k), api.NumberOrString(applications.ToleranceFrom(v)))
 		}
 		lazyContainerResources().Tolerance = tolerance
 	}
@@ -129,7 +128,7 @@ func (opts *ContainerResourcesOptions) Apply(configuration *[]applications.Confi
 			limits.Max = &applications.ResourceList{}
 		}
 		for k, v := range opts.BoundsLimitsMax {
-			limits.Max.Set(strings.ToLower(k), api.FromNumber(json.Number(v)))
+			limits.Max.Set(strings.ToLower(k), api.FromValue(v))
 		}
 	}
 	if len(opts.BoundsLimitsMin) > 0 {
@@ -138,7 +137,7 @@ func (opts *ContainerResourcesOptions) Apply(configuration *[]applications.Confi
 			limits.Min = &applications.ResourceList{}
 		}
 		for k, v := range opts.BoundsLimitsMin {
-			limits.Min.Set(strings.ToLower(k), api.FromNumber(json.Number(v)))
+			limits.Min.Set(strings.ToLower(k), api.FromValue(v))
 		}
 	}
 
@@ -154,7 +153,7 @@ func (opts *ContainerResourcesOptions) Apply(configuration *[]applications.Confi
 			requests.Max = &applications.ResourceList{}
 		}
 		for k, v := range opts.BoundsRequestsMax {
-			requests.Max.Set(strings.ToLower(k), api.FromNumber(json.Number(v)))
+			requests.Max.Set(strings.ToLower(k), api.FromValue(v))
 		}
 	}
 	if len(opts.BoundsRequestsMin) > 0 {
@@ -163,7 +162,7 @@ func (opts *ContainerResourcesOptions) Apply(configuration *[]applications.Confi
 			requests.Min = &applications.ResourceList{}
 		}
 		for k, v := range opts.BoundsRequestsMin {
-			requests.Min.Set(strings.ToLower(k), api.FromNumber(json.Number(v)))
+			requests.Min.Set(strings.ToLower(k), api.FromValue(v))
 		}
 	}
 	if bounds.Limits != nil || bounds.Requests != nil {
@@ -384,7 +383,7 @@ func checkResourceList(mode applications.RecommendationsMode, name string, minLi
 			return false
 		}
 
-		if value.IsString || value.Int64Value() < 0 {
+		if !IsNonNegativeQuantity(value) {
 			errs = append(errs, &Error{
 				Message:        fmt.Sprintf("invalid %s container %s for %s: %s", minmax, name, resourceName, value),
 				FixCommand:     fixCommand,
@@ -403,7 +402,7 @@ func checkResourceList(mode applications.RecommendationsMode, name string, minLi
 
 		minOk := checkResource(resourceName, "minimum", min, fixFlagMin)
 		maxOk := checkResource(resourceName, "maximum", max, fixFlagMax)
-		if minOk && maxOk && min.Int64Value() > max.Int64Value() {
+		if minOk && maxOk && QuantityLess(max, min) {
 			errs = append(errs, &Error{
 				Message:    fmt.Sprintf("invalid container %s range for %s: %s-%s", name, resourceName, min, max),
 				FixCommand: fixCommand,

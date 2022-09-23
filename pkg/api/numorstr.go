@@ -48,6 +48,18 @@ func FromString(val string) NumberOrString {
 	return NumberOrString{StrVal: val, IsString: true}
 }
 
+// FromValue returns the supplied value as a NumberOrString based
+// on an attempt to parse the supplied value as an int or float.
+func FromValue(val string) NumberOrString {
+	if v, err := strconv.ParseInt(val, 10, 64); err == nil {
+		return FromInt64(v)
+	}
+	if v, err := strconv.ParseFloat(val, 64); err == nil {
+		return FromFloat64(v)
+	}
+	return FromString(val)
+}
+
 // String coerces the value to a string.
 func (s *NumberOrString) String() string {
 	if s == nil {
