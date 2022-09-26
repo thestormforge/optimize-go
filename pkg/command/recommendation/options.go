@@ -371,24 +371,26 @@ func checkResourceList(mode applications.RecommendationsMode, name string, minLi
 	required := mode.Enabled() && name == "request"
 
 	checkResource := func(resourceName, minmax string, value *api.NumberOrString, fixFlag string) bool {
+		// Enforce required values
 		if value == nil {
 			if required {
 				errs = append(errs, &Error{
 					Message:        fmt.Sprintf("missing %s container %s for %s", minmax, name, resourceName),
 					FixCommand:     fixCommand,
 					FixFlag:        fixFlag,
-					FixValidValues: []string{resourceName + "=VALUE"},
+					FixValidValues: []string{fmt.Sprintf("%s=VALUE", resourceName)},
 				})
 			}
 			return false
 		}
 
-		if !IsNonNegativeQuantity(value) {
+		// Enforce valid, non-negative values
+		if q := value.Quantity(); q == nil || q.Signbit() {
 			errs = append(errs, &Error{
 				Message:        fmt.Sprintf("invalid %s container %s for %s: %s", minmax, name, resourceName, value),
 				FixCommand:     fixCommand,
 				FixFlag:        fixFlag,
-				FixValidValues: []string{resourceName + "=VALUE"},
+				FixValidValues: []string{fmt.Sprintf("%s=VALUE", resourceName)},
 			})
 			return false
 		}
@@ -402,6 +404,8 @@ func checkResourceList(mode applications.RecommendationsMode, name string, minLi
 
 		minOk := checkResource(resourceName, "minimum", min, fixFlagMin)
 		maxOk := checkResource(resourceName, "maximum", max, fixFlagMax)
+
+		// Make sure max is greater than or equal to min
 		if minOk && maxOk && QuantityLess(max, min) {
 			errs = append(errs, &Error{
 				Message:    fmt.Sprintf("invalid container %s range for %s: %s-%s", name, resourceName, min, max),

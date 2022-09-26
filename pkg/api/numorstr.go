@@ -18,6 +18,9 @@ package api
 
 import (
 	"encoding/json"
+	"math"
+	"math/big"
+	"regexp"
 	"strconv"
 )
 
@@ -106,4 +109,64 @@ func (s *NumberOrString) UnmarshalJSON(b []byte) error {
 		return json.Unmarshal(b, &s.StrVal)
 	}
 	return json.Unmarshal(b, &s.NumVal)
+}
+
+// quantityRegExp comes from Kubernetes.
+var quantityRegExp = regexp.MustCompile(`^([-+]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$`)
+
+// Quantity attempts to return a big float using the same logic as a Kubernetes
+// quantity. If parsing fails, this will return nil.
+func (s *NumberOrString) Quantity() *big.Float {
+	if !s.IsString {
+		if v, err := s.NumVal.Int64(); err == nil {
+			return new(big.Float).SetInt64(v)
+		}
+		if v, err := s.NumVal.Float64(); err == nil {
+			return new(big.Float).SetFloat64(v)
+		}
+	} else if parts := quantityRegExp.FindStringSubmatch(s.StrVal); len(parts) == 3 {
+		strVal, op := parts[1], 1.0
+		switch parts[2] {
+		case "":
+			op = 1.0
+		case "Ki":
+			op = math.Pow(2, 10)
+		case "Mi":
+			op = math.Pow(2, 20)
+		case "Gi":
+			op = math.Pow(2, 30)
+		case "Ti":
+			op = math.Pow(2, 40)
+		case "Pi":
+			op = math.Pow(2, 50)
+		case "Ei":
+			op = math.Pow(2, 60)
+		case "n":
+			op = math.Pow10(-9)
+		case "u":
+			op = math.Pow10(-6)
+		case "m":
+			op = math.Pow10(-3)
+		case "k":
+			op = math.Pow10(3)
+		case "M":
+			op = math.Pow10(9)
+		case "G":
+			op = math.Pow10(9)
+		case "T":
+			op = math.Pow10(12)
+		case "P":
+			op = math.Pow10(15)
+		case "E":
+			op = math.Pow10(18)
+		default:
+			strVal += parts[2]
+		}
+
+		if v, ok := new(big.Float).SetString(strVal); ok {
+			return v.Mul(v, big.NewFloat(op))
+		}
+	}
+
+	return nil
 }
