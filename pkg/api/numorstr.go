@@ -150,7 +150,7 @@ func (s *NumberOrString) Quantity() *big.Float {
 		case "k":
 			op = math.Pow10(3)
 		case "M":
-			op = math.Pow10(9)
+			op = math.Pow10(6)
 		case "G":
 			op = math.Pow10(9)
 		case "T":
