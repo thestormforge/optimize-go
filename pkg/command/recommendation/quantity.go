@@ -17,6 +17,10 @@ limitations under the License.
 package recommendation
 
 import (
+	"fmt"
+	"strings"
+	"unicode"
+
 	"github.com/thestormforge/optimize-go/pkg/api"
 )
 
@@ -31,4 +35,33 @@ func QuantityLess(a, b *api.NumberOrString) bool {
 	}
 
 	return af.Cmp(bf) < 0
+}
+
+// LikelyInvalid returns true if the value is likely to be invalid.
+func LikelyInvalid(resourceName string, val *api.NumberOrString) error {
+	switch resourceName {
+	case "cpu":
+		// There is a 1 millicore granularity requirement, you can't specify less than that
+		minCPU := api.FromString("1m")
+
+		if QuantityLess(val, &minCPU) {
+			return fmt.Errorf("%s must be at least %s", val, &minCPU)
+		}
+		return nil
+
+	case "memory":
+		// While not a hard requirement, specifying less than a megabyte probably isn't going to work
+		minMemory := api.FromString("1M")
+		if val.IsString && strings.TrimFunc(strings.TrimLeft(val.StrVal, "-+"), unicode.IsDigit) != "" {
+			minMemory = api.FromInt64(0)
+		}
+
+		if QuantityLess(val, &minMemory) {
+			return fmt.Errorf("%s must be at least %s", val, &minMemory)
+		}
+		return nil
+
+	default:
+		return nil
+	}
 }

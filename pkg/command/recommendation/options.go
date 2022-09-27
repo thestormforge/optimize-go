@@ -368,29 +368,42 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 func checkResourceList(mode applications.RecommendationsMode, name string, minList, maxList *applications.ResourceList, fixCommand, fixFlagMin, fixFlagMax string) ErrorList {
 	var errs ErrorList
 
-	required := mode.Enabled() && name == "request"
+	// minmax=minimum|maximum, name=request|limit, resourceName=cpu|memory
 
 	checkResource := func(resourceName, minmax string, value *api.NumberOrString, fixFlag string) bool {
-		// Enforce required values
 		if value == nil {
-			if required {
+			// Enforce required values
+			if mode.Enabled() && name == "request" {
 				errs = append(errs, &Error{
 					Message:        fmt.Sprintf("missing %s container %s for %s", minmax, name, resourceName),
 					FixCommand:     fixCommand,
 					FixFlag:        fixFlag,
-					FixValidValues: []string{fmt.Sprintf("%s=VALUE", resourceName)},
+					FixValidValues: []string{fmt.Sprintf("%s=%s", resourceName, "VALUE")},
 				})
 			}
+
+			// Even if it is allowed, we can't use it to compare to other values
 			return false
 		}
 
-		// Enforce valid, non-negative values
+		// Require that the value convert to quantity that is NOT negative ('signbit == true' means negative)
 		if q := value.Quantity(); q == nil || q.Signbit() {
 			errs = append(errs, &Error{
 				Message:        fmt.Sprintf("invalid %s container %s for %s: %s", minmax, name, resourceName, value),
 				FixCommand:     fixCommand,
 				FixFlag:        fixFlag,
-				FixValidValues: []string{fmt.Sprintf("%s=VALUE", resourceName)},
+				FixValidValues: []string{fmt.Sprintf("%s=%s", resourceName, "VALUE")},
+			})
+			return false
+		}
+
+		// Help prevent misconfiguration
+		if err := LikelyInvalid(resourceName, value); err != nil {
+			errs = append(errs, &Error{
+				Message:        fmt.Sprintf("invalid %s container %s for %s: %s", minmax, name, resourceName, err.Error()),
+				FixCommand:     fixCommand,
+				FixFlag:        fixFlag,
+				FixValidValues: []string{fmt.Sprintf("%s=%s", resourceName, "VALUE")},
 			})
 			return false
 		}
