@@ -38,6 +38,11 @@ const (
 )
 
 const (
+	flagHPAResourcesRequestsMax = "max-hpa-target-utilization"
+	flagHPAResourcesRequestsMin = "min-hpa-target-utilization"
+)
+
+const (
 	flagDeployMode                   = "mode"
 	flagDeployInterval               = "interval"
 	flagDeployMaxRecommendationRatio = "deploy-max-ratio"
@@ -167,6 +172,60 @@ func (opts *ContainerResourcesOptions) Apply(configuration *[]applications.Confi
 	}
 	if bounds.Limits != nil || bounds.Requests != nil {
 		lazyContainerResources().Bounds = bounds
+	}
+}
+
+// HPAResourcesOptions contains options for building the recommender configuration
+// for optimizing hpa resources.
+type HPAResourcesOptions struct {
+	TargetUtilizationMax map[string]int64
+	TargetUtilizationMin map[string]int64
+}
+
+func (opts *HPAResourcesOptions) AddFlags(cmd *cobra.Command) {
+	cmd.Flags().StringToInt64Var(&opts.TargetUtilizationMax, flagHPAResourcesRequestsMax, opts.TargetUtilizationMax, "per-hpa resource max target utilization as `resource=value`; resource is one of: cpu")
+	cmd.Flags().StringToInt64Var(&opts.TargetUtilizationMin, flagHPAResourcesRequestsMin, opts.TargetUtilizationMin, "per-hpa resource min target utilization as `resource=value`; resource is one of: cpu")
+}
+
+func (opts *HPAResourcesOptions) Apply(configuration *[]applications.Configuration) {
+	lazyHPAResources := func() *applications.HPAResources {
+		if len(*configuration) == 0 {
+			*configuration = append(*configuration, applications.Configuration{HPAResources: &applications.HPAResources{}})
+		}
+		if (*configuration)[0].HPAResources == nil {
+			(*configuration)[0].HPAResources = &applications.HPAResources{}
+		}
+		return (*configuration)[0].HPAResources
+	}
+
+	bounds := &applications.HPABounds{}
+	lazyTargetUtilization := func() *applications.HPABoundsRange {
+		if bounds.TargetUtilization == nil {
+			bounds.TargetUtilization = &applications.HPABoundsRange{}
+		}
+		return bounds.TargetUtilization
+	}
+	if len(opts.TargetUtilizationMax) > 0 {
+		targetUtilization := lazyTargetUtilization()
+		if targetUtilization.Max == nil {
+			targetUtilization.Max = &applications.HPAResourceList{}
+		}
+		for k, v := range opts.TargetUtilizationMax {
+			targetUtilization.Max.Set(strings.ToLower(k), int32(v))
+		}
+	}
+	if len(opts.TargetUtilizationMin) > 0 {
+		targetUtilization := lazyTargetUtilization()
+		if targetUtilization.Min == nil {
+			targetUtilization.Min = &applications.HPAResourceList{}
+		}
+		for k, v := range opts.TargetUtilizationMin {
+			targetUtilization.Min.Set(strings.ToLower(k), int32(v))
+		}
+	}
+
+	if bounds.TargetUtilization != nil {
+		lazyHPAResources().Bounds = bounds
 	}
 }
 
