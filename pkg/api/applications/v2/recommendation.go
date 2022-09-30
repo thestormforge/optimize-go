@@ -76,6 +76,7 @@ type LimitRangeItem struct {
 
 type Configuration struct {
 	ContainerResources *ContainerResources `json:"containerResources,omitempty"`
+	HPAResources       *HPAResources       `json:"hpaResources,omitempty"`
 }
 
 type ContainerResources struct {
@@ -119,6 +120,40 @@ func (rl *ResourceList) Set(name string, value api.NumberOrString) {
 		rl.CPU = &value
 	case "memory", "mem", "m":
 		rl.Memory = &value
+	}
+}
+
+type HPAResources struct {
+	Bounds *HPABounds `json:"bounds,omitempty"`
+}
+
+type HPABounds struct {
+	TargetUtilization *HPABoundsRange `json:"targetUtilization,omitempty"`
+}
+
+type HPABoundsRange struct {
+	Max *HPAResourceList `json:"max,omitempty"`
+	Min *HPAResourceList `json:"min,omitempty"`
+}
+
+type HPAResourceList struct {
+	CPU *int32 `json:"cpu,omitempty"`
+}
+
+func (rl *HPAResourceList) Get(name string) *int32 {
+	if rl != nil {
+		switch name {
+		case "cpu":
+			return rl.CPU
+		}
+	}
+	return nil
+}
+
+func (rl *HPAResourceList) Set(name string, value int32) {
+	switch name {
+	case "cpu", "c":
+		rl.CPU = &value
 	}
 }
 
