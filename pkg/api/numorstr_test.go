@@ -68,6 +68,11 @@ func TestNumberOrString_String(t *testing.T) {
 			value:    FromNumber("1"),
 			expected: "1",
 		},
+		{
+			desc:     "numeric string",
+			value:    FromString("1"),
+			expected: "1",
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -105,6 +110,14 @@ func TestNumberOrString_Int64Value(t *testing.T) {
 		{
 			desc:     "number",
 			value:    FromNumber("1"),
+			expected: 1,
+		},
+
+		// This is inconsistent with JSON marshaling: if we were consistent
+		// we would NOT try to convert the StrVal into a number.
+		{
+			desc:     "numeric string",
+			value:    FromString("1"),
 			expected: 1,
 		},
 	}
@@ -146,6 +159,14 @@ func TestNumberOrString_Float64Value(t *testing.T) {
 			value:    FromNumber("1"),
 			expected: 1.0,
 		},
+
+		// This is inconsistent with JSON marshaling: if we were consistent
+		// we would NOT try to convert the StrVal into a number.
+		{
+			desc:     "numeric string",
+			value:    FromString("1"),
+			expected: 1.0,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -185,6 +206,14 @@ func TestNumberOrString_MarshalJSON(t *testing.T) {
 			value:    FromNumber("1"),
 			expected: []byte(`1`),
 		},
+
+		// This is important because Kubernetes `Quantities` often marshal out
+		// as strings that look like numbers (and we should preserve that).
+		{
+			desc:     "numeric string",
+			value:    FromString("1"),
+			expected: []byte(`"1"`),
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -221,6 +250,14 @@ func TestNumberOrString_UnmarshalJSON(t *testing.T) {
 			desc:     "number",
 			data:     []byte(`1`),
 			expected: FromNumber("1"),
+		},
+
+		// This is important because Kubernetes `Quantities` often marshal out
+		// as strings that look like numbers (and we should preserve that).
+		{
+			desc:     "numeric string",
+			data:     []byte(`"1"`),
+			expected: FromString("1"),
 		},
 	}
 	for _, tc := range cases {
