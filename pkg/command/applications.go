@@ -163,6 +163,7 @@ func NewEnableApplicationRecommendationsCommand(cfg Config, p Printer) *cobra.Co
 	var (
 		deployConfiguration recommendation.DeployConfigurationOptions
 		containerResources  recommendation.ContainerResourcesOptions
+		hpaResources        recommendation.HPAResourcesOptions
 	)
 
 	cmd := &cobra.Command{
@@ -174,6 +175,7 @@ func NewEnableApplicationRecommendationsCommand(cfg Config, p Printer) *cobra.Co
 
 	deployConfiguration.AddFlags(cmd)
 	containerResources.AddFlags(cmd)
+	hpaResources.AddFlags(cmd)
 
 	_ = cmd.RegisterFlagCompletionFunc("cluster", validClusterArgs(cfg, applications.ClusterRecommendations))
 
