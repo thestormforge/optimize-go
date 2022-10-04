@@ -43,8 +43,8 @@ func LikelyInvalid(resourceName string, val *api.NumberOrString, resourceAsPerce
 		// Already verified Quantity is not negative, so only checking max
 		max := api.FromString("100")
 
-		if QuantityLess(&max, val) {
-			return fmt.Errorf("%s must be at most %s", &max, val)
+		if QuantityLess(&max, val) || !val.IsInt64() {
+			return fmt.Errorf("%s must be an integer of at most %s", val, &max)
 		}
 		return nil
 	}
