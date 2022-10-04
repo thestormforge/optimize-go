@@ -374,6 +374,11 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 		if bounds == nil {
 			bounds = &applications.Bounds{}
 		}
+		hpaBounds := patch.Configuration[0].HPAResources.Bounds
+		if hpaBounds == nil {
+			hpaBounds = &applications.Bounds{}
+		}
+
 		limits := func(l *applications.Bounds) *applications.BoundsRange {
 			if l.Limits != nil {
 				return l.Limits
@@ -407,7 +412,7 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 
 		errs = append(errs, checkResourceList(
 			mode, "target-utilization",
-			targetUtilization(bounds).Min, targetUtilization(bounds).Max,
+			targetUtilization(hpaBounds).Min, targetUtilization(hpaBounds).Max,
 			cmd.CommandPath(), flagHPATargetUtilizationMin, flagHPATargetUtilizationMax,
 		)...)
 	}
