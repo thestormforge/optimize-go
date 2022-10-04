@@ -38,7 +38,17 @@ func QuantityLess(a, b *api.NumberOrString) bool {
 }
 
 // LikelyInvalid returns true if the value is likely to be invalid.
-func LikelyInvalid(resourceName string, val *api.NumberOrString) error {
+func LikelyInvalid(resourceName string, val *api.NumberOrString, resourceAsPercentage bool) error {
+	if resourceAsPercentage {
+		// Already verified Quantity is not negative, so only checking max
+		max := api.FromString("100")
+
+		if QuantityLess(&max, val) {
+			return fmt.Errorf("%s must be at most %s", &max, val)
+		}
+		return nil
+	}
+
 	switch resourceName {
 	case "cpu":
 		// There is a 1 millicore granularity requirement, you can't specify less than that

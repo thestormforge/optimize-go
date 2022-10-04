@@ -386,6 +386,12 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 			}
 			return &applications.BoundsRange{}
 		}
+		targetUtilization := func(l *applications.Bounds) *applications.BoundsRange {
+			if l.TargetUtilization != nil {
+				return l.TargetUtilization
+			}
+			return &applications.BoundsRange{}
+		}
 
 		errs = append(errs, checkResourceList(
 			mode, "limit",
@@ -397,6 +403,12 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 			mode, "request",
 			requests(bounds).Min, requests(bounds).Max,
 			cmd.CommandPath(), flagContainerResourcesRequestsMin, flagContainerResourcesRequestsMax,
+		)...)
+
+		errs = append(errs, checkResourceList(
+			mode, "target-utilization",
+			targetUtilization(bounds).Min, targetUtilization(bounds).Max,
+			cmd.CommandPath(), flagHPATargetUtilizationMin, flagHPATargetUtilizationMax,
 		)...)
 	}
 
@@ -416,8 +428,9 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 // checkResourceList looks through the resource lists for errors.
 func checkResourceList(mode applications.RecommendationsMode, name string, minList, maxList *applications.ResourceList, fixCommand, fixFlagMin, fixFlagMax string) ErrorList {
 	var errs ErrorList
+	resourceAsPercentage := name == "target-utilization"
 
-	// minmax=minimum|maximum, name=request|limit, resourceName=cpu|memory
+	// minmax=minimum|maximum, name=request|limit|target-utilization, resourceName=cpu|memory
 
 	checkResource := func(resourceName, minmax string, value *api.NumberOrString, fixFlag string) bool {
 		if value == nil {
@@ -447,7 +460,7 @@ func checkResourceList(mode applications.RecommendationsMode, name string, minLi
 		}
 
 		// Help prevent misconfiguration
-		if err := LikelyInvalid(resourceName, value); err != nil {
+		if err := LikelyInvalid(resourceName, value, resourceAsPercentage); err != nil {
 			errs = append(errs, &Error{
 				Message:        fmt.Sprintf("invalid %s container %s for %s: %s", minmax, name, resourceName, err.Error()),
 				FixCommand:     fixCommand,
@@ -461,6 +474,10 @@ func checkResourceList(mode applications.RecommendationsMode, name string, minLi
 	}
 
 	for _, resourceName := range []string{"cpu", "memory"} {
+		if resourceAsPercentage && resourceName != "cpu" {
+			continue
+		}
+
 		min := minList.Get(resourceName)
 		max := maxList.Get(resourceName)
 
