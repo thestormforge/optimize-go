@@ -357,7 +357,6 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 		if bounds == nil {
 			bounds = &applications.Bounds{}
 		}
-
 		limits := func(l *applications.Bounds) *applications.BoundsRange {
 			if l.Limits != nil {
 				return l.Limits
