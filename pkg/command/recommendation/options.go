@@ -79,8 +79,8 @@ func (opts *ContainerResourcesOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringToStringVar(&opts.BoundsLimitsMin, flagContainerResourcesBoundsLimitsMin, opts.BoundsLimitsMin, "per-container resource min limits as `resource=quantity`; resource is one of: cpu|memory")
 	cmd.Flags().StringToStringVar(&opts.BoundsRequestsMax, flagContainerResourcesRequestsMax, opts.BoundsRequestsMax, "per-container resource max requests as `resource=quantity`; resource is one of: cpu|memory")
 	cmd.Flags().StringToStringVar(&opts.BoundsRequestsMin, flagContainerResourcesRequestsMin, opts.BoundsRequestsMin, "per-container resource min requests as `resource=quantity`; resource is one of: cpu|memory")
-	cmd.Flags().StringToInt64Var(&opts.BoundsTargetUtilizationMax, flagContainerResourcesTargetUtilizationMax, opts.BoundsTargetUtilizationMax, "per-container resource min targetUtilization as `resource=quantity`; resource is one of: cpu")
-	cmd.Flags().StringToInt64Var(&opts.BoundsTargetUtilizationMin, flagContainerResourcesTargetUtilizationMin, opts.BoundsTargetUtilizationMin, "per-container resource min targetUtilization as `resource=quantity`; resource is one of: cpu")
+	cmd.Flags().StringToInt64Var(&opts.BoundsTargetUtilizationMax, flagContainerResourcesTargetUtilizationMax, opts.BoundsTargetUtilizationMax, "per-container resource max target utilization as `resource=quantity`; resource is one of: cpu")
+	cmd.Flags().StringToInt64Var(&opts.BoundsTargetUtilizationMin, flagContainerResourcesTargetUtilizationMin, opts.BoundsTargetUtilizationMin, "per-container resource min target utilization as `resource=quantity`; resource is one of: cpu")
 
 	cmd.Flag(flagContainerResourcesInterval).Hidden = true
 	cmd.Flag(flagContainerResourcesTargetUtilization).Hidden = true
