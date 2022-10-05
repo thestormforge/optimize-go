@@ -94,16 +94,6 @@ func (s *NumberOrString) Float64Value() float64 {
 	return v
 }
 
-// IsInt64 returns true if the value to an int64.
-func (s *NumberOrString) IsInt64() bool {
-	if s.IsString {
-		_, err := strconv.ParseInt(s.StrVal, 10, 64)
-		return err == nil
-	}
-	_, err := s.NumVal.Int64()
-	return err == nil
-}
-
 // MarshalJSON writes the value with the appropriate type.
 func (s NumberOrString) MarshalJSON() ([]byte, error) {
 	if s.IsString {

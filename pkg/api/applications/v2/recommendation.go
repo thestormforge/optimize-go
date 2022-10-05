@@ -76,7 +76,6 @@ type LimitRangeItem struct {
 
 type Configuration struct {
 	ContainerResources *ContainerResources `json:"containerResources,omitempty"`
-	HPAResources       *HPAResources       `json:"hpaResources,omitempty"`
 }
 
 type ContainerResources struct {
@@ -85,10 +84,6 @@ type ContainerResources struct {
 	TargetUtilization *ResourceList `json:"targetUtilization,omitempty"`
 	Tolerance         *ResourceList `json:"tolerance,omitempty"`
 	Bounds            *Bounds       `json:"bounds,omitempty"`
-}
-
-type HPAResources struct {
-	Bounds *Bounds `json:"bounds,omitempty"`
 }
 
 type Bounds struct {

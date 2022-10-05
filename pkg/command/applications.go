@@ -162,7 +162,7 @@ func NewEditApplicationCommand(cfg Config, p Printer) *cobra.Command {
 func NewEnableApplicationRecommendationsCommand(cfg Config, p Printer) *cobra.Command {
 	var (
 		deployConfiguration recommendation.DeployConfigurationOptions
-		configuration       recommendation.ConfigurationOptions
+		containerResources  recommendation.ContainerResourcesOptions
 	)
 
 	cmd := &cobra.Command{
@@ -173,7 +173,7 @@ func NewEnableApplicationRecommendationsCommand(cfg Config, p Printer) *cobra.Co
 	}
 
 	deployConfiguration.AddFlags(cmd)
-	configuration.AddFlags(cmd)
+	containerResources.AddFlags(cmd)
 
 	_ = cmd.RegisterFlagCompletionFunc("cluster", validClusterArgs(cfg, applications.ClusterRecommendations))
 
@@ -204,7 +204,7 @@ func NewEnableApplicationRecommendationsCommand(cfg Config, p Printer) *cobra.Co
 
 		patch := applications.RecommendationList{}
 		deployConfiguration.Apply(&patch.DeployConfiguration)
-		configuration.Apply(&patch.Configuration)
+		containerResources.Apply(&patch.Configuration)
 		if err := recommendation.Finish(cmd, appAPI, app, recs, &patch); err != nil {
 			return err
 		}

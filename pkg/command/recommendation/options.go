@@ -27,16 +27,16 @@ import (
 )
 
 const (
-	flagContainerResourcesSelector          = "selector"
-	flagContainerResourcesInterval          = "container-resource-interval"
-	flagContainerResourcesTargetUtilization = "container-resource-target-utilization"
-	flagContainerResourcesTolerance         = "tolerance"
-	flagContainerResourcesBoundsLimitsMax   = "max-limit"
-	flagContainerResourcesBoundsLimitsMin   = "min-limit"
-	flagContainerResourcesRequestsMax       = "max-request"
-	flagContainerResourcesRequestsMin       = "min-request"
-	flagHPATargetUtilizationMax             = "hpa-max-target-utilization"
-	flagHPATargetUtilizationMin             = "hpa-min-target-utilization"
+	flagContainerResourcesSelector             = "selector"
+	flagContainerResourcesInterval             = "container-resource-interval"
+	flagContainerResourcesTargetUtilization    = "container-resource-target-utilization"
+	flagContainerResourcesTolerance            = "tolerance"
+	flagContainerResourcesBoundsLimitsMax      = "max-limit"
+	flagContainerResourcesBoundsLimitsMin      = "min-limit"
+	flagContainerResourcesRequestsMax          = "max-request"
+	flagContainerResourcesRequestsMin          = "min-request"
+	flagContainerResourcesTargetUtilizationMax = "max-target-utilization"
+	flagContainerResourcesTargetUtilizationMin = "min-target-utilization"
 )
 
 const (
@@ -55,22 +55,22 @@ var (
 	}
 )
 
-// ConfigurationOptions contains options for building the recommender configuration
+// ContainerResourcesOptions contains options for building the recommender configuration
 // for optimizing container resources.
-type ConfigurationOptions struct {
-	Selector                string
-	Interval                time.Duration
-	TargetUtilization       map[string]string
-	Tolerance               map[string]string
-	BoundsLimitsMax         map[string]string
-	BoundsLimitsMin         map[string]string
-	BoundsRequestsMax       map[string]string
-	BoundsRequestsMin       map[string]string
-	HPATargetUtilizationMax map[string]string
-	HPATargetUtilizationMin map[string]string
+type ContainerResourcesOptions struct {
+	Selector                   string
+	Interval                   time.Duration
+	TargetUtilization          map[string]string
+	Tolerance                  map[string]string
+	BoundsLimitsMax            map[string]string
+	BoundsLimitsMin            map[string]string
+	BoundsRequestsMax          map[string]string
+	BoundsRequestsMin          map[string]string
+	BoundsTargetUtilizationMax map[string]int64
+	BoundsTargetUtilizationMin map[string]int64
 }
 
-func (opts *ConfigurationOptions) AddFlags(cmd *cobra.Command) {
+func (opts *ContainerResourcesOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&opts.Selector, flagContainerResourcesSelector, opts.Selector, "`selector` for application resources which should have container resource optimization applied")
 	cmd.Flags().DurationVar(&opts.Interval, flagContainerResourcesInterval, opts.Interval, "amount of `time` between container resource recommendation computations")
 	cmd.Flags().StringToStringVar(&opts.TargetUtilization, flagContainerResourcesTargetUtilization, opts.TargetUtilization, "container resource target utilization as `resource=value`; resource is one of: cpu|memory")
@@ -79,28 +79,22 @@ func (opts *ConfigurationOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringToStringVar(&opts.BoundsLimitsMin, flagContainerResourcesBoundsLimitsMin, opts.BoundsLimitsMin, "per-container resource min limits as `resource=quantity`; resource is one of: cpu|memory")
 	cmd.Flags().StringToStringVar(&opts.BoundsRequestsMax, flagContainerResourcesRequestsMax, opts.BoundsRequestsMax, "per-container resource max requests as `resource=quantity`; resource is one of: cpu|memory")
 	cmd.Flags().StringToStringVar(&opts.BoundsRequestsMin, flagContainerResourcesRequestsMin, opts.BoundsRequestsMin, "per-container resource min requests as `resource=quantity`; resource is one of: cpu|memory")
-	cmd.Flags().StringToStringVar(&opts.HPATargetUtilizationMax, flagHPATargetUtilizationMax, opts.HPATargetUtilizationMax, "per-hpa resource max target utilization as `resource=value`; resource is one of: cpu")
-	cmd.Flags().StringToStringVar(&opts.HPATargetUtilizationMin, flagHPATargetUtilizationMin, opts.HPATargetUtilizationMin, "per-hpa resource min target utilization as `resource=value`; resource is one of: cpu")
+	cmd.Flags().StringToInt64Var(&opts.BoundsTargetUtilizationMax, flagContainerResourcesTargetUtilizationMax, opts.BoundsTargetUtilizationMax, "per-container resource min targetUtilization as `resource=quantity`; resource is one of: cpu")
+	cmd.Flags().StringToInt64Var(&opts.BoundsTargetUtilizationMin, flagContainerResourcesTargetUtilizationMin, opts.BoundsTargetUtilizationMin, "per-container resource min targetUtilization as `resource=quantity`; resource is one of: cpu")
 
 	cmd.Flag(flagContainerResourcesInterval).Hidden = true
 	cmd.Flag(flagContainerResourcesTargetUtilization).Hidden = true
 }
 
-func (opts *ConfigurationOptions) Apply(configuration *[]applications.Configuration) {
-
-	lazyConfig := func() *applications.Configuration {
-		if len(*configuration) == 0 {
-			*configuration = append(*configuration, applications.Configuration{ContainerResources: &applications.ContainerResources{}, HPAResources: &applications.HPAResources{}})
-		}
-		return &(*configuration)[0]
-	}
-
+func (opts *ContainerResourcesOptions) Apply(configuration *[]applications.Configuration) {
 	lazyContainerResources := func() *applications.ContainerResources {
-		config := lazyConfig()
-		if config.ContainerResources == nil {
-			config.ContainerResources = &applications.ContainerResources{}
+		if len(*configuration) == 0 {
+			*configuration = append(*configuration, applications.Configuration{ContainerResources: &applications.ContainerResources{}})
 		}
-		return config.ContainerResources
+		if (*configuration)[0].ContainerResources == nil {
+			(*configuration)[0].ContainerResources = &applications.ContainerResources{}
+		}
+		return (*configuration)[0].ContainerResources
 	}
 
 	if opts.Selector != "" {
@@ -177,45 +171,34 @@ func (opts *ConfigurationOptions) Apply(configuration *[]applications.Configurat
 			requests.Min.Set(strings.ToLower(k), api.FromValue(v))
 		}
 	}
-	if bounds.Limits != nil || bounds.Requests != nil {
-		lazyContainerResources().Bounds = bounds
-	}
 
-	lazyHPAResources := func() *applications.HPAResources {
-		config := lazyConfig()
-		if config.HPAResources == nil {
-			config.HPAResources = &applications.HPAResources{}
-		}
-		return config.HPAResources
-	}
-
-	hpaBounds := &applications.Bounds{}
 	lazyTargetUtilization := func() *applications.BoundsRange {
-		if hpaBounds.TargetUtilization == nil {
-			hpaBounds.TargetUtilization = &applications.BoundsRange{}
+		if bounds.TargetUtilization == nil {
+			bounds.TargetUtilization = &applications.BoundsRange{}
 		}
-		return hpaBounds.TargetUtilization
+		return bounds.TargetUtilization
 	}
-	if len(opts.HPATargetUtilizationMax) > 0 {
+	if len(opts.BoundsTargetUtilizationMax) > 0 {
 		targetUtilization := lazyTargetUtilization()
 		if targetUtilization.Max == nil {
 			targetUtilization.Max = &applications.ResourceList{}
 		}
-		for k, v := range opts.HPATargetUtilizationMax {
-			targetUtilization.Max.Set(strings.ToLower(k), api.FromValue(v))
+		for k, v := range opts.BoundsTargetUtilizationMax {
+			targetUtilization.Max.Set(strings.ToLower(k), api.FromInt64(v))
 		}
 	}
-	if len(opts.HPATargetUtilizationMin) > 0 {
+	if len(opts.BoundsTargetUtilizationMin) > 0 {
 		targetUtilization := lazyTargetUtilization()
 		if targetUtilization.Min == nil {
 			targetUtilization.Min = &applications.ResourceList{}
 		}
-		for k, v := range opts.HPATargetUtilizationMin {
-			targetUtilization.Min.Set(strings.ToLower(k), api.FromValue(v))
+		for k, v := range opts.BoundsTargetUtilizationMin {
+			targetUtilization.Min.Set(strings.ToLower(k), api.FromInt64(v))
 		}
 	}
-	if hpaBounds.TargetUtilization != nil {
-		lazyHPAResources().Bounds = hpaBounds
+
+	if bounds.Limits != nil || bounds.Requests != nil || bounds.TargetUtilization != nil {
+		lazyContainerResources().Bounds = bounds
 	}
 }
 
@@ -374,10 +357,6 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 		if bounds == nil {
 			bounds = &applications.Bounds{}
 		}
-		hpaBounds := patch.Configuration[0].HPAResources.Bounds
-		if hpaBounds == nil {
-			hpaBounds = &applications.Bounds{}
-		}
 
 		limits := func(l *applications.Bounds) *applications.BoundsRange {
 			if l.Limits != nil {
@@ -411,9 +390,9 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 		)...)
 
 		errs = append(errs, checkResourceList(
-			mode, "target-utilization",
-			targetUtilization(hpaBounds).Min, targetUtilization(hpaBounds).Max,
-			cmd.CommandPath(), flagHPATargetUtilizationMin, flagHPATargetUtilizationMax,
+			mode, "targetUtilization",
+			targetUtilization(bounds).Min, targetUtilization(bounds).Max,
+			cmd.CommandPath(), flagContainerResourcesTargetUtilizationMin, flagContainerResourcesTargetUtilizationMax,
 		)...)
 	}
 
@@ -433,9 +412,8 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 // checkResourceList looks through the resource lists for errors.
 func checkResourceList(mode applications.RecommendationsMode, name string, minList, maxList *applications.ResourceList, fixCommand, fixFlagMin, fixFlagMax string) ErrorList {
 	var errs ErrorList
-	resourceAsPercentage := name == "target-utilization"
 
-	// minmax=minimum|maximum, name=request|limit|target-utilization, resourceName=cpu|memory
+	// minmax=minimum|maximum, name=request|limit|targetUtilization, resourceName=cpu|memory
 
 	checkResource := func(resourceName, minmax string, value *api.NumberOrString, fixFlag string) bool {
 		if value == nil {
@@ -453,6 +431,29 @@ func checkResourceList(mode applications.RecommendationsMode, name string, minLi
 			return false
 		}
 
+		// Stricter requirements for target utilization
+		if name == "targetUtilization" {
+			if resourceName != "cpu" {
+				errs = append(errs, &Error{
+					Message:    fmt.Sprintf("invalid %s container %s for %s: \"%s\" is not currently supported", minmax, name, resourceName, resourceName),
+					FixCommand: fixCommand,
+					FixFlag:    fixFlag,
+				})
+				return false
+			}
+
+			if tu := value.Int64Value(); tu < 0 || tu > 100 {
+				errs = append(errs, &Error{
+					Message:    fmt.Sprintf("invalid %s container %s for %s: %s (must be between 0 and 100)", minmax, name, resourceName, value),
+					FixCommand: fixCommand,
+					FixFlag:    fixFlag,
+				})
+				return false
+			}
+
+			return true
+		}
+
 		// Require that the value convert to quantity that is NOT negative ('signbit == true' means negative)
 		if q := value.Quantity(); q == nil || q.Signbit() {
 			errs = append(errs, &Error{
@@ -465,7 +466,7 @@ func checkResourceList(mode applications.RecommendationsMode, name string, minLi
 		}
 
 		// Help prevent misconfiguration
-		if err := LikelyInvalid(resourceName, value, resourceAsPercentage); err != nil {
+		if err := LikelyInvalid(resourceName, value); err != nil {
 			errs = append(errs, &Error{
 				Message:        fmt.Sprintf("invalid %s container %s for %s: %s", minmax, name, resourceName, err.Error()),
 				FixCommand:     fixCommand,
@@ -479,10 +480,6 @@ func checkResourceList(mode applications.RecommendationsMode, name string, minLi
 	}
 
 	for _, resourceName := range []string{"cpu", "memory"} {
-		if resourceAsPercentage && resourceName != "cpu" {
-			continue
-		}
-
 		min := minList.Get(resourceName)
 		max := maxList.Get(resourceName)
 
