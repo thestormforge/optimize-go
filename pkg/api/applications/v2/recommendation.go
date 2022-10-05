@@ -87,8 +87,9 @@ type ContainerResources struct {
 }
 
 type Bounds struct {
-	Limits   *BoundsRange `json:"limits,omitempty"`
-	Requests *BoundsRange `json:"requests,omitempty"`
+	Limits            *BoundsRange `json:"limits,omitempty"`
+	Requests          *BoundsRange `json:"requests,omitempty"`
+	TargetUtilization *BoundsRange `json:"targetUtilization,omitempty"`
 }
 
 type BoundsRange struct {
