@@ -29,6 +29,11 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 )
 
+const (
+	paramAudience         = "audience"
+	paramAlternateSubject = "cluster"
+)
+
 // Config is a simple top level configuration object for client configuration.
 type Config struct {
 	// The API server address, this should correspond exactly to value of the
@@ -46,6 +51,10 @@ type Config struct {
 	// A hard-coded bearer token for debugging, the token will not be refreshed
 	// so the caller is responsible for providing a valid token.
 	Token string `json:"-" yaml:"-" env:"STORMFORGE_TOKEN"`
+
+	// Function that returns an additional, alternate subject identifier. If
+	// non-nil, this function will be called once on the creation of the token source.
+	AlternateSubject func() string
 }
 
 // Address returns the API server address. The canonical value will be slash-terminated,
@@ -95,9 +104,16 @@ func (cfg *Config) TokenSource(ctx context.Context) oauth2.TokenSource {
 			ClientSecret:   cfg.ClientSecret,
 			TokenURL:       tokenURL.String(),
 			Scopes:         cfg.Scopes,
-			EndpointParams: url.Values{"audience": []string{cfg.Server}},
+			EndpointParams: url.Values{paramAudience: []string{cfg.Server}},
 			AuthStyle:      oauth2.AuthStyleInParams,
 		}
+
+		if cfg.AlternateSubject != nil {
+			if altSub := cfg.AlternateSubject(); altSub != "" {
+				cc.EndpointParams.Set(paramAlternateSubject, altSub)
+			}
+		}
+
 		return cc.TokenSource(ctx)
 
 	default:
