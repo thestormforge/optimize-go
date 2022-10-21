@@ -18,20 +18,17 @@ package config
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"strings"
+	"sync"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
-)
-
-const (
-	paramAudience         = "audience"
-	paramAlternateSubject = "cluster"
 )
 
 // Config is a simple top level configuration object for client configuration.
@@ -48,13 +45,17 @@ type Config struct {
 	ClientSecret string `json:"client_secret,omitempty" yaml:"client_secret,omitempty" env:"STORMFORGE_CLIENT_SECRET"`
 	// The list of scopes to request during token exchanges.
 	Scopes []string `json:"scopes,omitempty" yaml:"scopes,omitempty"`
+	// Additional parameters to be included with the token request.
+	AuthorizationParams url.Values
 	// A hard-coded bearer token for debugging, the token will not be refreshed
 	// so the caller is responsible for providing a valid token.
 	Token string `json:"-" yaml:"-" env:"STORMFORGE_TOKEN"`
-
-	// Function that returns an additional, alternate subject identifier. If
-	// non-nil, this function will be called once on the creation of the token source.
-	AlternateSubject func() string
+	// Flag indicating that unauthorized errors are tolerated. If left false (the default),
+	// unauthorized errors will trigger an exit(77). The default behavior is intended
+	// to prevent unattended, unauthorized software from repeatedly attempting to access the
+	// API: e.g. if a client ID/secret is revoked, the software will terminate rather than
+	// continuously attempt to re-authorize.
+	AllowUnauthorized bool
 }
 
 // Address returns the API server address. The canonical value will be slash-terminated,
@@ -63,12 +64,11 @@ func (cfg *Config) Address() string {
 	return cfg.Server
 }
 
-// Transport wraps the supplied round tripper (presumably the `http.DefaultTransport`)
-// based on the current state of the configuration.
+// Transport wraps the supplied round tripper based on the current state of the configuration.
 func (cfg *Config) Transport(ctx context.Context, base http.RoundTripper) http.RoundTripper {
 	return &transport{
 		Transport: oauth2.Transport{
-			Source: cfg.TokenSource(ctx),
+			Source: &lazyTokenSource{init: func() oauth2.TokenSource { return cfg.TokenSource(ctx) }},
 			Base:   base,
 		},
 		Audience: cfg.Server,
@@ -79,10 +79,11 @@ func (cfg *Config) Transport(ctx context.Context, base http.RoundTripper) http.R
 // nil if there is insufficient configuration available, typically this would
 // indicate the API server does not require authorization.
 func (cfg *Config) TokenSource(ctx context.Context) oauth2.TokenSource {
+	var result oauth2.TokenSource
 	switch {
 
 	case cfg.Token != "":
-		return oauth2.StaticTokenSource(&oauth2.Token{
+		result = oauth2.StaticTokenSource(&oauth2.Token{
 			AccessToken: cfg.Token,
 		})
 
@@ -104,21 +105,67 @@ func (cfg *Config) TokenSource(ctx context.Context) oauth2.TokenSource {
 			ClientSecret:   cfg.ClientSecret,
 			TokenURL:       tokenURL.String(),
 			Scopes:         cfg.Scopes,
-			EndpointParams: url.Values{paramAudience: []string{cfg.Server}},
+			EndpointParams: cfg.AuthorizationParams,
 			AuthStyle:      oauth2.AuthStyleInParams,
 		}
 
-		if cfg.AlternateSubject != nil {
-			if altSub := cfg.AlternateSubject(); altSub != "" {
-				cc.EndpointParams.Set(paramAlternateSubject, altSub)
-			}
+		if cc.EndpointParams == nil {
+			cc.EndpointParams = url.Values{}
 		}
+		cc.EndpointParams.Set("audience", cfg.Server)
 
-		return cc.TokenSource(ctx)
+		result = cc.TokenSource(ctx)
 
-	default:
-		return nil
 	}
+
+	// Force unauthorized responses to exit
+	if !cfg.AllowUnauthorized && result != nil {
+		result = &exitTokenSource{src: result}
+	}
+
+	return result
+}
+
+// lazyTokenSource is a token source whose initialization is deferred, allowing
+// consuming code to establish configuration even after constructing the token
+// source. This is relevant for Cobra as it allows the token source to be
+// established _before_ the environment variables are parsed, thereby preventing
+// a common bug related to observability during the initialization sequence.
+type lazyTokenSource struct {
+	init   func() oauth2.TokenSource
+	doInit sync.Once
+	src    oauth2.TokenSource
+}
+
+// Token returns a token from the wrapped token source.
+func (ts *lazyTokenSource) Token() (*oauth2.Token, error) {
+	ts.doInit.Do(func() {
+		ts.src = ts.init()
+	})
+	return ts.src.Token()
+}
+
+// exitTokenSource forces an os.Exit if an attempt to fetch a token fails with
+// an "Unauthorized" (401) status.
+type exitTokenSource struct {
+	src oauth2.TokenSource
+}
+
+// Token retrieves a token from the wrapped source. If an OAuth2 error is returned
+// with a 401 status, the program exits with a status of 77 (EX_NOPERM).
+func (ts *exitTokenSource) Token() (*oauth2.Token, error) {
+	t, err := ts.src.Token()
+	if err != nil {
+		var oauthErr *oauth2.RetrieveError
+		if errors.As(err, &oauthErr) && oauthErr.Response.StatusCode == http.StatusUnauthorized {
+			// Note that no attempt is made to "log" an error message as it is
+			// assumed the exit status code is unique enough to this condition
+			// to identify the root cause of the failure.
+			os.Exit(77)
+		}
+		return nil, err
+	}
+	return t, nil
 }
 
 // transport wraps a stock OAuth2 transport with a check that ensures outbound
