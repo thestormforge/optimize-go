@@ -25,7 +25,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"sync"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
@@ -50,12 +49,9 @@ type Config struct {
 	// A hard-coded bearer token for debugging, the token will not be refreshed
 	// so the caller is responsible for providing a valid token.
 	Token string `json:"-" yaml:"-" env:"STORMFORGE_TOKEN"`
-	// Flag indicating that unauthorized errors are tolerated. If left false (the default),
-	// unauthorized errors will trigger an exit(77). The default behavior is intended
-	// to prevent unattended, unauthorized software from repeatedly attempting to access the
-	// API: e.g. if a client ID/secret is revoked, the software will terminate rather than
-	// continuously attempt to re-authorize.
-	AllowUnauthorized bool
+	// Hook invoked when an authorized error occurs retrieving a token. May only
+	// be invoked on a sample of errors if they are occurring rapidly.
+	UnauthorizedFunc func(error)
 }
 
 // Address returns the API server address. The canonical value will be slash-terminated,
@@ -64,11 +60,29 @@ func (cfg *Config) Address() string {
 	return cfg.Server
 }
 
+// tokenURL computes a token endpoint URL based on the configured issuer. This
+// assumes "oauth/token" as opposed to the sometimes seen "oauth2/token" path
+// convention.
+func (cfg *Config) tokenURL() (string, error) {
+	tokenURL, err := url.Parse(cfg.Issuer)
+	if err != nil {
+		return "", err
+	}
+	if tokenURL.Scheme != "https" {
+		return "", fmt.Errorf("issuer is required and must be HTTPS")
+	}
+	tokenURL, err = tokenURL.Parse("oauth/token")
+	if err != nil {
+		return "", err
+	}
+	return tokenURL.String(), nil
+}
+
 // Transport wraps the supplied round tripper based on the current state of the configuration.
-func (cfg *Config) Transport(ctx context.Context, base http.RoundTripper) http.RoundTripper {
+func (cfg *Config) Transport(tokenSource oauth2.TokenSource, base http.RoundTripper) http.RoundTripper {
 	return &transport{
 		Transport: oauth2.Transport{
-			Source: &lazyTokenSource{init: func() oauth2.TokenSource { return cfg.TokenSource(ctx) }},
+			Source: tokenSource,
 			Base:   base,
 		},
 		Audience: cfg.Server,
@@ -78,6 +92,10 @@ func (cfg *Config) Transport(ctx context.Context, base http.RoundTripper) http.R
 // TokenSource returns a new source for obtaining tokens. The token source may be
 // nil if there is insufficient configuration available, typically this would
 // indicate the API server does not require authorization.
+//
+// Note that token source instances typically cache tokens and are safe for
+// concurrent use; therefore it is STRONGLY recommended that this function only
+// be called once during the lifetime of a program.
 func (cfg *Config) TokenSource(ctx context.Context) oauth2.TokenSource {
 	var result oauth2.TokenSource
 	switch {
@@ -88,14 +106,7 @@ func (cfg *Config) TokenSource(ctx context.Context) oauth2.TokenSource {
 		})
 
 	case cfg.ClientID != "":
-		tokenURL, err := url.Parse(cfg.Issuer)
-		if err != nil {
-			return &errorTokenSource{err: err}
-		}
-		if tokenURL.Scheme != "https" {
-			return &errorTokenSource{err: fmt.Errorf("issuer is required and must be HTTPS")}
-		}
-		tokenURL, err = tokenURL.Parse("oauth/token")
+		tokenURL, err := cfg.tokenURL()
 		if err != nil {
 			return &errorTokenSource{err: err}
 		}
@@ -103,7 +114,7 @@ func (cfg *Config) TokenSource(ctx context.Context) oauth2.TokenSource {
 		cc := clientcredentials.Config{
 			ClientID:       cfg.ClientID,
 			ClientSecret:   cfg.ClientSecret,
-			TokenURL:       tokenURL.String(),
+			TokenURL:       tokenURL,
 			Scopes:         cfg.Scopes,
 			EndpointParams: cfg.AuthorizationParams,
 			AuthStyle:      oauth2.AuthStyleInParams,
@@ -118,51 +129,35 @@ func (cfg *Config) TokenSource(ctx context.Context) oauth2.TokenSource {
 
 	}
 
-	// Force unauthorized responses to exit
-	if !cfg.AllowUnauthorized && result != nil {
-		result = &exitTokenSource{src: result}
+	// Allow consumers to hook unauthorized errors occurring during authorization
+	if result != nil && cfg.UnauthorizedFunc != nil {
+		result = &unauthorizedHookTokenSource{src: result, hook: cfg.UnauthorizedFunc}
 	}
 
 	return result
 }
 
-// lazyTokenSource is a token source whose initialization is deferred, allowing
-// consuming code to establish configuration even after constructing the token
-// source. This is relevant for Cobra as it allows the token source to be
-// established _before_ the environment variables are parsed, thereby preventing
-// a common bug related to observability during the initialization sequence.
-type lazyTokenSource struct {
-	init   func() oauth2.TokenSource
-	doInit sync.Once
-	src    oauth2.TokenSource
-}
-
-// Token returns a token from the wrapped token source.
-func (ts *lazyTokenSource) Token() (*oauth2.Token, error) {
-	ts.doInit.Do(func() {
-		ts.src = ts.init()
-	})
-	return ts.src.Token()
-}
-
-// exitTokenSource forces an os.Exit if an attempt to fetch a token fails with
-// an "Unauthorized" (401) status.
-type exitTokenSource struct {
-	src oauth2.TokenSource
+// unauthorizedHookTokenSource is a token source that allows a hook function to
+// invoked if retrieving a token fails with an unauthorized error. This is
+// intended to give consumers an avenue for gracefully shutting down: because
+// of the nature of the credentials being used (client credentials or raw bearer
+// tokens), it is unlikely that an unauthorized error would resolve itself.
+type unauthorizedHookTokenSource struct {
+	src  oauth2.TokenSource
+	hook func(error)
 }
 
 // Token retrieves a token from the wrapped source. If an OAuth2 error is returned
 // with a 401 status, the program exits with a status of 77 (EX_NOPERM).
-func (ts *exitTokenSource) Token() (*oauth2.Token, error) {
+func (ts *unauthorizedHookTokenSource) Token() (*oauth2.Token, error) {
 	t, err := ts.src.Token()
 	if err != nil {
 		var oauthErr *oauth2.RetrieveError
 		if errors.As(err, &oauthErr) && oauthErr.Response.StatusCode == http.StatusUnauthorized {
-			// Note that no attempt is made to "log" an error message as it is
-			// assumed the exit status code is unique enough to this condition
-			// to identify the root cause of the failure.
-			os.Exit(77)
+			// TODO Debounce or rate limit so this isn't called multiple times?
+			ts.hook(err)
 		}
+
 		return nil, err
 	}
 	return t, nil
