@@ -46,7 +46,7 @@ func main() {
 				return err
 			}
 
-			http.DefaultTransport = cfg.Transport(cmd.Context(), http.DefaultTransport)
+			http.DefaultTransport = cfg.Transport(cfg.TokenSource(cmd.Context()), http.DefaultTransport)
 			return nil
 		},
 	}
