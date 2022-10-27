@@ -18,6 +18,7 @@ package config
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -27,11 +28,6 @@ import (
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
-)
-
-const (
-	paramAudience         = "audience"
-	paramAlternateSubject = "cluster"
 )
 
 // Config is a simple top level configuration object for client configuration.
@@ -48,13 +44,14 @@ type Config struct {
 	ClientSecret string `json:"client_secret,omitempty" yaml:"client_secret,omitempty" env:"STORMFORGE_CLIENT_SECRET"`
 	// The list of scopes to request during token exchanges.
 	Scopes []string `json:"scopes,omitempty" yaml:"scopes,omitempty"`
+	// Additional parameters to be included with the token request.
+	AuthorizationParams url.Values
 	// A hard-coded bearer token for debugging, the token will not be refreshed
 	// so the caller is responsible for providing a valid token.
 	Token string `json:"-" yaml:"-" env:"STORMFORGE_TOKEN"`
-
-	// Function that returns an additional, alternate subject identifier. If
-	// non-nil, this function will be called once on the creation of the token source.
-	AlternateSubject func() string
+	// Hook invoked when an authorized error occurs retrieving a token. May only
+	// be invoked on a sample of errors if they are occurring rapidly.
+	UnauthorizedFunc func(error)
 }
 
 // Address returns the API server address. The canonical value will be slash-terminated,
@@ -63,12 +60,29 @@ func (cfg *Config) Address() string {
 	return cfg.Server
 }
 
-// Transport wraps the supplied round tripper (presumably the `http.DefaultTransport`)
-// based on the current state of the configuration.
-func (cfg *Config) Transport(ctx context.Context, base http.RoundTripper) http.RoundTripper {
+// tokenURL computes a token endpoint URL based on the configured issuer. This
+// assumes "oauth/token" as opposed to the sometimes seen "oauth2/token" path
+// convention.
+func (cfg *Config) tokenURL() (string, error) {
+	tokenURL, err := url.Parse(cfg.Issuer)
+	if err != nil {
+		return "", err
+	}
+	if tokenURL.Scheme != "https" {
+		return "", fmt.Errorf("issuer is required and must be HTTPS")
+	}
+	tokenURL, err = tokenURL.Parse("oauth/token")
+	if err != nil {
+		return "", err
+	}
+	return tokenURL.String(), nil
+}
+
+// Transport wraps the supplied round tripper based on the current state of the configuration.
+func (cfg *Config) Transport(tokenSource oauth2.TokenSource, base http.RoundTripper) http.RoundTripper {
 	return &transport{
 		Transport: oauth2.Transport{
-			Source: cfg.TokenSource(ctx),
+			Source: tokenSource,
 			Base:   base,
 		},
 		Audience: cfg.Server,
@@ -78,23 +92,21 @@ func (cfg *Config) Transport(ctx context.Context, base http.RoundTripper) http.R
 // TokenSource returns a new source for obtaining tokens. The token source may be
 // nil if there is insufficient configuration available, typically this would
 // indicate the API server does not require authorization.
+//
+// Note that token source instances typically cache tokens and are safe for
+// concurrent use; therefore it is STRONGLY recommended that this function only
+// be called once during the lifetime of a program.
 func (cfg *Config) TokenSource(ctx context.Context) oauth2.TokenSource {
+	var result oauth2.TokenSource
 	switch {
 
 	case cfg.Token != "":
-		return oauth2.StaticTokenSource(&oauth2.Token{
+		result = oauth2.StaticTokenSource(&oauth2.Token{
 			AccessToken: cfg.Token,
 		})
 
 	case cfg.ClientID != "":
-		tokenURL, err := url.Parse(cfg.Issuer)
-		if err != nil {
-			return &errorTokenSource{err: err}
-		}
-		if tokenURL.Scheme != "https" {
-			return &errorTokenSource{err: fmt.Errorf("issuer is required and must be HTTPS")}
-		}
-		tokenURL, err = tokenURL.Parse("oauth/token")
+		tokenURL, err := cfg.tokenURL()
 		if err != nil {
 			return &errorTokenSource{err: err}
 		}
@@ -102,23 +114,53 @@ func (cfg *Config) TokenSource(ctx context.Context) oauth2.TokenSource {
 		cc := clientcredentials.Config{
 			ClientID:       cfg.ClientID,
 			ClientSecret:   cfg.ClientSecret,
-			TokenURL:       tokenURL.String(),
+			TokenURL:       tokenURL,
 			Scopes:         cfg.Scopes,
-			EndpointParams: url.Values{paramAudience: []string{cfg.Server}},
+			EndpointParams: cfg.AuthorizationParams,
 			AuthStyle:      oauth2.AuthStyleInParams,
 		}
 
-		if cfg.AlternateSubject != nil {
-			if altSub := cfg.AlternateSubject(); altSub != "" {
-				cc.EndpointParams.Set(paramAlternateSubject, altSub)
-			}
+		if cc.EndpointParams == nil {
+			cc.EndpointParams = url.Values{}
+		}
+		cc.EndpointParams.Set("audience", cfg.Server)
+
+		result = cc.TokenSource(ctx)
+
+	}
+
+	// Allow consumers to hook unauthorized errors occurring during authorization
+	if result != nil && cfg.UnauthorizedFunc != nil {
+		result = &unauthorizedHookTokenSource{src: result, hook: cfg.UnauthorizedFunc}
+	}
+
+	return result
+}
+
+// unauthorizedHookTokenSource is a token source that allows a hook function to
+// invoked if retrieving a token fails with an unauthorized error. This is
+// intended to give consumers an avenue for gracefully shutting down: because
+// of the nature of the credentials being used (client credentials or raw bearer
+// tokens), it is unlikely that an unauthorized error would resolve itself.
+type unauthorizedHookTokenSource struct {
+	src  oauth2.TokenSource
+	hook func(error)
+}
+
+// Token retrieves a token from the wrapped source. If an OAuth2 error is returned
+// with a 401 status, the program exits with a status of 77 (EX_NOPERM).
+func (ts *unauthorizedHookTokenSource) Token() (*oauth2.Token, error) {
+	t, err := ts.src.Token()
+	if err != nil {
+		var oauthErr *oauth2.RetrieveError
+		if errors.As(err, &oauthErr) && oauthErr.Response.StatusCode == http.StatusUnauthorized {
+			// TODO Debounce or rate limit so this isn't called multiple times?
+			ts.hook(err)
 		}
 
-		return cc.TokenSource(ctx)
-
-	default:
-		return nil
+		return nil, err
 	}
+	return t, nil
 }
 
 // transport wraps a stock OAuth2 transport with a check that ensures outbound
