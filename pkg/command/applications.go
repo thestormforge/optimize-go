@@ -318,7 +318,7 @@ func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 
 		for i := range result.Items {
 			u := result.Items[i].ApplicationItem.Link(api.RelationRecommendations)
-			if u == "" {
+			if u == "" || result.Items[i].Recommendations == applications.RecommendationsDisabled {
 				continue
 			}
 
