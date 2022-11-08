@@ -276,6 +276,9 @@ func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 		product   string
 		batchSize int
 		sortBy    string
+
+		pageOffset              int
+		skipRecommendationLimit int
 	)
 
 	cmd := &cobra.Command{
@@ -287,6 +290,12 @@ func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 	cmd.Flags().StringVar(&product, "for", product, "show only clusters for a specific `product`; one of: optimize-pro|optimize-live")
 	cmd.Flags().IntVar(&batchSize, "batch-size", batchSize, "fetch large lists in chu`n`ks rather then all at once")
 	cmd.Flags().StringVar(&sortBy, "sort-by", sortBy, "sort using `column` name")
+
+	// Hidden flags to deal with large application lists
+	cmd.Flags().IntVar(&pageOffset, "page-offset", pageOffset, "fetch a partial list starti`n`g from the specified offset")
+	cmd.Flags().IntVar(&skipRecommendationLimit, "skip-recommendation-limit", 500, "skip fetching recommendations if the page size exceeds the specified `limit`")
+	cmd.Flag("page-offset").Hidden = true
+	cmd.Flag("skip-recommendation-limit").Hidden = true
 
 	_ = cmd.RegisterFlagCompletionFunc("for", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return []string{"optimize-pro", "optimize-live"}, cobra.ShellCompDirectiveDefault
@@ -311,14 +320,31 @@ func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 			}
 		} else {
 			q := applications.ApplicationListQuery{}
+
+			// Hack to explicitly support --page-offset 0
+			if cmd.Flag("page-offset").Changed {
+				if pageOffset > 0 {
+					q.SetOffset(pageOffset)
+				} else {
+					q.IndexQuery = api.IndexQuery{api.ParamOffset: []string{"0"}}
+				}
+			}
+
 			if err := l.ForEachApplication(ctx, q, result.Add); err != nil {
 				return err
 			}
 		}
 
+		// This is a hack to get around the fact that we cannot provide recommendation configurations in a reasonable amount of time
+		var skipRecommendations bool
+		if len(result.Items) > skipRecommendationLimit {
+			_, _ = fmt.Fprintf(cmd.OutOrStderr(), "WARNING: Too many applications to fetch recommendations (%d, limit is %d), try fetching individual applications\n", len(result.Items), skipRecommendationLimit)
+			skipRecommendations = true
+		}
+
 		for i := range result.Items {
 			u := result.Items[i].ApplicationItem.Link(api.RelationRecommendations)
-			if u == "" {
+			if u == "" || result.Items[i].Recommendations == applications.RecommendationsDisabled || skipRecommendations {
 				continue
 			}
 

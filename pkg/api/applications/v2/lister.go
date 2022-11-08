@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -36,6 +37,9 @@ type Lister struct {
 
 // ForEachApplication iterates over all the applications matching the supplied query.
 func (l *Lister) ForEachApplication(ctx context.Context, q ApplicationListQuery, f func(*ApplicationItem) error) error {
+	// Only fetch a single page if an offset was supplied
+	onePage := url.Values(q.IndexQuery).Get(api.ParamOffset) != ""
+
 	// Define a helper to iteratively (NOT recursively) visit applications
 	forEach := func(lst ApplicationList, err error) (string, error) {
 		if err != nil {
@@ -61,7 +65,7 @@ func (l *Lister) ForEachApplication(ctx context.Context, q ApplicationListQuery,
 
 	// Iterate over all applications, starting with first page
 	u, err := forEach(l.API.ListApplications(ctx, q))
-	for u != "" && err == nil {
+	for u != "" && err == nil && !onePage {
 		u, err = forEach(l.API.ListApplicationsByPage(ctx, u))
 	}
 	return err
