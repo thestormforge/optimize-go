@@ -97,7 +97,7 @@ func CheckLabels(labels map[string]string) error {
 	}
 
 	if v, ok := labels["scenario"]; !ok {
-		return fmt.Errorf("missing required label: application")
+		return fmt.Errorf("missing required label: scenario")
 	} else if !nameRegexp.MatchString(v) {
 		return fmt.Errorf("invalid label value (must be lowercase): scenario=%q", v)
 	}
