@@ -51,7 +51,7 @@ type Config struct {
 	Token string `json:"-" yaml:"-" env:"STORMFORGE_TOKEN"`
 	// Hook invoked when an authorized error occurs retrieving a token. May only
 	// be invoked on a sample of errors if they are occurring rapidly.
-	UnauthorizedFunc func(error)
+	UnauthorizedFunc func(error) `json:"-" yaml:"-"`
 }
 
 // Address returns the API server address. The canonical value will be slash-terminated,
