@@ -38,7 +38,11 @@ func FromInt64(val int64) NumberOrString {
 
 // FromFloat64 returns the supplied value as a NumberOrString
 func FromFloat64(val float64) NumberOrString {
-	return NumberOrString{NumVal: json.Number(strconv.FormatFloat(val, 'f', -1, 64))}
+	s := strconv.FormatFloat(val, 'f', -1, 64)
+	if math.IsInf(val, 0) || math.IsNaN(val) {
+		return NumberOrString{StrVal: s, IsString: true}
+	}
+	return NumberOrString{NumVal: json.Number(s)}
 }
 
 // FromNumber returns the supplied value as a NumberOrString
@@ -166,6 +170,9 @@ func (s *NumberOrString) Quantity() *big.Float {
 		if v, ok := new(big.Float).SetString(strVal); ok {
 			return v.Mul(v, big.NewFloat(op))
 		}
+	} else if x, err := strconv.ParseFloat(s.StrVal, 64); err == nil { // +Inf, etc.
+		// We use `ParseFloat` instead of `s.Float64Value()` so we can explicitly check the error
+		return big.NewFloat(x)
 	}
 
 	return nil

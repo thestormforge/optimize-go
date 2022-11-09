@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"math"
 	"math/big"
 	"testing"
 
@@ -167,6 +168,12 @@ func TestNumberOrString_Float64Value(t *testing.T) {
 			value:    FromString("1"),
 			expected: 1.0,
 		},
+
+		{
+			desc:     "infinity",
+			value:    FromValue("infinity"),
+			expected: math.Inf(1),
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -292,6 +299,9 @@ func TestNumberOrString_Quantity(t *testing.T) {
 		{value: "1T", expected: 1000000000000},
 		{value: "1P", expected: 1000000000000000},
 		{value: "1E", expected: 1000000000000000000},
+
+		// These are out of spec
+		{value: "+Inf", expected: math.Inf(1)},
 	}
 	for _, tc := range cases {
 		t.Run(tc.value, func(t *testing.T) {
