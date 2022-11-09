@@ -415,18 +415,8 @@ func checkResourceList(mode applications.RecommendationsMode, name string, minLi
 	// minmax=minimum|maximum, name=request|limit|targetUtilization, resourceName=cpu|memory
 
 	checkResource := func(resourceName, minmax string, value *api.NumberOrString, fixFlag string) bool {
+		// Even if it is allowed, we can't use it to compare to other values
 		if value == nil {
-			// Enforce required values
-			if mode.Enabled() && name == "request" {
-				errs = append(errs, &Error{
-					Message:        fmt.Sprintf("missing %s container %s for %s", minmax, name, resourceName),
-					FixCommand:     fixCommand,
-					FixFlag:        fixFlag,
-					FixValidValues: []string{fmt.Sprintf("%s=%s", resourceName, "VALUE")},
-				})
-			}
-
-			// Even if it is allowed, we can't use it to compare to other values
 			return false
 		}
 
