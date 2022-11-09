@@ -84,6 +84,7 @@ type ContainerResources struct {
 	TargetUtilization *ResourceList `json:"targetUtilization,omitempty"`
 	Tolerance         *ResourceList `json:"tolerance,omitempty"`
 	Bounds            *Bounds       `json:"bounds,omitempty"`
+	LimitRequestRatio *ResourceList `json:"limitRequestRatio,omitempty"`
 }
 
 type Bounds struct {

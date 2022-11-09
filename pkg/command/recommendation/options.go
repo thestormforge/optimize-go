@@ -37,6 +37,7 @@ const (
 	flagContainerResourcesRequestsMin          = "min-request"
 	flagContainerResourcesTargetUtilizationMax = "max-target-utilization"
 	flagContainerResourcesTargetUtilizationMin = "min-target-utilization"
+	flagContainerResourcesLimitRequestRatio    = "limit-request-ratio"
 )
 
 const (
@@ -68,6 +69,7 @@ type ContainerResourcesOptions struct {
 	BoundsRequestsMin          map[string]string
 	BoundsTargetUtilizationMax map[string]int64
 	BoundsTargetUtilizationMin map[string]int64
+	LimitRequestRatio          map[string]string
 }
 
 func (opts *ContainerResourcesOptions) AddFlags(cmd *cobra.Command) {
@@ -81,9 +83,11 @@ func (opts *ContainerResourcesOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringToStringVar(&opts.BoundsRequestsMin, flagContainerResourcesRequestsMin, opts.BoundsRequestsMin, "per-container resource min requests as `resource=quantity`; resource is one of: cpu|memory")
 	cmd.Flags().StringToInt64Var(&opts.BoundsTargetUtilizationMax, flagContainerResourcesTargetUtilizationMax, opts.BoundsTargetUtilizationMax, "per-container resource max target utilization as `resource=quantity`; resource is one of: cpu")
 	cmd.Flags().StringToInt64Var(&opts.BoundsTargetUtilizationMin, flagContainerResourcesTargetUtilizationMin, opts.BoundsTargetUtilizationMin, "per-container resource min target utilization as `resource=quantity`; resource is one of: cpu")
+	cmd.Flags().StringToStringVar(&opts.LimitRequestRatio, flagContainerResourcesLimitRequestRatio, opts.LimitRequestRatio, "per-container limit:request ratio as `resource=quantity`; resource is one of: cpu|memory")
 
 	cmd.Flag(flagContainerResourcesInterval).Hidden = true
 	cmd.Flag(flagContainerResourcesTargetUtilization).Hidden = true
+	cmd.Flag(flagContainerResourcesLimitRequestRatio).Hidden = true
 }
 
 func (opts *ContainerResourcesOptions) Apply(configuration *[]applications.Configuration) {
@@ -119,6 +123,14 @@ func (opts *ContainerResourcesOptions) Apply(configuration *[]applications.Confi
 			tolerance.Set(strings.ToLower(k), api.NumberOrString(applications.ToleranceFrom(v)))
 		}
 		lazyContainerResources().Tolerance = tolerance
+	}
+
+	if size := len(opts.LimitRequestRatio); size > 0 {
+		limitRequestRatio := &applications.ResourceList{}
+		for k, v := range opts.LimitRequestRatio {
+			limitRequestRatio.Set(strings.ToLower(k), api.FromValue(v))
+		}
+		lazyContainerResources().LimitRequestRatio = limitRequestRatio
 	}
 
 	bounds := &applications.Bounds{}
