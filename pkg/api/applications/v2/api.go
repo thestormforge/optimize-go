@@ -35,6 +35,8 @@ const (
 	ErrRecommendationInvalid  api.ErrorType = "recommendation-invalid"
 	ErrRecommendationNotFound api.ErrorType = "recommendation-not-found"
 	ErrClusterNotFound        api.ErrorType = "cluster-not-found"
+	ErrRemoteWriteInvalid     api.ErrorType = "remote-write-invalid"
+	ErrRateLimited            api.ErrorType = "rate-limit-exceeded"
 )
 
 // Subscriber describes a strategy for subscribing to feed notifications.
@@ -123,4 +125,8 @@ type API interface {
 	PatchCluster(ctx context.Context, u string, c ClusterTitle) error
 	// DeleteCluster deletes a cluster.
 	DeleteCluster(ctx context.Context, u string) error
+
+	// RemoteWrite allows raw data to be compressed and written to the remote write endpoint.
+	// TODO Instead of JSON or Protobuf bytes, this should take...something else
+	RemoteWrite(ctx context.Context, body []byte) error
 }
