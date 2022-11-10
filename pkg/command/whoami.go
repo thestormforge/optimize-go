@@ -26,12 +26,14 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/oauth2"
 	"gopkg.in/square/go-jose.v2/jwt"
+	"sigs.k8s.io/yaml"
 )
 
 // NewWhoAmICommand returns a command for determining the current identity associated
 // with the configuration.
 func NewWhoAmICommand(cfg Config) *cobra.Command {
 	var (
+		output  string
 		pattern string
 	)
 
@@ -39,7 +41,8 @@ func NewWhoAmICommand(cfg Config) *cobra.Command {
 		Use: "whoami",
 	}
 
-	cmd.Flags().StringVar(&pattern, "template", "{{ toJson . }}", "the template `text` used to render the claims")
+	cmd.Flags().StringVarP(&output, "output", "o", output, "the output `format` to use; one of: json|yaml|go-template")
+	cmd.Flags().StringVar(&pattern, "template", pattern, "the template `text` used to render the claims")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
@@ -60,6 +63,20 @@ func NewWhoAmICommand(cfg Config) *cobra.Command {
 			return err
 		}
 
+		// Choose a template
+		switch output {
+		case "json", "":
+			pattern = "{{ toJson . }}"
+		case "yaml":
+			pattern = "{{ toYaml . }}"
+		case "go-template":
+			if pattern == "" {
+				return fmt.Errorf("missing template")
+			}
+		default:
+			return fmt.Errorf("unknown format: %s", output)
+		}
+
 		// Send it through a template
 		tmpl, err := template.New("out").
 			Funcs(map[string]interface{}{
@@ -69,6 +86,10 @@ func NewWhoAmICommand(cfg Config) *cobra.Command {
 					enc.SetIndent("", "  ")
 					err := enc.Encode(v)
 					return buf.String(), err
+				},
+				"toYaml": func(v interface{}) (string, error) {
+					data, err := yaml.Marshal(v)
+					return string(data), err
 				},
 			}).
 			Parse(pattern)
