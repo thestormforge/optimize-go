@@ -199,17 +199,13 @@ func (t *transport) requiresAuthorization(u *url.URL) bool {
 			return true
 		}
 
-		// Special case other resources directly under /v2/ or /
+		// Special case other resources directly under /v2/
 		if c, err := url.Parse(endpoint); err == nil {
 			c.Path = path.Join(c.Path, "..", "clusters")
 			if strings.HasPrefix(u.String(), c.String()) {
 				return true
 			}
 			c.Path = path.Join(c.Path, "..", "application-activity")
-			if strings.HasPrefix(u.String(), c.String()) {
-				return true
-			}
-			c.Path = path.Join(c.Path, "..", "..", "prometheus", "write")
 			if strings.HasPrefix(u.String(), c.String()) {
 				return true
 			}

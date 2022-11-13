@@ -27,7 +27,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/golang/snappy"
 	"github.com/thestormforge/optimize-go/pkg/api"
 )
 
@@ -832,31 +831,6 @@ func (h *httpAPI) DeleteCluster(ctx context.Context, u string) error {
 		return nil
 	case http.StatusNotFound:
 		return api.NewError(ErrClusterNotFound, resp, body)
-	default:
-		return api.NewUnexpectedError(resp, body)
-	}
-}
-
-func (h *httpAPI) RemoteWrite(ctx context.Context, body []byte) error {
-	// TODO This is less then ideal
-	u := h.client.URL(h.endpoint + "../../prometheus/write")
-	req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewReader(snappy.Encode(nil, body)))
-	if err != nil {
-		return err
-	}
-
-	resp, body, err := h.client.Do(ctx, req)
-	if err != nil {
-		return err
-	}
-
-	switch resp.StatusCode {
-	case http.StatusNoContent:
-		return nil
-	case http.StatusBadRequest:
-		return api.NewError(ErrRemoteWriteInvalid, resp, body)
-	case http.StatusTooManyRequests:
-		return api.NewError(ErrRateLimited, resp, body)
 	default:
 		return api.NewUnexpectedError(resp, body)
 	}
