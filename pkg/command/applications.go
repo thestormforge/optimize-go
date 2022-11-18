@@ -288,7 +288,7 @@ func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&product, "for", product, "show only clusters for a specific `product`; one of: optimize-pro|optimize-live")
-	cmd.Flags().IntVar(&batchSize, "batch-size", batchSize, "fetch large lists in chu`n`ks rather then all at once")
+	cmd.Flags().IntVar(&batchSize, "chunk-size", 500, "fetch large lists in chu`n`ks rather then all at once")
 	cmd.Flags().StringVar(&sortBy, "sort-by", sortBy, "sort using `column` name")
 
 	// Hidden flags to deal with large application lists

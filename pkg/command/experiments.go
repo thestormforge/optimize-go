@@ -84,7 +84,7 @@ func NewGetExperimentsCommand(cfg Config, p Printer) *cobra.Command {
 		ValidArgsFunction: validExperimentArgs(cfg),
 	}
 
-	cmd.Flags().IntVar(&batchSize, "batch-size", batchSize, "fetch large lists in chu`n`ks rather then all at once")
+	cmd.Flags().IntVar(&batchSize, "chunk-size", 500, "fetch large lists in chu`n`ks rather then all at once")
 	cmd.Flags().StringVarP(&selector, "selector", "l", selector, "selector (label `query`) to filter on")
 	cmd.Flags().StringVar(&sortBy, "sort-by", sortBy, "sort using `column` name")
 
