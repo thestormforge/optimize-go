@@ -387,6 +387,7 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 			}
 			return &applications.BoundsRange{}
 		}
+		limitRequestRatio := patch.Configuration[0].ContainerResources.LimitRequestRatio
 
 		errs = append(errs, checkResourceList(
 			mode, "limit",
@@ -404,6 +405,11 @@ func Finish(cmd *cobra.Command, appAPI applications.API, app applications.Applic
 			mode, "targetUtilization",
 			targetUtilization(bounds).Min, targetUtilization(bounds).Max,
 			cmd.CommandPath(), flagContainerResourcesTargetUtilizationMin, flagContainerResourcesTargetUtilizationMax,
+		)...)
+
+		errs = append(errs, checkLimitRequestRatio(
+			limitRequestRatio,
+			cmd.CommandPath(), flagContainerResourcesLimitRequestRatio,
 		)...)
 	}
 
@@ -492,6 +498,28 @@ func checkResourceList(mode applications.RecommendationsMode, name string, minLi
 			errs = append(errs, &Error{
 				Message:    fmt.Sprintf("invalid container %s range for %s: %s-%s", name, resourceName, min, max),
 				FixCommand: fixCommand,
+			})
+		}
+	}
+
+	return errs
+}
+
+// checkLimitRequestRatio ensures the ratio does not produce invalid results.
+func checkLimitRequestRatio(list *applications.ResourceList, fixCommand, fixFlag string) ErrorList {
+	var errs ErrorList
+
+	for _, resourceName := range []string{"cpu", "memory"} {
+		r := list.Get(resourceName)
+		if r == nil {
+			continue
+		}
+
+		if f := r.Float64Value(); (f > 0 && f < 1) || f < 0 {
+			errs = append(errs, &Error{
+				Message:    fmt.Sprintf("invalid limit/request ratio for %s: %g (must be 0 or at least 1)", resourceName, f),
+				FixCommand: fixCommand,
+				FixFlag:    fixFlag,
 			})
 		}
 	}
