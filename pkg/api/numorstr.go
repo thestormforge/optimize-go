@@ -26,9 +26,9 @@ import (
 
 // NumberOrString is value that can a JSON number or string.
 type NumberOrString struct {
-	IsString bool
-	NumVal   json.Number
-	StrVal   string
+	IsString bool        `json:"isString"`
+	NumVal   json.Number `json:"numVal"`
+	StrVal   string      `json:"strVal"`
 }
 
 // FromInt64 returns the supplied value as a NumberOrString
