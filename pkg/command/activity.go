@@ -110,7 +110,6 @@ func NewWatchActivityCommand(cfg Config) *cobra.Command {
 	cmd.Flags().StringVar(&itemTemplateText, "item-template", `{{ template "ActivityItem" . }}`, "the item `template` used to render the items")
 	cmd.Flag("feed-template").Hidden = true
 	cmd.Flag("item-template").Hidden = true
-	cmd.Flag("user-agent").Hidden = true
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, out := cmd.Context(), cmd.OutOrStdout()
