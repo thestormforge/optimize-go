@@ -24,7 +24,7 @@ import (
 	"strconv"
 )
 
-// NumberOrString is value that can a JSON number or string.
+// NumberOrString is value that can be a JSON number or string.
 type NumberOrString struct {
 	IsString bool
 	NumVal   json.Number
