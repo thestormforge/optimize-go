@@ -227,6 +227,12 @@ type RecommendationRow struct {
 }
 
 func NewRecommendationRow(item *applications.RecommendationItem) *RecommendationRow {
+	for i := range item.Parameters {
+		for j := range item.Parameters[i].ContainerResources {
+			fixCPU(item.Parameters[i].ContainerResources[j])
+		}
+	}
+
 	return &RecommendationRow{
 		Name:              item.Name,
 		DeployedAtMachine: formatTime(item.DeployedAt, time.RFC3339),
@@ -615,4 +621,22 @@ func (s *sorter) Less(i, j int) bool { return bytes.Compare(s.keys[i], s.keys[j]
 func (s *sorter) Swap(i, j int) {
 	s.keys[i], s.keys[j] = s.keys[j], s.keys[i]
 	s.Output.Swap(i, j)
+}
+
+// fixCPU is a hack to adjust the CPU value for display.
+func fixCPU(value interface{}) {
+	switch value := value.(type) {
+	case []interface{}:
+		for i := range value {
+			fixCPU(value[i])
+		}
+	case map[string]interface{}:
+		for k, v := range value {
+			if f, ok := v.(float64); ok && k == "cpu" {
+				value[k] = f / 1000
+			} else {
+				fixCPU(v)
+			}
+		}
+	}
 }
