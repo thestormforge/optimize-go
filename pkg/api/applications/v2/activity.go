@@ -108,8 +108,7 @@ type RefreshActivity struct {
 }
 
 type ActivityPatchRequest struct {
-	Title string   `json:"title"`
-	Tags  []string `json:"tags"`
+	Title string `json:"title"`
 	// Data is a JSON-serializable value for internal metadata about the Activity
 	Data any `json:"_stormforge,omitempty"`
 }
