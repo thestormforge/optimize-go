@@ -58,8 +58,6 @@ func (ai *ActivityItem) HasTag(tag string) bool {
 }
 
 const (
-	TagRun     string = "run"
-	TagScan    string = "scan"
 	TagApprove string = "approve"
 	TagRefresh string = "refresh"
 )
