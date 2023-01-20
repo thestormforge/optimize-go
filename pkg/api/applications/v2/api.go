@@ -67,22 +67,31 @@ type API interface {
 	DeleteApplication(ctx context.Context, u string) error
 
 	// ListScenarios lists configured scenarios for an application.
+	// Deprecated: scenarios should no longer be used.
 	ListScenarios(ctx context.Context, u string, q ScenarioListQuery) (ScenarioList, error)
 	// CreateScenario creates a scenario.
+	// Deprecated: scenarios should no longer be used.
 	CreateScenario(ctx context.Context, u string, scn Scenario) (api.Metadata, error)
 	// CreateScenarioByName creates a scenario.
+	// Deprecated: scenarios should no longer be used.
 	CreateScenarioByName(ctx context.Context, u string, n ScenarioName, scn Scenario) (Scenario, error)
 	// GetScenario retrieves a scenario.
+	// Deprecated: scenarios should no longer be used.
 	GetScenario(ctx context.Context, u string) (Scenario, error)
 	// GetScenarioByName retrieves a scenario by name.
+	// Deprecated: scenarios should no longer be used.
 	GetScenarioByName(ctx context.Context, u string, n ScenarioName) (Scenario, error)
 	// UpdateScenario updates or creates a scenario.
+	// Deprecated: scenarios should no longer be used.
 	UpdateScenario(ctx context.Context, u string, scn Scenario) (Scenario, error)
 	// UpdateScenarioByName updates or creates a scenario.
+	// Deprecated: scenarios should no longer be used.
 	UpdateScenarioByName(ctx context.Context, u string, n ScenarioName, scn Scenario) (Scenario, error)
 	// DeleteScenario deletes a scenario.
+	// Deprecated: scenarios should no longer be used.
 	DeleteScenario(ctx context.Context, u string) error
 	// PatchScenario updates attributes on a scenario.
+	// Deprecated: scenarios should no longer be used.
 	PatchScenario(ctx context.Context, u string, scn Scenario) error
 
 	// GetTemplate gets the application scenario template.
