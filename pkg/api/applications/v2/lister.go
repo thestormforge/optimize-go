@@ -91,6 +91,7 @@ func (l *Lister) ForEachNamedApplication(ctx context.Context, names []string, ig
 }
 
 // ForEachScenario iterates over all scenarios for an application matching the supplied query.
+// Deprecated: scenarios should no longer be used.
 func (l *Lister) ForEachScenario(ctx context.Context, app *Application, q ScenarioListQuery, f func(*ScenarioItem) error) (err error) {
 	// Define a helper to iteratively (NOT recursively) list and visit scenarios
 	forEach := func(u string) (string, error) {
@@ -128,6 +129,7 @@ func (l *Lister) ForEachScenario(ctx context.Context, app *Application, q Scenar
 }
 
 // ForEachNamedScenario iterates over all the named scenarios, optionally ignoring those that do not exist.
+// Deprecated: scenarios should no longer be used.
 func (l *Lister) ForEachNamedScenario(ctx context.Context, names []string, ignoreNotFound bool, f func(item *ScenarioItem) error) error {
 	cache := make(map[ApplicationName]*Application)
 	for _, name := range names {
@@ -312,6 +314,7 @@ func (l *Lister) GetApplicationByNameOrTitle(ctx context.Context, name string) (
 
 // GetScenarioByNameOrTitle tries to get a scenario by name and falls back to a
 // linear search over all the scenarios by title.
+// Deprecated: scenarios should no longer be used
 func (l *Lister) GetScenarioByNameOrTitle(ctx context.Context, app *Application, name string) (*Scenario, error) {
 	var scnByName, scnByTitle *Scenario
 	err := l.ForEachScenario(ctx, app, ScenarioListQuery{}, func(scn *ScenarioItem) error {
