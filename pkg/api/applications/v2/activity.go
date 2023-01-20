@@ -105,6 +105,12 @@ type RefreshActivity struct {
 	ActivityFailure
 }
 
+type ActivityPatchRequest struct {
+	Title string `json:"title"`
+	// Data is a JSON-serializable value for internal metadata about the Activity
+	Data any `json:"_stormforge,omitempty"`
+}
+
 type ActivityFailure struct {
 	FailureReason  string `json:"failure_reason,omitempty"`
 	FailureMessage string `json:"failure_message,omitempty"`

@@ -592,7 +592,7 @@ func (h *httpAPI) DeleteActivity(ctx context.Context, u string) error {
 	}
 }
 
-func (h *httpAPI) PatchApplicationActivity(ctx context.Context, u string, a ActivityFailure) error {
+func (h *httpAPI) PatchApplicationActivity(ctx context.Context, u string, a ActivityPatchRequest) error {
 	req, err := httpNewJSONRequest(http.MethodPatch, u, a)
 	if err != nil {
 		return err
