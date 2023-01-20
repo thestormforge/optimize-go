@@ -297,6 +297,8 @@ func NewGetApplicationsCommand(cfg Config, p Printer) *cobra.Command {
 	cmd.Flag("page-offset").Hidden = true
 	cmd.Flag("skip-recommendation-limit").Hidden = true
 
+	// Hide the product filter flag since Optimize Pro no longer uses applications
+	cmd.Flag("for").Hidden = true
 	_ = cmd.RegisterFlagCompletionFunc("for", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return []string{"optimize-pro", "optimize-live"}, cobra.ShellCompDirectiveDefault
 	})
