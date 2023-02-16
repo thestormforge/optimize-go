@@ -45,10 +45,10 @@ type Config struct {
 	// The list of scopes to request during token exchanges.
 	Scopes []string `json:"scopes,omitempty" yaml:"scopes,omitempty"`
 	// Additional parameters to be included with the token request.
-	AuthorizationParams url.Values
+	AuthorizationParams url.Values `json:"params,omitempty" yaml:"params,omitempty"`
 	// A hard-coded bearer token for debugging, the token will not be refreshed
 	// so the caller is responsible for providing a valid token.
-	Token string `json:"-" yaml:"-" env:"STORMFORGE_TOKEN"`
+	Token string `json:"token,omitempty" yaml:"token,omitempty" env:"STORMFORGE_TOKEN"`
 	// Hook invoked when an authorized error occurs retrieving a token. May only
 	// be invoked on a sample of errors if they are occurring rapidly.
 	UnauthorizedFunc func(error) `json:"-" yaml:"-"`
