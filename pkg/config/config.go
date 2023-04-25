@@ -37,7 +37,7 @@ type Config struct {
 	Server string `json:"server" yaml:"server" env:"STORMFORGE_SERVER" envDefault:"https://api.stormforge.io/"`
 	// The API authorization server address, this should correspond exactly to
 	// the expected issuer claim of the tokens being used.
-	Issuer string `json:"issuer,omitempty" yaml:"issuer,omitempty" env:"STORMFORGE_ISSUER" envDefault:"https://auth.stormforge.io/"`
+	Issuer string `json:"issuer,omitempty" yaml:"issuer,omitempty" env:"STORMFORGE_ISSUER" envDefault:"https://api.stormforge.io/"`
 	// The client ID used to obtain tokens via a client credentials grant.
 	ClientID string `json:"client_id,omitempty" yaml:"client_id,omitempty" env:"STORMFORGE_CLIENT_ID"`
 	// The client secret used to obtain tokens via a client credentials grant.
