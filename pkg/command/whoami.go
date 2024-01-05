@@ -25,7 +25,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"golang.org/x/oauth2"
-	"gopkg.in/square/go-jose.v2/jwt"
+	"gopkg.in/go-jose/go-jose.v2/jwt"
 	"sigs.k8s.io/yaml"
 )
 

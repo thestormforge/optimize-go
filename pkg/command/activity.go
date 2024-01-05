@@ -27,7 +27,7 @@ import (
 	"github.com/thestormforge/optimize-go/pkg/api"
 	applications "github.com/thestormforge/optimize-go/pkg/api/applications/v2"
 	"golang.org/x/oauth2"
-	"gopkg.in/square/go-jose.v2/jwt"
+	"gopkg.in/go-jose/go-jose.v2/jwt"
 )
 
 // NewGetActivityCommand returns a command for getting activity feed items.
